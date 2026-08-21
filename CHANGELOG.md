@@ -3,6 +3,8 @@
 ## 0.2.0 — 2026-08-21
 
 - Use EX to define observed exposure and safety population.
+- Add explicit exposure-date source flags and DS-disposition fallback when EX/DM end dates are both missing.
+- Separate raw EX duration (`EXDURN_RAW`) from final treatment-window duration (`TRTDURN`) so fallback dates do not hide source-data incompleteness.
 - Use DS to derive randomisation, completion and discontinuation.
 - Add subject-level exposure summaries and source-date traceability.
 - Add related and moderate/severe TEAE flags.
