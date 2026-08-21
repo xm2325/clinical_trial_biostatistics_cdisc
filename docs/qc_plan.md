@@ -20,5 +20,6 @@ The workflow distinguishes **required** QC checks from informational checks. `me
 ## Informational checks
 
 - Number of AE records with missing start dates.
+- Number of subjects whose exposure end required DM or DS fallback; DS disposition fallbacks are counted separately.
 
 Informational checks are retained in the QC report but do not make the overall required-QC flag fail.
