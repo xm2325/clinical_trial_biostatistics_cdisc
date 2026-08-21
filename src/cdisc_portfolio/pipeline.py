@@ -73,6 +73,8 @@ def run(root: Path) -> dict[str, object]:
     completed_n = int((adsl["RANDFL"].eq("Y") & adsl["COMPLFL"].eq("Y")).sum())
     teae_subject_n = int(adae.loc[adae["TRTEMFL"].eq("Y"), "USUBJID"].nunique())
     teae_event_n = int(adae["TRTEMFL"].eq("Y").sum())
+    exposure_end_fallback_n = int(adsl.loc[adsl["SAFFL"].eq("Y"), "TRTEDTSRC"].ne("EX").sum())
+    ds_exposure_end_fallback_n = int(adsl.loc[adsl["SAFFL"].eq("Y"), "TRTEDTSRC"].eq("DS_DISPOSITION_FALLBACK").sum())
     metrics = {
         "input_rows": {"DM": int(len(dm)), "AE": int(len(ae)), "DS": int(len(ds)), "EX": int(len(ex))},
         "randomized_subjects": randomized_n,
@@ -80,6 +82,8 @@ def run(root: Path) -> dict[str, object]:
         "completed_subjects": completed_n,
         "subjects_with_teae": teae_subject_n,
         "teae_events": teae_event_n,
+        "exposure_end_fallback_subjects": exposure_end_fallback_n,
+        "ds_exposure_end_fallback_subjects": ds_exposure_end_fallback_n,
         "required_qc_checks": int(len(required_qc)),
         "required_qc_passed": int(required_qc["passed"].sum()),
         "qc_all_passed": qc_all_passed,
@@ -106,6 +110,7 @@ def run(root: Path) -> dict[str, object]:
         f"- Completed subjects: {completed_n}.\n"
         f"- Subjects with >=1 portfolio-defined TEAE: {teae_subject_n}.\n"
         f"- Portfolio-defined TEAE events: {teae_event_n}.\n"
+        f"- Exposure-end fallback subjects: {exposure_end_fallback_n} (DS disposition fallback: {ds_exposure_end_fallback_n}).\n"
         f"- Required QC checks passed: {metrics['required_qc_passed']}/{metrics['required_qc_checks']}.\n"
         f"- QC all required checks passed: {qc_all_passed}.\n\n"
         "The TEAE rule and inferential comparisons are pre-specified portfolio assumptions, not claims about the original pilot protocol or a regulatory submission.\n"
