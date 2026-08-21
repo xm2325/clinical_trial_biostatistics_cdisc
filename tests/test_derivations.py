@@ -42,8 +42,10 @@ def test_adsl_uses_observed_exposure_and_disposition():
     assert adsl.loc["1", "COMPLFL"] == "Y"
     assert adsl.loc["2", "DCSFL"] == "Y"
     assert adsl.loc["2", "EOSDECOD"] == "ADVERSE EVENT"
-    assert adsl.loc["1", "EXDURN"] == 10
+    assert adsl.loc["1", "EXDURN_RAW"] == 10
+    assert adsl.loc["1", "TRTDURN"] == 10
     assert adsl.loc["1", "EXN"] == 2
+    assert adsl.loc["1", "TRTEDTSRC"] == "EX"
 
 
 def test_adae_teae_window_and_flags():
@@ -59,3 +61,15 @@ def test_adae_teae_window_and_flags():
     assert adae.loc[2, "RELFL"] == "Y"
     assert adae.loc[2, "MODSEVFL"] == "Y"
     assert adae.loc[3, "TRTEMFL"] == "N"
+
+
+def test_missing_exposure_end_uses_disposition_date_with_flag():
+    dm = _dm().iloc[[0]].copy()
+    dm.loc[:, "RFXENDTC"] = None
+    ex = _ex().iloc[[0]].copy()
+    ex.loc[:, "EXENDTC"] = None
+    ds = _ds().loc[_ds()["USUBJID"].eq("1")].copy()
+    adsl = derive_adsl_style(dm, ex, ds).iloc[0]
+    assert str(adsl["TRTEDT"].date()) == "2020-01-10"
+    assert adsl["TRTEDTSRC"] == "DS_DISPOSITION_FALLBACK"
+    assert adsl["TRTDURN"] == 10
