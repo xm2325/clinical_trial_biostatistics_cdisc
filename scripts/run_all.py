@@ -13,3 +13,5 @@ from cdisc_portfolio.pipeline import run  # noqa: E402
 if __name__ == "__main__":
     metrics = run(ROOT)
     print(json.dumps(metrics, indent=2, sort_keys=True))
+    if not metrics.get("qc_all_passed", False):
+        raise SystemExit("Required QC did not pass; see outputs/qc_report.csv")
