@@ -30,7 +30,11 @@ def run_qc(adsl: pd.DataFrame, adae: pd.DataFrame) -> pd.DataFrame:
     add("Safety population has observed exposure", safety_without_ex == 0, f"subjects={safety_without_ex}")
 
     bad_ex_dates = int((adsl["SAFFL"].eq("Y") & (adsl["TRTSDT"].isna() | adsl["TRTEDT"].isna())).sum())
-    add("Safety subjects have exposure start/end dates", bad_ex_dates == 0, f"subjects={bad_ex_dates}")
+    add("Safety subjects have usable exposure start/end dates", bad_ex_dates == 0, f"subjects={bad_ex_dates}")
+
+    end_fallback = int(adsl.loc[adsl["SAFFL"].eq("Y"), "TRTEDTSRC"].isin({"DM_FALLBACK", "DS_DISPOSITION_FALLBACK"}).sum())
+    ds_end_fallback = int(adsl.loc[adsl["SAFFL"].eq("Y"), "TRTEDTSRC"].eq("DS_DISPOSITION_FALLBACK").sum())
+    add("Exposure-end fallbacks quantified", True, f"fallback subjects={end_fallback}; DS disposition fallback={ds_end_fallback}", required=False)
 
     reverse_dates = int((adsl["TRTSDT"].notna() & adsl["TRTEDT"].notna() & (adsl["TRTEDT"] < adsl["TRTSDT"])).sum())
     add("Exposure end is not before exposure start", reverse_dates == 0, f"subjects={reverse_dates}")
