@@ -13,8 +13,10 @@ This document records the main source-to-derived-variable mappings used by v0.2.
 | TRT01A | DM.ACTARM | copied |
 | TRTSDT_DM / TRTEDT_DM | DM.RFXSTDTC / RFXENDTC | parsed to date; traceability only |
 | TRTSDT | EX.EXSTDTC | minimum non-missing subject date; falls back to DM date only if EX summary is unavailable |
-| TRTEDT | EX.EXENDTC | maximum non-missing subject date; falls back to DM date only if EX summary is unavailable |
-| EXDURN | TRTSDT / TRTEDT | inclusive calendar-day duration |
+| TRTEDT | EX.EXENDTC / DM.RFXENDTC / DS | maximum non-missing EX end date; then DM end date; then final DS disposition date as a documented fallback |
+| TRTSDTSRC / TRTEDTSRC | derivation metadata | records the source used for final treatment dates |
+| EXDURN_RAW | EX.EXSTDTC / EX.EXENDTC | inclusive duration using EX dates only; remains missing when EX end is missing |
+| TRTDURN | TRTSDT / TRTEDT | final inclusive treatment-window duration after documented date fallbacks |
 | EXN | EX | number of subject EX records |
 | EXTRTS | EX.EXTRT | sorted distinct treatment strings joined with ` | ` |
 | EXDOSE_MAX | EX.EXDOSE | maximum numeric recorded dose |
