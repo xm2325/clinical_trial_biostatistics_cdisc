@@ -11,7 +11,7 @@ from cdisc_portfolio.qc import run_qc
 
 def test_required_qc_passes_clean_fixture():
     adsl = pd.DataFrame([
-        {"STUDYID":"S","USUBJID":"1","SAFFL":"Y","EXN":1,"TRTSDT":pd.Timestamp("2020-01-01"),"TRTEDT":pd.Timestamp("2020-01-10"),"RANDFL":"Y","EOSDECOD":"COMPLETED","COMPLFL":"Y","DCSFL":"N"}
+        {"STUDYID":"S","USUBJID":"1","SAFFL":"Y","EXN":1,"TRTSDT":pd.Timestamp("2020-01-01"),"TRTEDT":pd.Timestamp("2020-01-10"),"TRTEDTSRC":"EX","RANDFL":"Y","EOSDECOD":"COMPLETED","COMPLFL":"Y","DCSFL":"N"}
     ])
     adae = pd.DataFrame([
         {"STUDYID":"S","USUBJID":"1","AESEQ":1,"SAFFL":"Y","TRTEMFL":"Y","ASTDT":pd.Timestamp("2020-01-05"),"TRTSDT":pd.Timestamp("2020-01-01"),"TRTEDT":pd.Timestamp("2020-01-10")}
