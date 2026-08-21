@@ -21,12 +21,13 @@ Planned and actual treatment labels are taken from DM and carried to `TRT01P` an
 Actual exposure dates are derived from EX:
 
 - `TRTSDT`: minimum parsed `EXSTDTC`;
-- `TRTEDT`: maximum parsed `EXENDTC`;
-- `EXDURN`: `TRTEDT - TRTSDT + 1` days;
+- `TRTEDT`: maximum parsed `EXENDTC`; if unavailable, use DM `RFXENDTC`, then the final DS disposition date as a pre-specified fallback;
+- `EXDURN_RAW`: inclusive duration from non-missing EX start/end dates only;
+- `TRTDURN`: final inclusive treatment-window duration from `TRTSDT`/`TRTEDT`, after documented fallbacks;
 - `EXN`: number of observed EX records;
 - `EXDOSE_MAX` and `EXDOSE_MEAN`: subject-level summaries of numeric `EXDOSE`.
 
-DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM` for traceability.
+DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM` for traceability. `TRTSDTSRC` and `TRTEDTSRC` record whether the final analysis date came from EX or a fallback. Fallback use is quantified in QC and run metrics.
 
 ## 4. Disposition
 
@@ -79,14 +80,14 @@ Required checks cover:
 - AE-to-subject referential integrity;
 - valid analysis flags;
 - observed exposure for safety subjects;
-- valid exposure start/end ordering;
+- usable exposure dates and valid exposure start/end ordering;
 - disposition availability for randomised subjects;
 - mutually exclusive completion/discontinuation flags;
 - no treatment-emergent event outside the safety population;
 - no TEAE before first exposure;
 - no TEAE after the pre-specified 30-day follow-up window.
 
-The pipeline fails the work-sample acceptance condition if any required QC check fails, although it still writes the QC report for diagnosis.
+Exposure-date fallback use and AE records with missing start dates are reported as informational QC items. The pipeline fails the work-sample acceptance condition if any required QC check fails, although it still writes the QC report for diagnosis.
 
 ## 11. Sample-size demonstration
 
