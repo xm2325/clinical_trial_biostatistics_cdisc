@@ -29,12 +29,12 @@ def run_efficacy_qc(
     baseline = adqs_item.loc[adqs_item["ABLFL"].eq("Y")]
     baseline_counts = baseline.groupby(["STUDYID", "USUBJID"]).size()
     baseline_dups = int((baseline_counts > 1).sum())
-    add("ACITM01 baseline record unique per subject", baseline_dups == 0, f"subjects with >1 baseline={baseline_dups}")
+    add("ACTOT baseline record unique per subject", baseline_dups == 0, f"subjects with >1 baseline={baseline_dups}")
 
     post = adqs_item.loc[adqs_item["ABLFL"].ne("Y") & adqs_item["BASE"].notna() & adqs_item["AVAL"].notna()]
     identity_error = (pd.to_numeric(post["CHG"], errors="coerce") - (post["AVAL"] - post["BASE"])).abs()
     max_error = float(identity_error.max()) if not identity_error.empty else 0.0
-    add("ACITM01 CHG equals AVAL-BASE", max_error < 1e-12, f"max absolute error={max_error:.3g}")
+    add("ACTOT CHG equals AVAL-BASE", max_error < 1e-12, f"max absolute error={max_error:.3g}")
 
     obs = ancova_subjects.loc[ancova_subjects["analysis"].eq("Observed Week 24")]
     obs_dups = int(obs.duplicated(["STUDYID", "USUBJID"]).sum())
