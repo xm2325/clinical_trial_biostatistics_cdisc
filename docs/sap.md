@@ -1,8 +1,10 @@
-# Statistical Analysis Plan — portfolio version 0.2
+# Statistical Analysis Plan — portfolio version 0.3
 
 ## 1. Scope
 
-This Statistical Analysis Plan (SAP) specifies a limited safety analysis for an independent portfolio project using public SDTM test data. It is not sponsor-approved and is not a regulatory-submission SAP.
+This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
+
+Version 0.3 adds two questionnaire workflows. First, it derives an `ADQSCIBC-style` CIBIC+ analysis dataset from the official CDISC QS Dataset-JSON and compares the result with the public CDISC `ADQSCIBC` reference ADaM. Second, it uses `ACITM01` (Word Recall Task) as a portfolio continuous-endpoint example with baseline, change from baseline, Week 24 ANCOVA and a LOCF sensitivity analysis. The ACITM01 analysis is not presented as the source trial's primary or confirmatory endpoint.
 
 ## 2. Analysis populations
 
@@ -12,7 +14,15 @@ A subject is randomised if DS contains a record with `DSDECOD == "RANDOMIZED"`.
 
 ### 2.2 Safety population
 
-A subject is in the safety population if at least one EX record is observed. This operational definition makes the population depend on observed exposure rather than only DM treatment labels.
+A subject is in the safety population if at least one EX record is observed.
+
+### 2.3 CIBIC+ reference-reproduction population
+
+Subjects must be randomised and have at least one numeric QS record with `QSTESTCD == "CIBICVAL"`. One analysis record is selected or carried forward for each available target analysis visit.
+
+### 2.4 ACITM01 efficacy population
+
+Subjects must be randomised, have a numeric `ACITM01` baseline record flagged by `QSBLFL == "Y"`, and have at least one numeric post-baseline ACITM01 value. The observed-case Week 24 ANCOVA further requires an observed `WEEK 24` value.
 
 ## 3. Treatment and exposure
 
@@ -21,13 +31,13 @@ Planned and actual treatment labels are taken from DM and carried to `TRT01P` an
 Actual exposure dates are derived from EX:
 
 - `TRTSDT`: minimum parsed `EXSTDTC`;
-- `TRTEDT`: maximum parsed `EXENDTC`; if unavailable, use DM `RFXENDTC`, then the final DS disposition date as a pre-specified fallback;
+- `TRTEDT`: maximum parsed `EXENDTC`; if unavailable, use DM `RFXENDTC`, then the final DS disposition date as a documented fallback;
 - `EXDURN_RAW`: inclusive duration from non-missing EX start/end dates only;
 - `TRTDURN`: final inclusive treatment-window duration from `TRTSDT`/`TRTEDT`, after documented fallbacks;
 - `EXN`: number of observed EX records;
 - `EXDOSE_MAX` and `EXDOSE_MEAN`: subject-level summaries of numeric `EXDOSE`.
 
-DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM` for traceability. `TRTSDTSRC` and `TRTEDTSRC` record whether the final analysis date came from EX or a fallback. Fallback use is quantified in QC and run metrics.
+DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM`. `TRTSDTSRC` and `TRTEDTSRC` record the source used for the final analysis dates.
 
 ## 4. Disposition
 
@@ -44,51 +54,62 @@ AE records are linked to ADSL-style by `STUDYID` and `USUBJID`.
 - `MODSEVFL`: `Y` for `AESEV` in `MODERATE` or `SEVERE`.
 - Serious TEAE: `AESER == "Y"` and `TRTEMFL == "Y"`.
 
-No partial-date imputation is performed. An AE with missing start date cannot meet the portfolio TEAE rule; the missingness count is reported by QC.
+No partial-date imputation is performed for AE start dates.
 
-## 6. Descriptive statistics
+## 6. CIBIC+ analysis-window reproduction
 
-Age is summarised using mean, standard deviation, median, Q1 and Q3. Categorical variables are summarised as counts and percentages. Exposure duration and exposure-record counts are summarised by actual treatment.
+The official CDISC QS Dataset-JSON is filtered to `QSTESTCD == "CIBICVAL"`. Numeric standard results are mapped to `AVAL`. The following portfolio implementation follows the public `ADQSCIBC` reference metadata:
 
-TEAE incidence is subject-level: each subject contributes at most once to an incidence count for a given endpoint or preferred term. Percentages use the corresponding safety-population treatment-arm N as denominator.
+| Analysis visit | Target day | Actual-observation window |
+|---|---:|---|
+| Week 8 | 56 | days 2–84 |
+| Week 16 | 112 | days 85–140 |
+| Week 24 | 168 | day 141 onward |
 
-## 7. Exploratory any-TEAE treatment comparison
+Within an analysis window, the record nearest the target day is selected. If no record exists in a window, the latest prior post-baseline CIBIC+ record is carried forward and `DTYPE=LOCF`. `AWTARGET`, `AWLO`, `AWHI`, `AWTDIFF`, `QSSEQ`, source visit and source date are retained for traceability.
 
-For each Xanomeline arm versus placebo:
+The derived records are compared with the official CDISC `ADQSCIBC` reference using `USUBJID + AVISIT`. Validation metrics include reference-key coverage and exact-match rates for `AVAL`, `DTYPE` and `QSSEQ`.
 
-- risk in the active arm: `p1 = e1 / n1`;
-- risk in placebo: `p0 = e0 / n0`;
-- risk difference: `RD = p1 - p0`;
-- 95% CI: `RD +/- 1.96 * sqrt[p1(1-p1)/n1 + p0(1-p0)/n0]`;
-- Fisher's exact-test p-value from the 2x2 subject-level table.
+## 7. ACITM01 ADQS-style derivation
 
-These comparisons are unadjusted and exploratory. No multiplicity correction is applied. The workflow does not present them as confirmatory efficacy or safety conclusions.
+`ACITM01` is the QS Word Recall Task. `AVAL` is the numeric standard result. Baseline is the subject's record with `QSBLFL == "Y"`; this value is carried as `BASE`. For post-baseline records:
 
-## 8. Missing data
+`CHG = AVAL - BASE`.
 
-No model-based missing-data imputation is used. Missing dates and other derivation-impacting fields are quantified in the QC output.
+The long-form ADQS-style dataset retains the subject, actual treatment, source visit, analysis day/date, `AVAL`, `BASE`, `CHG`, baseline flag and source `QSSEQ`.
 
-## 9. Multiplicity
+## 8. Week 24 ANCOVA
 
-No confirmatory hypothesis family is defined. P-values in Table 7 are exploratory and are reported without multiplicity adjustment.
+The observed-case portfolio analysis models the Week 24 ACITM01 value as:
 
-## 10. QC
+`AVAL_Week24 = intercept + treatment + centred BASE + error`.
 
-Required checks cover:
+Placebo is the reference treatment. Least-squares means are evaluated at the analysis-set mean baseline. Two active-versus-placebo contrasts are reported with standard errors, two-sided 95% t-based confidence intervals and two-sided p-values.
 
-- unique ADSL-style and ADAE-style keys;
-- AE-to-subject referential integrity;
-- valid analysis flags;
-- observed exposure for safety subjects;
-- usable exposure dates and valid exposure start/end ordering;
-- disposition availability for randomised subjects;
-- mutually exclusive completion/discontinuation flags;
-- no treatment-emergent event outside the safety population;
-- no TEAE before first exposure;
-- no TEAE after the pre-specified 30-day follow-up window.
+This is an exploratory portfolio model. No claim is made that ACITM01 is the original trial's confirmatory endpoint.
 
-Exposure-date fallback use and AE records with missing start dates are reported as informational QC items. The pipeline fails the work-sample acceptance condition if any required QC check fails, although it still writes the QC report for diagnosis.
+## 9. Missing-data sensitivity
 
-## 11. Sample-size demonstration
+The observed-case Week 24 ANCOVA uses only observed Week 24 values. A separate LOCF sensitivity dataset uses the latest numeric post-baseline ACITM01 observation on or before analysis day 168 for each efficacy subject. The same ANCOVA specification is then fitted to the LOCF sensitivity dataset. Observed-case and LOCF results are reported separately.
+
+## 10. Descriptive statistics
+
+Safety descriptive statistics are unchanged from v0.2. For ACITM01, the observed Week 24 analysis set is summarised by treatment arm using N, baseline mean/SD, Week 24 mean/SD and change-from-baseline mean/SD.
+
+## 11. Exploratory any-TEAE treatment comparison
+
+For each Xanomeline arm versus placebo, the workflow reports subject-level TEAE risk, unadjusted risk difference, a Wald 95% confidence interval and Fisher's exact-test p-value. These comparisons remain exploratory.
+
+## 12. Multiplicity
+
+No confirmatory hypothesis family is defined. P-values from the TEAE analysis and ACITM01 ANCOVA are exploratory and are not multiplicity-adjusted.
+
+## 13. QC and acceptance
+
+Required QC covers safety derivations, efficacy keys, baseline/change identities, ANCOVA subject uniqueness, LOCF sample retention and official-reference validation. The v0.3 acceptance thresholds initially require at least 95% official `ADQSCIBC` reference-key coverage and at least 99% `AVAL` agreement on overlapping keys. `DTYPE` and `QSSEQ` agreement are also reported.
+
+The live script exits non-zero when any required QC check fails. Outputs are still uploaded by GitHub Actions so the failing derivation can be diagnosed.
+
+## 14. Sample-size demonstration
 
 A separate utility provides equal-allocation normal-approximation sample-size calculations for two-arm continuous and binary endpoints. These examples are not tied to the public pilot study.
