@@ -28,8 +28,8 @@ jobs:
           test -f outputs/analysis_run_note.md && cat outputs/analysis_run_note.md || true
           echo "--- ADQSCIBC reference comparison ---"
           test -f outputs/adqscibc_reference_metrics.csv && cat outputs/adqscibc_reference_metrics.csv || true
-          echo "--- ACITM01 ANCOVA contrasts ---"
-          test -f outputs/table10_acitm01_ancova_contrasts.csv && cat outputs/table10_acitm01_ancova_contrasts.csv || true
+          echo "--- ACTOT ANCOVA contrasts ---"
+          test -f outputs/table10_actot_ancova_contrasts.csv && cat outputs/table10_actot_ancova_contrasts.csv || true
           echo "--- TEAE risk differences ---"
           test -f outputs/table7_teae_risk_difference.csv && cat outputs/table7_teae_risk_difference.csv || true
           echo "--- QC ---"
