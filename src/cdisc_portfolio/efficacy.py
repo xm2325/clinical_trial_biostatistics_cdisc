@@ -27,9 +27,9 @@ def _to_date(s: pd.Series) -> pd.Series:
 def derive_adqscibc_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFrame:
     """Reproduce a compact CIBIC+ analysis dataset from official SDTM QS.
 
-    The analysis-window and LOCF rules are portfolio implementations based on the
-    public reference ADQSCIBC metadata. The output is labelled ADQSCIBC-style,
-    not a submission-ready ADaM dataset.
+    SDTM uses QSTESTCD=CIBIC; the public reference ADaM maps this to
+    PARAMCD=CIBICVAL. The output is labelled ADQSCIBC-style rather than
+    submission-ready ADaM.
     """
     _require(
         qs,
@@ -38,7 +38,7 @@ def derive_adqscibc_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFrame:
     )
     _require(adsl, {"STUDYID", "USUBJID", "TRT01P", "RANDFL", "COMPLFL"}, "ADSL-style")
 
-    q = qs.loc[qs["QSTESTCD"].fillna("").astype(str).str.upper().eq("CIBICVAL")].copy()
+    q = qs.loc[qs["QSTESTCD"].fillna("").astype(str).str.upper().eq("CIBIC")].copy()
     q["AVAL"] = pd.to_numeric(q["QSSTRESN"], errors="coerce")
     q["ADY"] = pd.to_numeric(q["QSDY"], errors="coerce")
     q["ADT"] = _to_date(q["QSDTC"])
@@ -106,18 +106,19 @@ def derive_adqscibc_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values(["STUDYID", "USUBJID", "AVISITN"]).reset_index(drop=True)
 
 
-def derive_acitm01_adqs_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFrame:
-    """Create an ADQS-style long dataset for the ACITM01 Word Recall Task.
+def derive_actot_adqs_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFrame:
+    """Create an ADQS-style long dataset for ACTOT total score.
 
-    ACITM01 is used as a portfolio continuous-endpoint example because it has a
-    defined baseline in QS. It is not claimed to be the source trial's primary endpoint.
+    The official SDTM Define-XML identifies ACTOT as the derived total score for
+    the Alzheimer's Disease Assessment Scale. This portfolio uses the supplied
+    QS total score rather than re-scoring individual questionnaire items.
     """
     _require(
         qs,
         {"STUDYID", "USUBJID", "QSSEQ", "QSTESTCD", "QSTEST", "QSSTRESN", "QSBLFL", "QSDY", "QSDTC", "VISIT", "VISITNUM"},
         "QS",
     )
-    q = qs.loc[qs["QSTESTCD"].fillna("").astype(str).str.upper().eq("ACITM01")].copy()
+    q = qs.loc[qs["QSTESTCD"].fillna("").astype(str).str.upper().eq("ACTOT")].copy()
     q["AVAL"] = pd.to_numeric(q["QSSTRESN"], errors="coerce")
     q["ADY"] = pd.to_numeric(q["QSDY"], errors="coerce")
     q["ADT"] = _to_date(q["QSDTC"])
@@ -132,7 +133,7 @@ def derive_acitm01_adqs_style(qs: pd.DataFrame, adsl: pd.DataFrame) -> pd.DataFr
     baseline = baseline_rows.drop_duplicates(["STUDYID", "USUBJID"], keep="last")[["STUDYID", "USUBJID", "AVAL"]].rename(columns={"AVAL": "BASE"})
 
     out = q.merge(baseline, on=["STUDYID", "USUBJID"], how="left", validate="many_to_one")
-    out["PARAMCD"] = "ACITM01"
+    out["PARAMCD"] = "ACTOT"
     out["PARAM"] = out["QSTEST"]
     out["AVISIT"] = out["VISIT"]
     out["AVISITN"] = pd.to_numeric(out["VISITNUM"], errors="coerce")
@@ -156,12 +157,12 @@ def _analysis_subjects(adqs: pd.DataFrame, locf: bool) -> pd.DataFrame:
     base = x.loc[x["ABLFL"].eq("Y"), ["STUDYID", "USUBJID", "TRT01A", "BASE"]].drop_duplicates(["STUDYID", "USUBJID"])
     if not locf:
         wk24 = x.loc[x["AVISIT"].fillna("").astype(str).str.upper().eq("WEEK 24"), ["STUDYID", "USUBJID", "AVAL", "ADY"]].copy()
-        wk24 = wk24.sort_values(["STUDYID", "USUBJID", "ADY"]).drop_duplicates(["STUDYID", "USUBJID"], keep="last")
+        wk24 = wk24.sort_values(["STUDYID", "USUBJID", "ADY"]).drop_duplicates(["STUDYID", "USUBJID"], keep="last").copy()
         wk24["DTYPE"] = ""
     else:
         post = x.loc[x["ABLFL"].ne("Y") & x["ADY"].gt(1) & x["ADY"].le(168), ["STUDYID", "USUBJID", "AVAL", "ADY", "AVISIT"]].copy()
         post = post.sort_values(["STUDYID", "USUBJID", "ADY"])
-        wk24 = post.drop_duplicates(["STUDYID", "USUBJID"], keep="last")
+        wk24 = post.drop_duplicates(["STUDYID", "USUBJID"], keep="last").copy()
         wk24["DTYPE"] = np.where(wk24["AVISIT"].fillna("").astype(str).str.upper().eq("WEEK 24"), "", "LOCF")
     ana = base.merge(wk24, on=["STUDYID", "USUBJID"], how="inner", validate="one_to_one")
     ana["CHG"] = ana["AVAL"] - ana["BASE"]
@@ -225,7 +226,7 @@ def _fit_ancova(data: pd.DataFrame, label: str) -> tuple[pd.DataFrame, pd.DataFr
     return pd.DataFrame(lsmeans), pd.DataFrame(contrasts)
 
 
-def acitm01_week24_ancova(adqs: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def actot_week24_ancova(adqs: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     observed = _analysis_subjects(adqs, locf=False)
     locf = _analysis_subjects(adqs, locf=True)
     ls_obs, c_obs = _fit_ancova(observed, "Observed Week 24")
@@ -237,7 +238,7 @@ def acitm01_week24_ancova(adqs: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFram
     return pd.concat([ls_obs, ls_locf], ignore_index=True), pd.concat([c_obs, c_locf], ignore_index=True), analysis_subjects
 
 
-def acitm01_descriptive(adqs: pd.DataFrame) -> pd.DataFrame:
+def actot_descriptive(adqs: pd.DataFrame) -> pd.DataFrame:
     observed = _analysis_subjects(adqs, locf=False)
     rows = []
     for arm in EXPECTED_ARMS:
