@@ -33,7 +33,7 @@ def _exposure_subject_summary(ex: pd.DataFrame) -> pd.DataFrame:
             "USUBJID": usubjid,
             "TRTSDT_EX": start,
             "TRTEDT_EX": end,
-            "EXDURN": duration,
+            "EXDURN_RAW": duration,
             "EXN": int(len(g)),
             "EXTRTS": " | ".join(trts),
             "EXDOSE_MAX": float(doses.max()) if doses.notna().any() else np.nan,
@@ -100,16 +100,31 @@ def derive_adsl_style(dm: pd.DataFrame, ex: pd.DataFrame, ds: pd.DataFrame) -> p
     adsl = adsl.merge(exposure, on=["STUDYID", "USUBJID"], how="left", validate="one_to_one")
     adsl = adsl.merge(disposition, on=["STUDYID", "USUBJID"], how="left", validate="one_to_one")
 
+    # EX is used as the source of actual exposure dates when available; DM dates are kept
+    # for traceability and QC comparisons. A final DS disposition date is an explicit
+    # portfolio fallback when both EX and DM exposure-end dates are unavailable.
     adsl["TRTSDT"] = adsl["TRTSDT_EX"].combine_first(adsl["TRTSDT_DM"])
-    adsl["TRTEDT"] = adsl["TRTEDT_EX"].combine_first(adsl["TRTEDT_DM"])
+    adsl["TRTEDT"] = adsl["TRTEDT_EX"].combine_first(adsl["TRTEDT_DM"]).combine_first(adsl["EOSDT"])
+    adsl["TRTSDTSRC"] = np.select(
+        [adsl["TRTSDT_EX"].notna(), adsl["TRTSDT_DM"].notna()],
+        ["EX", "DM_FALLBACK"],
+        default="MISSING",
+    )
+    adsl["TRTEDTSRC"] = np.select(
+        [adsl["TRTEDT_EX"].notna(), adsl["TRTEDT_DM"].notna(), adsl["EOSDT"].notna()],
+        ["EX", "DM_FALLBACK", "DS_DISPOSITION_FALLBACK"],
+        default="MISSING",
+    )
+    valid_window = adsl["TRTSDT"].notna() & adsl["TRTEDT"].notna() & (adsl["TRTEDT"] >= adsl["TRTSDT"])
+    adsl["TRTDURN"] = np.where(valid_window, (adsl["TRTEDT"] - adsl["TRTSDT"]).dt.days + 1, np.nan)
     adsl["RANDFL"] = np.where(adsl["RAND_DSFL"].eq("Y"), "Y", "N")
     adsl["SAFFL"] = np.where(adsl["EXN"].fillna(0).gt(0), "Y", "N")
     adsl["DCSFL"] = np.where(adsl["RANDFL"].eq("Y") & adsl["COMPLFL"].fillna("N").ne("Y"), "Y", "N")
 
     keep = [
         "STUDYID", "USUBJID", "AGE", "SEX", "RACE", "COUNTRY",
-        "TRT01P", "TRT01A", "TRTSDT", "TRTEDT", "TRTSDT_DM", "TRTEDT_DM",
-        "EXDURN", "EXN", "EXTRTS", "EXDOSE_MAX", "EXDOSE_MEAN",
+        "TRT01P", "TRT01A", "TRTSDT", "TRTEDT", "TRTSDTSRC", "TRTEDTSRC", "TRTSDT_DM", "TRTEDT_DM",
+        "EXDURN_RAW", "TRTDURN", "EXN", "EXTRTS", "EXDOSE_MAX", "EXDOSE_MEAN",
         "RANDFL", "SAFFL", "COMPLFL", "DCSFL", "EOSDECOD", "EOSTERM", "EOSDT",
     ]
     keep = [c for c in keep if c in adsl.columns]
