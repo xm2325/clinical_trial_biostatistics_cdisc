@@ -4,7 +4,7 @@
 
 This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
 
-Version 0.3 adds two questionnaire workflows. First, it derives an `ADQSCIBC-style` CIBIC+ analysis dataset from the official CDISC QS Dataset-JSON and compares the result with the public CDISC `ADQSCIBC` reference ADaM. Second, it uses `ACITM01` (Word Recall Task) as a portfolio continuous-endpoint example with baseline, change from baseline, Week 24 ANCOVA and a LOCF sensitivity analysis. The ACITM01 analysis is not presented as the source trial's primary or confirmatory endpoint.
+Version 0.3 adds two questionnaire workflows. First, it derives an `ADQSCIBC-style` CIBIC+ analysis dataset from the official CDISC QS Dataset-JSON and compares the result with the public CDISC `ADQSCIBC` reference ADaM. Second, it uses `ACTOT`, the Alzheimer's Disease Assessment Scale total score identified in the official SDTM Define-XML, as a continuous-endpoint example with baseline, change from baseline, Week 24 ANCOVA and a LOCF sensitivity analysis. The ACTOT analysis is an independent portfolio analysis and is not presented as the source trial's confirmatory analysis.
 
 ## 2. Analysis populations
 
@@ -18,11 +18,11 @@ A subject is in the safety population if at least one EX record is observed.
 
 ### 2.3 CIBIC+ reference-reproduction population
 
-Subjects must be randomised and have at least one numeric QS record with `QSTESTCD == "CIBICVAL"`. One analysis record is selected or carried forward for each available target analysis visit.
+Subjects must be randomised and have at least one numeric QS record with `QSTESTCD == "CIBIC"`. One analysis record is selected or carried forward for each available target analysis visit. The output parameter code is `CIBICVAL`, matching the public reference ADaM.
 
-### 2.4 ACITM01 efficacy population
+### 2.4 ACTOT efficacy population
 
-Subjects must be randomised, have a numeric `ACITM01` baseline record flagged by `QSBLFL == "Y"`, and have at least one numeric post-baseline ACITM01 value. The observed-case Week 24 ANCOVA further requires an observed `WEEK 24` value.
+Subjects must be randomised, have a numeric `ACTOT` baseline record flagged by `QSBLFL == "Y"`, and have at least one numeric post-baseline ACTOT value. The observed-case Week 24 ANCOVA further requires an observed `WEEK 24` value.
 
 ## 3. Treatment and exposure
 
@@ -37,7 +37,7 @@ Actual exposure dates are derived from EX:
 - `EXN`: number of observed EX records;
 - `EXDOSE_MAX` and `EXDOSE_MEAN`: subject-level summaries of numeric `EXDOSE`.
 
-DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM`. `TRTSDTSRC` and `TRTEDTSRC` record the source used for the final analysis dates.
+DM `RFXSTDTC` and `RFXENDTC` are retained as `TRTSDT_DM` and `TRTEDT_DM`. `TRTSDTSRC` and `TRTEDTSRC` record the source used for final analysis dates.
 
 ## 4. Disposition
 
@@ -58,7 +58,7 @@ No partial-date imputation is performed for AE start dates.
 
 ## 6. CIBIC+ analysis-window reproduction
 
-The official CDISC QS Dataset-JSON is filtered to `QSTESTCD == "CIBICVAL"`. Numeric standard results are mapped to `AVAL`. The following portfolio implementation follows the public `ADQSCIBC` reference metadata:
+The official CDISC QS Dataset-JSON is filtered to SDTM `QSTESTCD == "CIBIC"`. Numeric standard results are mapped to `AVAL`, and the analysis output uses `PARAMCD=CIBICVAL` as in the reference ADaM.
 
 | Analysis visit | Target day | Actual-observation window |
 |---|---:|---|
@@ -70,31 +70,33 @@ Within an analysis window, the record nearest the target day is selected. If no 
 
 The derived records are compared with the official CDISC `ADQSCIBC` reference using `USUBJID + AVISIT`. Validation metrics include reference-key coverage and exact-match rates for `AVAL`, `DTYPE` and `QSSEQ`.
 
-## 7. ACITM01 ADQS-style derivation
+## 7. ACTOT ADQS-style derivation
 
-`ACITM01` is the QS Word Recall Task. `AVAL` is the numeric standard result. Baseline is the subject's record with `QSBLFL == "Y"`; this value is carried as `BASE`. For post-baseline records:
+The official SDTM Define-XML lists `ACTOT` and states that total scores for the Alzheimer's Disease Assessment Scale were derived as described in the source SAP. This portfolio uses the supplied QS `ACTOT` value rather than re-scoring individual questionnaire items.
+
+`AVAL` is the numeric `QSSTRESN`. Baseline is the subject's `ACTOT` record with `QSBLFL == "Y"`, carried as `BASE`. For post-baseline records:
 
 `CHG = AVAL - BASE`.
 
-The long-form ADQS-style dataset retains the subject, actual treatment, source visit, analysis day/date, `AVAL`, `BASE`, `CHG`, baseline flag and source `QSSEQ`.
+The long-form ADQS-style dataset retains subject, actual treatment, source visit, analysis day/date, `AVAL`, `BASE`, `CHG`, baseline flag and source `QSSEQ`.
 
 ## 8. Week 24 ANCOVA
 
-The observed-case portfolio analysis models the Week 24 ACITM01 value as:
+The observed-case portfolio analysis models the Week 24 ACTOT value as:
 
 `AVAL_Week24 = intercept + treatment + centred BASE + error`.
 
 Placebo is the reference treatment. Least-squares means are evaluated at the analysis-set mean baseline. Two active-versus-placebo contrasts are reported with standard errors, two-sided 95% t-based confidence intervals and two-sided p-values.
 
-This is an exploratory portfolio model. No claim is made that ACITM01 is the original trial's confirmatory endpoint.
+This is an exploratory portfolio model and is not presented as the original trial's confirmatory model.
 
 ## 9. Missing-data sensitivity
 
-The observed-case Week 24 ANCOVA uses only observed Week 24 values. A separate LOCF sensitivity dataset uses the latest numeric post-baseline ACITM01 observation on or before analysis day 168 for each efficacy subject. The same ANCOVA specification is then fitted to the LOCF sensitivity dataset. Observed-case and LOCF results are reported separately.
+The observed-case Week 24 ANCOVA uses only observed Week 24 values. A separate LOCF sensitivity dataset uses the latest numeric post-baseline ACTOT observation on or before analysis day 168 for each efficacy subject. The same ANCOVA specification is fitted to the LOCF sensitivity dataset. Observed-case and LOCF results are reported separately.
 
 ## 10. Descriptive statistics
 
-Safety descriptive statistics are unchanged from v0.2. For ACITM01, the observed Week 24 analysis set is summarised by treatment arm using N, baseline mean/SD, Week 24 mean/SD and change-from-baseline mean/SD.
+Safety descriptive statistics are unchanged from v0.2. For ACTOT, the observed Week 24 analysis set is summarised by treatment arm using N, baseline mean/SD, Week 24 mean/SD and change-from-baseline mean/SD.
 
 ## 11. Exploratory any-TEAE treatment comparison
 
@@ -102,13 +104,13 @@ For each Xanomeline arm versus placebo, the workflow reports subject-level TEAE 
 
 ## 12. Multiplicity
 
-No confirmatory hypothesis family is defined. P-values from the TEAE analysis and ACITM01 ANCOVA are exploratory and are not multiplicity-adjusted.
+No confirmatory hypothesis family is defined. P-values from the TEAE analysis and ACTOT ANCOVA are exploratory and are not multiplicity-adjusted.
 
 ## 13. QC and acceptance
 
 Required QC covers safety derivations, efficacy keys, baseline/change identities, ANCOVA subject uniqueness, LOCF sample retention and official-reference validation. The v0.3 acceptance thresholds initially require at least 95% official `ADQSCIBC` reference-key coverage and at least 99% `AVAL` agreement on overlapping keys. `DTYPE` and `QSSEQ` agreement are also reported.
 
-The live script exits non-zero when any required QC check fails. Outputs are still uploaded by GitHub Actions so the failing derivation can be diagnosed.
+The live script exits non-zero when any required QC check fails. Outputs are still uploaded by GitHub Actions so a failing derivation can be diagnosed.
 
 ## 14. Sample-size demonstration
 
