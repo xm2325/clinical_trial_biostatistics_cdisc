@@ -58,7 +58,7 @@ def exposure_summary(adsl: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for arm in _arm_order(safety["TRT01A"]):
         g = safety.loc[safety["TRT01A"].eq(arm)]
-        dur = pd.to_numeric(g["EXDURN"], errors="coerce")
+        dur = pd.to_numeric(g["TRTDURN"], errors="coerce")
         maxdose = pd.to_numeric(g["EXDOSE_MAX"], errors="coerce")
         rows.extend([
             {"TRT01A": arm, "Statistic": "Exposure duration, mean (SD), days", "Value": f"{dur.mean():.1f} ({dur.std(ddof=1):.1f})"},
