@@ -51,10 +51,26 @@ def main() -> None:
     samples.to_csv(outputs / "adqsadas_samples.csv", index=False)
     trace.to_csv(outputs / "adqscibc_mismatch_source_trace.csv", index=False)
 
+    actot_ref = adqsadas_ref.loc[
+        adqsadas_ref["PARAMCD"].fillna("").astype(str).str.upper().eq("ACTOT")
+    ].copy()
+    actot_ref.to_csv(outputs / "adqsadas_actot_reference.csv", index=False)
+    actot_group_cols = [
+        c for c in ["AVISIT", "AVISITN", "DTYPE", "EFFFL", "ANL01FL", "ABLFL"]
+        if c in actot_ref.columns
+    ]
+    actot_counts = (
+        actot_ref.groupby(actot_group_cols, dropna=False).size().reset_index(name="records")
+        .sort_values([c for c in ["AVISITN", "DTYPE", "EFFFL", "ANL01FL"] if c in actot_group_cols])
+    )
+    actot_counts.to_csv(outputs / "adqsadas_actot_reference_counts.csv", index=False)
+
     print("--- official ADQSADAS profile ---")
     print(json.dumps(profile, indent=2, sort_keys=True))
     print("--- official ADQSADAS parameter counts ---")
     print(params.to_csv(index=False))
+    print("--- official ACTOT row semantics ---")
+    print(actot_counts.to_csv(index=False))
     print("--- CIBIC reference mismatches traced to official QS ---")
     if trace.empty:
         print("none")
