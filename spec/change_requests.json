@@ -1,5 +1,5 @@
 {
-  "version": "0.10.0",
+  "version": "0.11.0",
   "evidence_boundary": "Illustrative portfolio change requests used to exercise statistical impact assessment. They are not sponsor protocol amendments, approved SAP changes or production change-control records.",
   "changes": [
     {
@@ -33,15 +33,15 @@
     {
       "change_id": "CR-003",
       "title": "Primary ACTOT visit change",
-      "description": "Illustrative change of the primary ACTOT analysis focus from Week 24 to Week 16, including planning and primary MMRM contrast review.",
-      "rationale": "Tests propagation from an endpoint timing change into analysis datasets, ANCOVA/MMRM displays, protocol-design assumptions and the randomisation count linked to the selected planning scenario.",
+      "description": "Illustrative change of the primary ACTOT analysis focus from Week 24 to Week 16, including planning, estimand specification and primary MMRM contrast review.",
+      "rationale": "Tests propagation from an endpoint timing change into analysis datasets, ANCOVA/MMRM displays, the estimand specification, protocol-design assumptions and the randomisation count linked to the selected planning scenario.",
       "changed_components": ["actot_primary_visit"],
       "declared_impacts": {
         "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/ancova_analysis_subjects.csv", "outputs/mmrm_analysis_dataset.csv"],
         "tlfs": ["T08", "T09", "T10", "T11", "T12", "T15"],
         "qc": ["outputs/qc_report.csv", "outputs/r_independent_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/mmrm_qc.csv", "outputs/protocol_design_qc.csv", "outputs/randomisation_qc.csv"],
-        "documents": ["docs/protocol_summary.md", "docs/sap.md", "docs/analysis_dataset_spec.md", "docs/tlf_shells.md", "docs/protocol_statistical_design.md", "docs/sap_v0_9_review_addendum.md", "docs/randomisation_kit_schedule.md"],
-        "specs": ["spec/protocol_design.json", "spec/randomisation_schedule.json"]
+        "documents": ["docs/protocol_summary.md", "docs/sap.md", "docs/analysis_dataset_spec.md", "docs/tlf_shells.md", "docs/protocol_statistical_design.md", "docs/sap_v0_9_review_addendum.md", "docs/randomisation_kit_schedule.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
+        "specs": ["spec/protocol_design.json", "spec/randomisation_schedule.json", "spec/estimands.json"]
       }
     },
     {
@@ -56,6 +56,20 @@
         "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv"],
         "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/sap_v0_9_review_addendum.md"],
         "specs": []
+      }
+    },
+    {
+      "change_id": "CR-005",
+      "title": "Treatment-discontinuation intercurrent-event strategy change",
+      "description": "Illustrative change from a treatment-policy strategy for treatment discontinuation to a hypothetical strategy.",
+      "rationale": "Tests whether changing the scientific question for a key intercurrent event reaches the estimand specification, observed-data MMRM path, longitudinal outputs, missingness review and controlled statistical documentation.",
+      "changed_components": ["treatment_discontinuation_strategy"],
+      "declared_impacts": {
+        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv"],
+        "tlfs": ["T11", "T12", "T13", "T14", "T15", "T16", "T17"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/estimand_review.csv", "outputs/r_independent_qc.csv"],
+        "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
+        "specs": ["spec/estimands.json"]
       }
     }
   ]
