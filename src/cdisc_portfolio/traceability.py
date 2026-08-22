@@ -9,6 +9,7 @@ import pandas as pd
 
 REGISTRY_COLUMNS = [
     "tlf_id",
+    "registry_version",
     "title",
     "objective",
     "population",
@@ -38,14 +39,7 @@ def validate_traceability(
     registry_path: Path | None = None,
     contracts_path: Path | None = None,
 ) -> tuple[pd.DataFrame, dict[str, object]]:
-    """Validate SAP/TLF registry rows against produced analysis artifacts.
-
-    The check is deliberately structural. It verifies that each planned TLF has
-    complete planning metadata, a machine-readable output contract, generated
-    analysis/QC evidence, expected columns, a minimum row count, and a recorded
-    output hash. It does not replace the statistical QC performed by the
-    analysis-specific programs.
-    """
+    """Validate planned TLF rows against generated analysis artifacts."""
     root = Path(root)
     registry_path = registry_path or root / "spec" / "analysis_traceability.csv"
     contracts_path = contracts_path or root / "spec" / "output_contracts.json"
@@ -54,12 +48,16 @@ def validate_traceability(
     missing_registry_columns = [c for c in REGISTRY_COLUMNS if c not in registry.columns]
     if missing_registry_columns:
         raise ValueError(f"Traceability registry missing columns: {missing_registry_columns}")
-
     if registry.empty:
         raise ValueError("Traceability registry is empty")
     if registry["tlf_id"].duplicated().any():
         dup = registry.loc[registry["tlf_id"].duplicated(keep=False), "tlf_id"].tolist()
         raise ValueError(f"Duplicate TLF IDs: {sorted(set(dup))}")
+
+    versions = sorted({x.strip() for x in registry["registry_version"].astype(str) if x.strip()})
+    if len(versions) != 1 or not bool(registry["registry_version"].astype(str).str.strip().ne("").all()):
+        raise ValueError(f"Traceability registry must declare one non-empty registry_version; found={versions}")
+    registry_version = versions[0]
 
     metadata_complete = registry[REGISTRY_COLUMNS].apply(lambda s: s.astype(str).str.strip().ne("")).all(axis=1)
     if not bool(metadata_complete.all()):
@@ -85,7 +83,6 @@ def validate_traceability(
 
         required_columns = [str(x) for x in contract.get("required_columns", [])]
         min_rows = int(contract.get("min_rows", 1))
-        actual_columns: list[str] = []
         row_count = 0
         missing_columns: list[str] = required_columns.copy()
         output_sha256 = ""
@@ -94,11 +91,10 @@ def validate_traceability(
         if output_exists:
             try:
                 out = pd.read_csv(output_path)
-                actual_columns = [str(c) for c in out.columns]
                 row_count = int(len(out))
-                missing_columns = sorted(set(required_columns) - set(actual_columns))
+                missing_columns = sorted(set(required_columns) - set(map(str, out.columns)))
                 output_sha256 = _sha256(output_path)
-            except Exception as exc:  # retained in audit output before failing
+            except Exception as exc:
                 read_error = f"{type(exc).__name__}: {exc}"
 
         required_columns_ok = output_exists and not missing_columns and not read_error
@@ -112,42 +108,38 @@ def validate_traceability(
         qc_evidence_exists = bool(qc_paths) and all((root / p).is_file() for p in qc_paths)
         missing_qc_evidence = [p for p in qc_paths if not (root / p).is_file()]
 
-        passed = all(
-            [
-                output_matches_registry,
-                output_exists,
-                required_columns_ok,
-                row_count_ok,
-                analysis_dataset_exists,
-                qc_evidence_exists,
-            ]
-        )
-
-        rows.append(
-            {
-                "tlf_id": tlf_id,
-                "title": rec["title"],
-                "output_file": rec["output_file"],
-                "output_matches_contract": output_matches_registry,
-                "output_exists": output_exists,
-                "row_count": row_count,
-                "min_rows": min_rows,
-                "row_count_ok": row_count_ok,
-                "required_columns_ok": required_columns_ok,
-                "missing_columns": "|".join(missing_columns),
-                "analysis_dataset_exists": analysis_dataset_exists,
-                "missing_analysis_datasets": "|".join(missing_analysis_datasets),
-                "qc_evidence_exists": qc_evidence_exists,
-                "missing_qc_evidence": "|".join(missing_qc_evidence),
-                "output_sha256": output_sha256,
-                "read_error": read_error,
-                "passed": passed,
-            }
-        )
+        passed = all([
+            output_matches_registry,
+            output_exists,
+            required_columns_ok,
+            row_count_ok,
+            analysis_dataset_exists,
+            qc_evidence_exists,
+        ])
+        rows.append({
+            "tlf_id": tlf_id,
+            "registry_version": rec["registry_version"],
+            "title": rec["title"],
+            "output_file": rec["output_file"],
+            "output_matches_contract": output_matches_registry,
+            "output_exists": output_exists,
+            "row_count": row_count,
+            "min_rows": min_rows,
+            "row_count_ok": row_count_ok,
+            "required_columns_ok": required_columns_ok,
+            "missing_columns": "|".join(missing_columns),
+            "analysis_dataset_exists": analysis_dataset_exists,
+            "missing_analysis_datasets": "|".join(missing_analysis_datasets),
+            "qc_evidence_exists": qc_evidence_exists,
+            "missing_qc_evidence": "|".join(missing_qc_evidence),
+            "output_sha256": output_sha256,
+            "read_error": read_error,
+            "passed": passed,
+        })
 
     detail = pd.DataFrame(rows)
     metrics: dict[str, object] = {
-        "analysis_version": "0.6.0",
+        "analysis_version": registry_version,
         "planned_tlfs": int(len(detail)),
         "passed_tlfs": int(detail["passed"].sum()),
         "outputs_found": int(detail["output_exists"].sum()),
@@ -173,6 +165,7 @@ def write_traceability_outputs(root: Path) -> dict[str, object]:
     lines = [
         "# SAP-to-TLF traceability validation",
         "",
+        f"- Registry version: {metrics['analysis_version']}.",
         f"- Planned TLFs: {metrics['planned_tlfs']}.",
         f"- TLFs passing complete structural traceability: {metrics['passed_tlfs']}/{metrics['planned_tlfs']}.",
         f"- Output files found: {metrics['outputs_found']}/{metrics['planned_tlfs']}.",
