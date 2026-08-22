@@ -2,17 +2,17 @@
 
 A reproducible clinical-trial biostatistics work sample built from public CDISC pilot data and public pharmaverse SDTM test data.
 
-The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, TLF-style outputs, public-reference validation, separate R/Python programming QC, longitudinal MMRM, executable SAP-to-TLF traceability, protocol-design/sample-size calculations, a controlled portfolio randomisation/initial-kit schedule, and an executable analysis-dataset/TLF reviewer gate.
+The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, TLF-style outputs, public-reference validation, separate R/Python programming QC, longitudinal MMRM, executable SAP-to-TLF traceability, protocol-design/sample-size calculations, a controlled portfolio randomisation/initial-kit schedule, an executable analysis-dataset/TLF reviewer gate, and machine-readable statistical change-control impact assessment.
 
-> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does **not** claim sponsor/CRO production, strong SAS production, DSMB, regulatory-submission, formal ADaM conformance, IRT/IWRS production, or independent second-programmer validation experience.
+> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does **not** claim sponsor/CRO production, strong SAS production, DSMB, regulatory-submission, formal ADaM conformance, IRT/IWRS production, or independent second-programmer validation experience. The v0.10 change requests are portfolio simulations, not sponsor-approved protocol/SAP amendments.
 
-## Verified v0.9 live run
+## Verified v0.10 live run
 
 The full workflow has been executed in GitHub Actions against downloaded public source data and pinned public CDISC reference files.
 
 | Verification layer | Verified result |
 |---|---:|
-| Python unit tests | **34/34 passed** |
+| Python unit tests | **40/40 passed** |
 | Required Python pipeline QC | **24/24 passed** |
 | Required R/Python cross-language QC | **16/16 passed** |
 | Required MMRM QC | **11/11 passed** |
@@ -21,6 +21,8 @@ The full workflow has been executed in GitHub Actions against downloaded public 
 | Randomisation/initial-kit schedule QC | **10/10 passed** |
 | Analysis-dataset/TLF reviewer QC | **24/24 passed** |
 | Reviewed generated files with SHA256 | **17/17** |
+| Statistical change-impact declarations | **67/67 covered** |
+| Statistical change-impact resources resolved | **67/67** |
 | Randomised / safety subjects in public analysis | 254 / 254 |
 | Official CDISC QS rows | 121,749 |
 | Portfolio-defined TEAE events | 1,116 |
@@ -48,6 +50,8 @@ Public DM / EX / DS / AE / QS
         +--> Observed ACTOT Week 8/16/24 --> longitudinal MMRM + covariance sensitivity
         |
         +--> Dataset contracts + cross-dataset reviewer --> TLF denominator reconciliation
+        |
+        +--> Change request + dependency graph --> downstream dataset/TLF/QC/document impact gate
         |
         +--> SAP/TLF registry --> output contracts --> QC evidence --> SHA256 output identity
 
@@ -86,7 +90,7 @@ The public `ADQSADAS` reference contains 12,463 rows for 254 subjects across 15 
 
 `R/independent_qc.R` starts from the same cached public raw inputs and does not call the Python derivation code. Python outputs are read only for the final cross-language comparison.
 
-The verified run passes **16/16 required checks**. Safety population counts, TEAE counts, risk-difference outputs, CIBIC selected records, ACTOT derivations and Week 24/LOCF ANCOVA outputs reconcile across the two implementations. The latest maximum R/Python ANCOVA numerical difference is **7.11e-15**.
+The verified run passes **16/16 required checks**. Safety population counts, TEAE counts, risk-difference outputs, CIBIC selected records, ACTOT derivations and Week 24/LOCF ANCOVA outputs reconcile across the two implementations. The latest maximum R/Python ANCOVA numerical difference is **4e-14**, below the pre-specified `1e-8` tolerance.
 
 This remains a separate implementation by the same portfolio author, not review by a second independent programmer.
 
@@ -142,13 +146,30 @@ Five machine-readable contracts cover ADSL-style, ADAE-style, ACTOT, ANCOVA and 
 
 The live reviewer reconstructed randomised/safety arm denominators of **86 Placebo, 96 High Dose and 72 Low Dose**, and observed Week 24 Ns of **30 Placebo, 59 High Dose and 27 Low Dose**, with all linked TLF values reconciling.
 
-Negative-control unit tests deliberately corrupt an ADAE treatment assignment, a safety-table denominator, an MMRM source-derived `CHG`, a required dataset column and a controlled flag. The reviewer/contract validators are required to reject those defects. This is evidence that the checks can fail rather than only reporting conditions that happen to be true in the current outputs.
+Negative-control unit tests deliberately corrupt an ADAE treatment assignment, a safety-table denominator, an MMRM source-derived `CHG`, a required dataset column and a controlled flag. The reviewer/contract validators are required to reject those defects.
 
 This layer is same-author portfolio review, not formal ADaM conformance assessment, sponsor programming review or independent second-programmer sign-off.
 
+## Statistical change-control impact gate
+
+Version 0.10 adds a blocking impact-assessment layer driven by `spec/change_impact_graph.json` and `spec/change_requests.json`. A change request specifies the statistical component that changes; the dependency graph then propagates the required downstream review across analysis datasets, TLFs, QC outputs, controlled documents and machine-readable specifications.
+
+The verified live run covers **67/67 graph-required impact relationships** and resolves **67/67 required resources**, with no missing or extra declarations across four portfolio scenarios:
+
+| Scenario | Propagated components | Required impacts | Impacted TLFs |
+|---|---:|---:|---|
+| CR-001 Safety population definition | 4 | 18 | T01–T07 |
+| CR-002 TEAE follow-up window | 3 | 14 | T04–T07 |
+| CR-003 Primary ACTOT visit | 6 | 24 | T08–T12, T15 |
+| CR-004 Primary MMRM covariance | 3 | 11 | T11–T15 |
+
+For TLF impacts, the gate resolves each ID through `spec/analysis_traceability.csv` and checks that the corresponding generated TLF exists in the live run. Static documents/specifications and generated analysis/QC files must also resolve. An omitted graph-required impact, an unknown component or a dependency cycle is tested as a failure condition; conservative extra review items are allowed but reported.
+
+CR-002, CR-003 and CR-004 do **not** silently change the current 30-day TEAE definition, Week 24 analysis focus or unstructured primary MMRM. They are change-control simulations used to test downstream impact review.
+
 ## Executable SAP-to-TLF traceability
 
-The machine-readable registry covers **15 planned TLFs**. CI requires each TLF to have a planned objective/population/endpoint/method, resolvable source and analysis-dataset links, an actual output file, required columns/minimum rows, linked QC evidence and a SHA256 output identity. The verified v0.9 run retains **15/15** passing structural traceability.
+The machine-readable registry covers **15 planned TLFs**. CI requires each TLF to have a planned objective/population/endpoint/method, resolvable source and analysis-dataset links, an actual output file, required columns/minimum rows, linked QC evidence and a SHA256 output identity. The verified v0.10 run retains **15/15** passing structural traceability.
 
 ## Protocol design and sample-size exercise
 
@@ -201,10 +222,12 @@ These comparisons are exploratory and not multiplicity-adjusted.
 - `docs/protocol_summary.md` — portfolio protocol scope and analysis populations.
 - `docs/sap.md` — portfolio SAP through v0.8 analysis/randomisation scope.
 - `docs/sap_v0_9_review_addendum.md` — v0.9 controlled addendum for dataset/TLF review.
+- `docs/sap_v0_10_change_control_addendum.md` — v0.10 controlled addendum documenting change-impact governance without changing current analyses.
 - `docs/tlf_shells.md` — TLF definitions and output structure.
 - `docs/analysis_traceability.md` — executable SAP-to-TLF traceability design.
 - `docs/analysis_dataset_spec.md` — source-to-analysis mappings plus v0.9 machine-readable contracts.
 - `docs/analysis_dataset_review.md` — v0.9 reviewer rules, negative controls and CI evidence.
+- `docs/change_control_impact_assessment.md` — v0.10 dependency graph, scenarios, acceptance rules and generated evidence.
 - `docs/protocol_statistical_design.md` — protocol-design and sample-size rationale.
 - `docs/protocol_statistical_review_checklist.md` — statistical protocol review checklist.
 - `docs/randomisation_kit_schedule.md` — randomisation, blinding boundary and initial-kit schedule design/QC.
@@ -225,7 +248,8 @@ Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
 Rscript R/independent_qc.R
 Rscript R/mmrm_analysis.R
 python scripts/run_dataset_review.py
+python scripts/run_change_impact.py
 python scripts/validate_traceability.py
 ```
 
-Analysis scripts cache public inputs under `cache/`. GitHub Actions runs the same calculation and QC chain and uploads generated `outputs/` as an artifact, including reviewer diagnostics when available.
+Analysis scripts cache public inputs under `cache/`. GitHub Actions runs the same calculation and QC chain and uploads generated `outputs/` as an artifact, including reviewer and change-impact diagnostics when available.
