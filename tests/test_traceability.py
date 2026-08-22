@@ -13,6 +13,7 @@ from cdisc_portfolio.traceability import validate_traceability
 
 REGISTRY_COLUMNS = [
     "tlf_id",
+    "registry_version",
     "title",
     "objective",
     "population",
@@ -33,6 +34,7 @@ def _write_fixture(root: Path, required_columns=None):
     registry = pd.DataFrame(
         [[
             "T01",
+            "0.14.0",
             "Demographics",
             "Describe baseline",
             "Safety population",
@@ -47,15 +49,13 @@ def _write_fixture(root: Path, required_columns=None):
     )
     registry.to_csv(root / "spec" / "analysis_traceability.csv", index=False)
     (root / "spec" / "output_contracts.json").write_text(
-        json.dumps(
-            {
-                "T01": {
-                    "output_file": "outputs/table1_demographics.csv",
-                    "required_columns": required_columns,
-                    "min_rows": 1,
-                }
+        json.dumps({
+            "T01": {
+                "output_file": "outputs/table1_demographics.csv",
+                "required_columns": required_columns,
+                "min_rows": 1,
             }
-        ),
+        }),
         encoding="utf-8",
     )
     pd.DataFrame([{"USUBJID": "01"}]).to_csv(root / "outputs" / "adsl_style.csv", index=False)
@@ -68,6 +68,7 @@ def _write_fixture(root: Path, required_columns=None):
 def test_traceability_passes_complete_output_contract(tmp_path):
     _write_fixture(tmp_path)
     detail, metrics = validate_traceability(tmp_path)
+    assert metrics["analysis_version"] == "0.14.0"
     assert metrics["planned_tlfs"] == 1
     assert metrics["passed_tlfs"] == 1
     assert metrics["all_passed"] is True
@@ -86,6 +87,26 @@ def test_traceability_reports_missing_required_output_column(tmp_path):
 def test_traceability_rejects_registry_contract_id_mismatch(tmp_path):
     _write_fixture(tmp_path)
     contracts_path = tmp_path / "spec" / "output_contracts.json"
-    contracts_path.write_text(json.dumps({"T99": {"output_file": "x", "required_columns": [], "min_rows": 1}}), encoding="utf-8")
+    contracts_path.write_text(
+        json.dumps({"T99": {"output_file": "x", "required_columns": [], "min_rows": 1}}),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="Registry/contract ID mismatch"):
+        validate_traceability(tmp_path)
+
+
+def test_traceability_rejects_mixed_registry_versions(tmp_path):
+    _write_fixture(tmp_path)
+    path = tmp_path / "spec" / "analysis_traceability.csv"
+    registry = pd.read_csv(path, dtype=str)
+    second = registry.copy()
+    second.loc[0, "tlf_id"] = "T02"
+    second.loc[0, "registry_version"] = "0.13.0"
+    second.loc[0, "output_file"] = "outputs/table2.csv"
+    registry = pd.concat([registry, second], ignore_index=True)
+    registry.to_csv(path, index=False)
+    contracts = json.loads((tmp_path / "spec" / "output_contracts.json").read_text(encoding="utf-8"))
+    contracts["T02"] = {"output_file": "outputs/table2.csv", "required_columns": [], "min_rows": 1}
+    (tmp_path / "spec" / "output_contracts.json").write_text(json.dumps(contracts), encoding="utf-8")
+    with pytest.raises(ValueError, match="one non-empty registry_version"):
         validate_traceability(tmp_path)

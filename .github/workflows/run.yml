@@ -9,7 +9,7 @@ on:
 jobs:
   test-and-live-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,6 +39,7 @@ jobs:
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_sensitivity.R")); cat("rbmi_sensitivity.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_mcse_qc.R")); cat("rbmi_mcse_qc.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/rbmi_reference_based.R")); cat("rbmi_reference_based.R syntax OK\n")'
       - name: Install R analysis dependencies
         run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi"))'
       - name: Independent R reconstruction and cross-language QC
@@ -53,6 +54,8 @@ jobs:
         run: Rscript R/rbmi_sensitivity.R
       - name: ACTOT rbmi Monte Carlo precision gate
         run: Rscript R/rbmi_mcse_qc.R
+      - name: ACTOT rbmi reference-based MI gate
+        run: Rscript R/rbmi_reference_based.R
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
       - name: Statistical change-control impact gate
@@ -101,6 +104,18 @@ jobs:
           test -f outputs/rbmi_mcse_diagnostics.csv && cat outputs/rbmi_mcse_diagnostics.csv || true
           echo "--- rbmi draw diagnostics ---"
           test -f outputs/rbmi_draw_diagnostics.csv && cat outputs/rbmi_draw_diagnostics.csv || true
+          echo "--- rbmi reference-based MI summary ---"
+          test -f outputs/rbmi_reference_summary.md && cat outputs/rbmi_reference_summary.md || true
+          echo "--- rbmi reference-based MI results ---"
+          test -f outputs/table22_rbmi_reference_based.csv && cat outputs/table22_rbmi_reference_based.csv || true
+          echo "--- rbmi reference-based ICE counts ---"
+          test -f outputs/rbmi_reference_ice_counts.csv && cat outputs/rbmi_reference_ice_counts.csv || true
+          echo "--- rbmi reference-based MCSE QC ---"
+          test -f outputs/rbmi_reference_mcse_qc.csv && cat outputs/rbmi_reference_mcse_qc.csv || true
+          echo "--- rbmi reference-based QC ---"
+          test -f outputs/rbmi_reference_qc.csv && cat outputs/rbmi_reference_qc.csv || true
+          echo "--- rbmi reference-based vs v0.13 MAR diagnostic ---"
+          test -f outputs/rbmi_reference_vs_v013_mar.csv && cat outputs/rbmi_reference_vs_v013_mar.csv || true
           echo "--- rbmi vs primary MMRM diagnostic ---"
           test -f outputs/rbmi_vs_mmrm_week24.csv && cat outputs/rbmi_vs_mmrm_week24.csv || true
           echo "--- Analysis-dataset and TLF reviewer summary ---"

@@ -1,174 +1,96 @@
-# QC plan — portfolio version 0.13
+# QC plan — portfolio version 0.14
 
-The workflow separates derivation QC, public-reference validation, separate R/Python programming checks, MMRM model/data QC, estimand/missing-data review, deterministic fixed-delta sensitivity QC, subject-level multiple-imputation (MI) QC, Monte Carlo precision QC, analysis-dataset/TLF review, statistical change-impact assessment and final SAP-to-TLF traceability. Required failures exit non-zero.
+The workflow uses separate blocking QC layers for derivation, public-reference checks, R/Python replication, repeated-measures modelling, estimand/missing-data review, deterministic sensitivity, subject-level MI, reference-based MI, reviewer checks, change impact and final TLF traceability. A required failure exits non-zero.
 
-Informational discrepancies remain visible rather than being converted into arbitrary acceptance rules. Aggregate unit-test totals are not part of the controlled QC specification because the test suite can increase without changing the statistical acceptance rules.
+## QC stack
 
-## v0.13 blocking QC stack
+The current live workflow checks:
 
-The current workflow requires all of the following layers to succeed on the same commit:
-
-1. Python unit/regression tests;
-2. core Python derivation/pipeline QC;
-3. public CDISC reference validation;
-4. separate R/Python programming QC;
-5. MMRM data/model/inference QC;
+1. Python unit tests and core derivation QC;
+2. official CDISC efficacy-reference structure/source trace;
+3. protocol-design and randomisation/initial-kit QC;
+4. separate R reconstruction and R/Python comparison;
+5. ACTOT MMRM data/model/inference QC;
 6. estimand and missing-data review;
-7. deterministic fixed-delta sensitivity QC;
-8. subject-level MI model/pooling/delta-application QC;
-9. independent Monte Carlo precision QC;
-10. analysis-dataset/TLF reviewer;
-11. protocol-design QC;
-12. randomisation/initial-kit QC;
-13. statistical change-impact gate;
-14. **21-TLF** structural traceability.
+7. v0.12 deterministic fixed-delta sensitivity QC;
+8. v0.13 subject-level MI model/pooling/delta QC;
+9. independent v0.13 MI Monte Carlo precision QC;
+10. v0.14 reference-based MI ICE/model/pooling/MCSE QC;
+11. analysis-dataset/TLF reviewer;
+12. statistical change-control impact gate;
+13. versioned T01-T22 structural traceability.
 
-Documentation consistency is part of release readiness: a release candidate is not accepted from an earlier implementation-only head. The final documentation head must itself pass the complete CI workflow.
+## Reference-based MI QC
 
-## Core Python pipeline
+`R/rbmi_reference_based.R` reads the same generated ADSL-style and ACTOT analysis data used by the existing estimand and MI layers.
 
-The core checks cover ADSL-/ADAE-style keys and population flags, exposure/treatment dates, disposition, portfolio TEAE timing, CIBIC/ACTOT derivations, Week 24 analysis sets and official-reference structural/source-row agreement.
+The v0.14 required checks include:
 
-Blocking examples include:
+- installed `rbmi` version equals 1.6.1;
+- v0.13 MI base specification remains the controlled parent model;
+- target population remains 254 randomised subjects with baseline ACTOT;
+- scheduled ACTOT subject-visit rows are unique;
+- existing estimand review reports zero observed ACTOT after recorded discontinuation;
+- strategies are exactly MAR, JR, CR and CIR;
+- 200 imputations are retained;
+- every active discontinuer has usable `TRTSDT`/`EOSDT` timing;
+- actual-date post-discontinuation ACTOT count is zero (`ADT > EOSDT`);
+- observed ACTOT on/after the first affected visit used for strategy switching is zero;
+- each pairwise model returns 200 draws and remains within the 10% model-failure limit;
+- the output contains 2 comparisons × 4 strategies = 8 rows;
+- pooled estimates/inference are finite;
+- all analyses use Rubin pooling;
+- all eight rows pass `MCSE(estimate) / pooled SE <= 0.075`.
 
-- safety subjects must have observed exposure and usable treatment dates;
-- portfolio-defined TEAEs cannot occur outside the safety population or the controlled treatment-emergent window;
-- ACTOT `CHG = AVAL - BASE`;
-- observed Week 24 ANCOVA must contain one row per subject;
-- official ADQSCIBC analysis-key, `DTYPE` and selected `QSSEQ` agreement must each be 100%.
+The successful v0.14 core/formalisation runs passed **27/27** required reference-based checks. Both pairwise models had zero model-fit failures. The maximum reference-based MCSE ratio was **0.053811**.
 
-Reference `AVAL` disagreement is not automatically treated as failure when the selected public source row is the same and the source-derived value is preserved. Such differences remain in explicit source-trace outputs.
+## ICE timing guard
 
-## Separate R/Python programming QC
+The reference-based analysis deliberately has two separate timing checks.
 
-`R/independent_qc.R` starts from the same cached public DM/EX/DS/AE/QS inputs and does not call Python derivation functions. Python outputs are read only for the final comparison.
-
-Checks cover population counts, TEAE outputs, CIBIC selection/source values, ACTOT source rows/baseline/change and Week 24/LOCF ANCOVA inference. Numerical agreement is evaluated against the controlled `1e-8` tolerance.
-
-This is same-author cross-language replication, not validation by a second independent programmer.
-
-## MMRM QC
-
-`R/mmrm_analysis.R` uses observed Week 8, Week 16 and Week 24 ACTOT records; LOCF rows do not enter the repeated-measures model.
-
-Required checks cover:
-
-- planned treatment/visit levels;
-- subject-visit uniqueness;
-- exact `CHG = AVAL - BASE`;
-- within-subject baseline consistency;
-- finite likelihood for unstructured and heterogeneous AR(1) fits;
-- expected contrast cardinality;
-- finite estimate/SE/df/CI/p-value output;
-- the two primary Week 24 active-versus-placebo contrasts.
-
-Verified model input: **451 observed post-baseline records from 189 subjects**.
-
-## Estimand and missing-data review
-
-`spec/estimands.json` defines `EST-ACTOT-W24-TP` and keeps the scientific estimand separate from the primary estimator and its assumptions.
-
-The primary estimator remains the unstructured REML MMRM. MAR is a working missing-data assumption, not an estimand attribute. LOCF remains supportive only.
-
-Checks cover five-attribute completeness, treatment/visit definition, treatment-policy handling, exclusion of LOCF from the primary MMRM, target-population/visit denominator reconciliation, disposition reconciliation, exact observed-record alignment and post-discontinuation retention logic.
-
-Verified target population: **254**; Week 24 observed/missing: **116/138**. The public data contain no positive live-data example of observed ACTOT after recorded treatment discontinuation, so the retention rule is also tested with controlled fixtures.
-
-## Deterministic fixed-delta sensitivity QC
-
-`spec/mnar_sensitivity.json` controls the v0.12 fixed-delta pattern-mixture mean-shift diagnostic based on the primary Week 24 MMRM contrast and observed Week 24 missing proportions.
-
-The controlled formula is:
+The first is an actual-date estimand-alignment check:
 
 ```text
-theta_s(delta) = theta_MAR
-               + delta * (m_active * active_multiplier
-                          - m_placebo * placebo_multiplier)
+observed scheduled ACTOT with ADT > EOSDT == 0
 ```
 
-The grid is **0-6 ACTOT points by 0.5** under three pre-specified adverse scenarios. QC includes complete unique scenario definitions, valid zero-based grid, arm denominators/proportions, finite primary contrasts, the complete **78-row** scenario × contrast × delta grid, exact delta-zero reproduction of primary MMRM estimates, monotone adverse movement and analytic/grid agreement for directional tipping thresholds.
-
-T18 fixed-delta CI/p-value columns reuse primary MMRM SE/df after deterministic mean shift. They are not MI inference.
-
-## v0.13 subject-level MI QC
-
-The controlled specification is `spec/mi_sensitivity.json`. The MI stage runs separately for Low Dose versus Placebo and High Dose versus Placebo with **200 imputations** per pairwise analysis.
-
-Required MI QC includes, at minimum:
-
-- controlled specification/version and method agreement;
-- expected pairwise treatment populations and Week 8/16/24 visit grid;
-- observed values retained before imputation and missing scheduled outcomes represented as missing;
-- approximate-Bayesian `rbmi` model fit with unstructured covariance and REML;
-- maximum bootstrap-fit failure fraction not exceeding the controlled 10% limit;
-- complete imputation count for each accepted pairwise analysis;
-- Week 24 baseline-adjusted ANCOVA on each imputed data set;
-- Rubin pooling with finite pooled estimates, SEs, confidence intervals and p-values;
-- exactly two MAR active-versus-placebo comparison rows for T20;
-- complete 2 comparisons × 4 scenarios = **8 rows** for T21;
-- delta shifts applied only to outcomes originally missing at Week 24;
-- no delta shift to observed Week 24 outcomes or non-Week-24 outcomes;
-- reuse of the controlled imputation draws across MAR and delta scenarios;
-- required MI QC and diagnostic artifacts present for downstream traceability.
-
-Required evidence includes:
+The second is the visit-level condition needed before MAR/non-MAR strategy switching:
 
 ```text
-outputs/rbmi_mi_qc.csv
-outputs/rbmi_draw_diagnostics.csv
-outputs/rbmi_delta_audit.csv
-outputs/rbmi_vs_mmrm_week24.csv
+observed ACTOT on/after the first affected scheduled visit == 0
 ```
 
-The MAR MI estimates are compared with the primary MMRM diagnostically. Numerical equality is not an acceptance rule because the estimators differ.
+These checks answer different questions and neither replaces the other.
 
-## Independent Monte Carlo precision QC
+The first live v0.14 implementation used `TRTEDT` as the ICE date and failed the visit-level guard. The implementation was corrected to `EOSDT`, which is the discontinuation timing already used by the project estimand review. The guard was not removed or relaxed.
 
-Monte Carlo precision is checked separately from model fitting and Rubin pooling. For each MAR active-versus-placebo comparison, CI calculates:
+## T22 traceability evidence
 
-```text
-MCSE(estimate) / pooled SE
-```
+T22 requires all of the following in the same live run:
 
-The controlled upper bound is **7.5%**. A run can therefore fail the MCSE gate even when all imputation-model fits succeeded.
+- `outputs/table22_rbmi_reference_based.csv`;
+- `outputs/rbmi_reference_ice_audit.csv`;
+- `outputs/estimand_review.csv`;
+- `outputs/rbmi_reference_qc.csv`;
+- `outputs/rbmi_reference_mcse_qc.csv`;
+- `outputs/rbmi_reference_draw_diagnostics.csv`.
 
-Required evidence:
+The final traceability validator also checks the T22 required columns, minimum 8 rows and SHA256 output identity.
 
-```text
-outputs/rbmi_mcse_diagnostics.csv
-outputs/rbmi_mcse_qc.csv
-```
+## Change-control QC
 
-T20/T21 are not accepted as QC-complete if the required MCSE evidence is absent or the controlled MAR precision criterion fails.
+The v0.14 graph/request specifications both declare version `0.14.0`. Eight simulated requests are assessed.
 
-## Analysis-dataset/TLF reviewer
+The verified machine result is **195/195 required impact relationships declared and 195/195 required resources resolved**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
 
-The reviewer remains separate from derivation programs and checks parentage, derivation consistency, dataset contracts, population consistency, TLF denominators and TLF structure. Negative controls corrupt controlled treatment consistency, safety denominators, MMRM `CHG`, required dataset columns and controlled flags; validators must reject them.
+Important negative controls require failure when T22 or its reference-based QC evidence is omitted from an upstream change that should reach it.
 
-## Statistical change-impact gate
+## Traceability version QC
 
-The current machine-readable request set contains **seven** simulated change requests.
+`spec/analysis_traceability.csv` contains `registry_version`. Every TLF row must declare one identical non-empty version. `traceability_metrics.json` derives `analysis_version` from this field rather than a hard-coded constant.
 
-Acceptance requires:
+This rule was added after the v0.14 formalisation artifact exposed a stale historical `0.6.0` value in otherwise successful 22-TLF metrics.
 
-- graph/request versions to agree;
-- changed components to exist;
-- the dependency graph to remain acyclic;
-- every transitive required impact to be declared;
-- required static resources to resolve;
-- required generated datasets/QC outputs to exist in the same live run;
-- impacted TLFs to resolve through the current TLF registry.
+## Evidence boundary
 
-CR-006 controls deterministic fixed-delta assumptions for T18/T19. CR-007 controls MI assumptions including imputation count, longitudinal imputation model, MCSE threshold and delta scenarios for T20/T21.
-
-Regression/negative-control coverage must also protect upstream propagation. Primary ACTOT visit changes (CR-003) and treatment-discontinuation/intercurrent-event strategy changes (CR-005) must reach T20/T21 and their relevant QC/specification review.
-
-## 21-TLF structural traceability
-
-The final traceability gate validates registry/contract agreement, generated files, required columns/minimum rows, analysis-data links, QC links and SHA256 output identity for **T01-T21**.
-
-T20 requires at least **2 rows** and links to MI QC, MCSE QC and draw diagnostics. T21 requires at least **8 rows** and links to MI QC, MCSE QC and the delta audit. A final CSV alone is insufficient for traceability acceptance.
-
-## CI evidence retention
-
-GitHub Actions prints run summaries and retains `outputs/` for many downstream failure paths. This keeps reference-discrepancy traces, model diagnostics, deterministic sensitivity evidence, MI/MCSE evidence, reviewer outputs, change-impact diagnostics and traceability diagnostics available for investigation.
+These checks are portfolio QC. Same-author R/Python replication is not independent second-programmer validation, and successful reference-based MI QC is not sponsor approval of an MNAR strategy.
