@@ -98,17 +98,17 @@ def test_repository_change_requests_cover_every_graph_required_impact():
     graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
     requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
     results = assess_change_requests(graph, requests)
-    assert len(results) == 5
+    assert len(results) == 6
     assert all(result["passed"] for result in results)
     assert all(not any(result["missing"].values()) for result in results)
 
 
-def test_repository_change_control_versions_match_v011():
+def test_repository_change_control_versions_match_v012():
     graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
     requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
-    assert _matched_spec_version(graph, requests) == "0.11.0"
+    assert _matched_spec_version(graph, requests) == "0.12.0"
     broken = copy.deepcopy(requests)
-    broken["version"] = "0.10.0"
+    broken["version"] = "0.11.0"
     with pytest.raises(ValueError, match="version mismatch"):
         _matched_spec_version(graph, broken)
 
@@ -123,11 +123,32 @@ def test_repository_negative_control_detects_omitted_required_impact():
     assert result["missing"]["tlfs"] == ["T04"]
 
 
-def test_estimand_strategy_change_requires_missingness_tlfs():
+def test_estimand_strategy_change_requires_missingness_and_mnar_tlfs():
     graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
     requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
     change = copy.deepcopy(requests["changes"][4])
     change["declared_impacts"]["tlfs"].remove("T16")
+    change["declared_impacts"]["tlfs"].remove("T18")
     result = assess_change(graph, change)
     assert not result["passed"]
-    assert result["missing"]["tlfs"] == ["T16"]
+    assert result["missing"]["tlfs"] == ["T16", "T18"]
+
+
+def test_mnar_assumption_change_requires_both_sensitivity_tlfs():
+    graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
+    requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
+    change = copy.deepcopy(requests["changes"][5])
+    change["declared_impacts"]["tlfs"].remove("T19")
+    result = assess_change(graph, change)
+    assert not result["passed"]
+    assert result["missing"]["tlfs"] == ["T19"]
+
+
+def test_primary_mmrm_covariance_change_propagates_to_mnar_outputs():
+    graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
+    requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
+    result = assess_change(graph, requests["changes"][3])
+    assert result["passed"]
+    assert "T18" in result["required"]["tlfs"]
+    assert "T19" in result["required"]["tlfs"]
+    assert "outputs/mnar_sensitivity_qc.csv" in result["required"]["qc"]
