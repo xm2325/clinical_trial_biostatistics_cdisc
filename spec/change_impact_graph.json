@@ -1,0 +1,167 @@
+{
+  "version": "0.10.0",
+  "components": {
+    "safety_population_definition": {
+      "description": "Definition of the safety analysis population.",
+      "downstream": ["adsl_population_flags"],
+      "impacts": {
+        "documents": [
+          "docs/sap.md",
+          "docs/analysis_dataset_spec.md",
+          "docs/qc_plan.md",
+          "docs/tlf_shells.md",
+          "docs/independent_programming_qc.md",
+          "docs/sap_v0_9_review_addendum.md"
+        ]
+      }
+    },
+    "adsl_population_flags": {
+      "description": "Subject-level randomised/safety population flags and treatment context.",
+      "downstream": ["adae_subject_context", "safety_population_tlfs"],
+      "impacts": {
+        "analysis_datasets": ["outputs/adsl_style.csv"],
+        "qc": [
+          "outputs/qc_report.csv",
+          "outputs/r_independent_qc.csv",
+          "outputs/analysis_dataset_review.csv"
+        ]
+      }
+    },
+    "adae_subject_context": {
+      "description": "ADAE-style subject population/treatment context inherited from ADSL-style.",
+      "downstream": [],
+      "impacts": {
+        "analysis_datasets": ["outputs/adae_style.csv"]
+      }
+    },
+    "safety_population_tlfs": {
+      "description": "TLFs whose displayed population or denominator depends on the safety definition.",
+      "downstream": [],
+      "impacts": {
+        "tlfs": ["T01", "T02", "T03", "T04", "T05", "T06", "T07"]
+      }
+    },
+    "teae_followup_window": {
+      "description": "Treatment-emergent adverse-event follow-up window after treatment end.",
+      "downstream": ["adae_teae_flag"],
+      "impacts": {
+        "documents": [
+          "docs/sap.md",
+          "docs/analysis_dataset_spec.md",
+          "docs/qc_plan.md",
+          "docs/tlf_shells.md",
+          "docs/independent_programming_qc.md",
+          "docs/sap_v0_9_review_addendum.md"
+        ]
+      }
+    },
+    "adae_teae_flag": {
+      "description": "ADAE-style TRTEMFL derivation and downstream TEAE classifications.",
+      "downstream": ["teae_tlfs"],
+      "impacts": {
+        "analysis_datasets": ["outputs/adae_style.csv"],
+        "qc": [
+          "outputs/qc_report.csv",
+          "outputs/r_independent_qc.csv",
+          "outputs/analysis_dataset_review.csv"
+        ]
+      }
+    },
+    "teae_tlfs": {
+      "description": "TEAE overview, SOC/PT, severity and risk-difference outputs.",
+      "downstream": [],
+      "impacts": {
+        "tlfs": ["T04", "T05", "T06", "T07"]
+      }
+    },
+    "actot_primary_visit": {
+      "description": "Selected primary ACTOT analysis visit and corresponding primary contrast focus.",
+      "downstream": ["ancova_primary_analysis", "mmrm_primary_contrast_focus", "protocol_design_assumptions"],
+      "impacts": {
+        "documents": [
+          "docs/protocol_summary.md",
+          "docs/sap.md",
+          "docs/analysis_dataset_spec.md",
+          "docs/tlf_shells.md",
+          "docs/protocol_statistical_design.md",
+          "docs/sap_v0_9_review_addendum.md"
+        ]
+      }
+    },
+    "ancova_primary_analysis": {
+      "description": "Primary observed-case and sensitivity ANCOVA analysis-subject construction.",
+      "downstream": ["actot_primary_tlfs"],
+      "impacts": {
+        "analysis_datasets": [
+          "outputs/adqs_actot_style.csv",
+          "outputs/ancova_analysis_subjects.csv"
+        ],
+        "qc": [
+          "outputs/qc_report.csv",
+          "outputs/r_independent_qc.csv",
+          "outputs/analysis_dataset_review.csv"
+        ]
+      }
+    },
+    "actot_primary_tlfs": {
+      "description": "Primary-visit ACTOT descriptive and ANCOVA outputs plus the ANCOVA/MMRM diagnostic comparison.",
+      "downstream": [],
+      "impacts": {
+        "tlfs": ["T08", "T09", "T10", "T15"]
+      }
+    },
+    "mmrm_primary_contrast_focus": {
+      "description": "Visit-specific MMRM LS-mean and contrast reporting affected by a changed primary visit.",
+      "downstream": [],
+      "impacts": {
+        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv"],
+        "tlfs": ["T11", "T12", "T15"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv"]
+      }
+    },
+    "protocol_design_assumptions": {
+      "description": "Planning endpoint assumptions and sample-size calculations linked to the selected ACTOT visit.",
+      "downstream": ["randomisation_planned_n"],
+      "impacts": {
+        "qc": ["outputs/protocol_design_qc.csv"],
+        "documents": ["docs/protocol_statistical_design.md"],
+        "specs": ["spec/protocol_design.json"]
+      }
+    },
+    "randomisation_planned_n": {
+      "description": "Illustrative randomisation schedule count linked to the selected protocol-design scenario.",
+      "downstream": [],
+      "impacts": {
+        "qc": ["outputs/randomisation_qc.csv"],
+        "documents": ["docs/randomisation_kit_schedule.md"],
+        "specs": ["spec/randomisation_schedule.json"]
+      }
+    },
+    "mmrm_primary_covariance": {
+      "description": "Primary within-subject covariance structure for the longitudinal ACTOT MMRM.",
+      "downstream": ["mmrm_model_fit"],
+      "impacts": {
+        "documents": [
+          "docs/sap.md",
+          "docs/tlf_shells.md",
+          "docs/sap_v0_9_review_addendum.md"
+        ]
+      }
+    },
+    "mmrm_model_fit": {
+      "description": "MMRM model fit, covariance comparison and visit-specific inference.",
+      "downstream": ["mmrm_tlfs"],
+      "impacts": {
+        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv"]
+      }
+    },
+    "mmrm_tlfs": {
+      "description": "Longitudinal MMRM LS means, contrasts, covariance sensitivity, diagnostics and Week-24 comparison outputs.",
+      "downstream": [],
+      "impacts": {
+        "tlfs": ["T11", "T12", "T13", "T14", "T15"]
+      }
+    }
+  }
+}
