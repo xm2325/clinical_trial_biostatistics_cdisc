@@ -20,12 +20,20 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Unit tests
         run: pytest -q
+      - name: Profile official efficacy references
+        run: python scripts/profile_official_references.py
       - name: Run public CDISC workflow
         run: python scripts/run_all.py
       - name: Show measurable run summary
         if: always()
         run: |
           test -f outputs/analysis_run_note.md && cat outputs/analysis_run_note.md || true
+          echo "--- ADQSADAS reference profile ---"
+          test -f outputs/adqsadas_reference_profile.json && cat outputs/adqsadas_reference_profile.json || true
+          echo "--- ADQSADAS parameter counts ---"
+          test -f outputs/adqsadas_param_counts.csv && cat outputs/adqsadas_param_counts.csv || true
+          echo "--- CIBIC source/reference mismatch trace ---"
+          test -f outputs/adqscibc_mismatch_source_trace.csv && cat outputs/adqscibc_mismatch_source_trace.csv || true
           echo "--- ADQSCIBC reference comparison ---"
           test -f outputs/adqscibc_reference_metrics.csv && cat outputs/adqscibc_reference_metrics.csv || true
           echo "--- ACTOT ANCOVA contrasts ---"
