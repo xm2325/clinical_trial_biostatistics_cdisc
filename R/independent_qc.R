@@ -95,9 +95,7 @@ same_num <- function(a, b, tol = 1e-10) {
   same_na & ok
 }
 
-# -----------------------------------------------------------------------------
-# Independent safety derivation from raw DM / EX / DS / AE
-# -----------------------------------------------------------------------------
+# Independent safety derivation from raw DM / EX / DS / AE.
 dm <- read_source_csv("dm")
 ae <- read_source_csv("ae")
 ds <- read_source_csv("ds")
@@ -229,9 +227,7 @@ add_check(
   sprintf("max numeric difference=%.3g", risk_diff)
 )
 
-# -----------------------------------------------------------------------------
-# Independent efficacy derivation from official QS Dataset-JSON
-# -----------------------------------------------------------------------------
+# Independent efficacy derivation from official QS Dataset-JSON.
 qs <- read_dataset_json(file.path(cache_dir, "qs.json"))
 
 # CIBIC selected analysis records.
@@ -318,8 +314,6 @@ for (g in split(a, interaction(a$STUDYID, a$USUBJID, drop = TRUE))) {
   b <- b[order(b$ADY, b$QSSEQ_NUM), , drop = FALSE]
   base <- b$AVAL[nrow(b)]
   ablfl <- ifelse(upper_chr(g$QSBLFL) == "Y", "Y", "")
-  has_post <- any(ablfl != "" == FALSE & !is.na(g$AVAL))
-  # Equivalent to Python: any non-baseline numeric record after baseline flagging.
   has_post <- any(ablfl != "Y" & !is.na(g$AVAL))
   actot_rows[[length(actot_rows) + 1]] <- data.frame(
     STUDYID = g$STUDYID,
@@ -429,9 +423,7 @@ ancova_n_df_equal <- contrast_keys_equal && all(r_contrasts$n_total == py_contra
 add_check("R ANCOVA contrast keys/N/df match Python", ancova_n_df_equal, paste0("observed N=", nrow(obs), "; LOCF N=", nrow(locf)))
 add_check("R ANCOVA estimates/SE/CI/p match Python", contrast_keys_equal && max_ancova_diff <= 1e-8, sprintf("max numeric difference=%.3g", max_ancova_diff))
 
-# -----------------------------------------------------------------------------
 # Persist independent QC evidence and fail on required discrepancies.
-# -----------------------------------------------------------------------------
 qc <- add_check(get = TRUE)
 write.csv(qc, file.path(out_dir, "r_independent_qc.csv"), row.names = FALSE, na = "")
 write.csv(r_contrasts[, setdiff(names(r_contrasts), "key")], file.path(out_dir, "r_actot_ancova_contrasts.csv"), row.names = FALSE, na = "")
