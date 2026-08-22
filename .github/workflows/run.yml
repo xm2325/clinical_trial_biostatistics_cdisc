@@ -27,7 +27,10 @@ jobs:
 
       - uses: r-lib/actions/setup-r@v2
         with:
+          r-version: '4.6.1'
           use-public-rspm: true
+      - name: Parse R QC program
+        run: Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("R syntax OK\n")'
       - name: Install R QC dependency
         run: Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
       - name: Independent R reconstruction and cross-language QC
