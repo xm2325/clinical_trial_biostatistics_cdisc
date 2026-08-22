@@ -1,0 +1,62 @@
+{
+  "version": "0.11.0",
+  "framework": {
+    "name": "ICH E9(R1) estimand framework",
+    "reference": "https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf"
+  },
+  "evidence_boundary": "Independent portfolio estimand specification for public CDISC pilot data. It is not a sponsor-approved estimand, protocol amendment, SAP approval or regulatory position.",
+  "estimands": [
+    {
+      "id": "EST-ACTOT-W24-TP",
+      "objective": "Compare each active treatment with placebo on ACTOT change from baseline at Week 24 while retaining observed outcomes after treatment discontinuation.",
+      "treatment": {
+        "conditions": ["Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"],
+        "comparisons": ["Xanomeline Low Dose vs Placebo", "Xanomeline High Dose vs Placebo"]
+      },
+      "population": {
+        "description": "Portfolio analysis population operationalised as randomised subjects with an observed baseline ACTOT score.",
+        "operational_rule": "RANDFL=Y and baseline ACTOT observed"
+      },
+      "variable": {
+        "parameter": "ACTOT",
+        "visit": "Week 24",
+        "measure": "change_from_baseline",
+        "direction": "Lower ACTOT change is treated as more favourable in this portfolio analysis."
+      },
+      "intercurrent_events": [
+        {
+          "event": "treatment_discontinuation",
+          "strategy": "treatment_policy",
+          "operational_rule": "Retain observed Week 8, Week 16 and Week 24 ACTOT measurements regardless of recorded treatment discontinuation."
+        }
+      ],
+      "summary_measure": {
+        "type": "active_vs_placebo_difference_in_adjusted_mean_change",
+        "scale": "ACTOT points",
+        "timepoint": "Week 24"
+      },
+      "estimator": {
+        "primary": {
+          "method": "MMRM",
+          "fixed_effects": "treatment-by-visit and baseline-by-visit",
+          "covariance": "unstructured",
+          "df_method": "Satterthwaite",
+          "uses_observed_postbaseline": true,
+          "uses_locf": false,
+          "missing_data_assumption": "MAR",
+          "assumption_note": "Likelihood-based inference uses observed post-baseline ACTOT values. MAR is an estimator assumption and is not an estimand attribute."
+        },
+        "supportive_sensitivity": {
+          "method": "Week 24 ANCOVA with LOCF",
+          "uses_locf": true,
+          "role": "legacy-style sensitivity/stress test only",
+          "limitation": "LOCF is not the primary estimator and is not presented as preferred missing-data handling under ICH E9(R1)."
+        }
+      },
+      "portfolio_input_limitations": [
+        "Treatment discontinuation is the only intercurrent event operationalised in this estimand review because it is explicitly represented in the current DS-derived subject data.",
+        "Rescue medication, treatment switching and other potential intercurrent events are not inferred when they are not explicitly available in the current portfolio inputs."
+      ]
+    }
+  ]
+}
