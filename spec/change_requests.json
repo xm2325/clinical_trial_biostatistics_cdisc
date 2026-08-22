@@ -1,5 +1,5 @@
 {
-  "version": "0.11.0",
+  "version": "0.12.0",
   "evidence_boundary": "Illustrative portfolio change requests used to exercise statistical impact assessment. They are not sponsor protocol amendments, approved SAP changes or production change-control records.",
   "changes": [
     {
@@ -33,27 +33,27 @@
     {
       "change_id": "CR-003",
       "title": "Primary ACTOT visit change",
-      "description": "Illustrative change of the primary ACTOT analysis focus from Week 24 to Week 16, including planning, estimand specification and primary MMRM contrast review.",
-      "rationale": "Tests propagation from an endpoint timing change into analysis datasets, ANCOVA/MMRM displays, the estimand specification, protocol-design assumptions and the randomisation count linked to the selected planning scenario.",
+      "description": "Illustrative change of the primary ACTOT analysis focus from Week 24 to Week 16, including planning, estimand, MMRM and missing-data sensitivity review.",
+      "rationale": "Tests propagation from endpoint timing into analysis datasets, ANCOVA/MMRM displays, estimand and MNAR sensitivity specifications, protocol-design assumptions and the randomisation count linked to the planning scenario.",
       "changed_components": ["actot_primary_visit"],
       "declared_impacts": {
-        "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/ancova_analysis_subjects.csv", "outputs/mmrm_analysis_dataset.csv"],
-        "tlfs": ["T08", "T09", "T10", "T11", "T12", "T15"],
-        "qc": ["outputs/qc_report.csv", "outputs/r_independent_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/mmrm_qc.csv", "outputs/protocol_design_qc.csv", "outputs/randomisation_qc.csv"],
-        "documents": ["docs/protocol_summary.md", "docs/sap.md", "docs/analysis_dataset_spec.md", "docs/tlf_shells.md", "docs/protocol_statistical_design.md", "docs/sap_v0_9_review_addendum.md", "docs/randomisation_kit_schedule.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
-        "specs": ["spec/protocol_design.json", "spec/randomisation_schedule.json", "spec/estimands.json"]
+        "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/ancova_analysis_subjects.csv", "outputs/mmrm_analysis_dataset.csv", "outputs/mnar_sensitivity_inputs.csv"],
+        "tlfs": ["T08", "T09", "T10", "T11", "T12", "T15", "T18", "T19"],
+        "qc": ["outputs/qc_report.csv", "outputs/r_independent_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/mmrm_qc.csv", "outputs/protocol_design_qc.csv", "outputs/randomisation_qc.csv", "outputs/mnar_sensitivity_qc.csv"],
+        "documents": ["docs/protocol_summary.md", "docs/sap.md", "docs/analysis_dataset_spec.md", "docs/tlf_shells.md", "docs/protocol_statistical_design.md", "docs/sap_v0_9_review_addendum.md", "docs/randomisation_kit_schedule.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md", "docs/qc_plan.md", "docs/mnar_sensitivity.md", "docs/sap_v0_12_mnar_addendum.md"],
+        "specs": ["spec/protocol_design.json", "spec/randomisation_schedule.json", "spec/estimands.json", "spec/mnar_sensitivity.json"]
       }
     },
     {
       "change_id": "CR-004",
       "title": "Primary MMRM covariance change",
       "description": "Illustrative change of the primary longitudinal covariance structure from unstructured to heterogeneous AR(1).",
-      "rationale": "Tests whether a model-specification change reaches MMRM fit/inference QC and every TLF that reports or compares the longitudinal model.",
+      "rationale": "Tests whether a model-specification change reaches MMRM fit/inference QC, every MMRM TLF and the downstream fixed-delta sensitivity calculation that uses the primary Week 24 contrast.",
       "changed_components": ["mmrm_primary_covariance"],
       "declared_impacts": {
-        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv"],
-        "tlfs": ["T11", "T12", "T13", "T14", "T15"],
-        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv"],
+        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv", "outputs/mnar_sensitivity_inputs.csv"],
+        "tlfs": ["T11", "T12", "T13", "T14", "T15", "T18", "T19"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/mnar_sensitivity_qc.csv"],
         "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/sap_v0_9_review_addendum.md"],
         "specs": []
       }
@@ -62,14 +62,28 @@
       "change_id": "CR-005",
       "title": "Treatment-discontinuation intercurrent-event strategy change",
       "description": "Illustrative change from a treatment-policy strategy for treatment discontinuation to a hypothetical strategy.",
-      "rationale": "Tests whether changing the scientific question for a key intercurrent event reaches the estimand specification, observed-data MMRM path, longitudinal outputs, missingness review and controlled statistical documentation.",
+      "rationale": "Tests whether changing the scientific question for a key intercurrent event reaches the estimand specification, observed-data MMRM path, longitudinal outputs, missingness review and MNAR sensitivity assumptions.",
       "changed_components": ["treatment_discontinuation_strategy"],
       "declared_impacts": {
-        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv"],
-        "tlfs": ["T11", "T12", "T13", "T14", "T15", "T16", "T17"],
-        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/estimand_review.csv", "outputs/r_independent_qc.csv"],
-        "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
-        "specs": ["spec/estimands.json"]
+        "analysis_datasets": ["outputs/mmrm_analysis_dataset.csv", "outputs/mnar_sensitivity_inputs.csv"],
+        "tlfs": ["T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/analysis_dataset_review.csv", "outputs/estimand_review.csv", "outputs/r_independent_qc.csv", "outputs/mnar_sensitivity_qc.csv"],
+        "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md", "docs/mnar_sensitivity.md", "docs/sap_v0_12_mnar_addendum.md"],
+        "specs": ["spec/estimands.json", "spec/mnar_sensitivity.json"]
+      }
+    },
+    {
+      "change_id": "CR-006",
+      "title": "Fixed-delta MNAR sensitivity assumption change",
+      "description": "Illustrative change to the adverse delta range or scenario multipliers used to stress missing Week 24 ACTOT outcomes.",
+      "rationale": "Tests whether a sensitivity-analysis assumption change forces regeneration of the sensitivity inputs, T18/T19, QC evidence and controlled missing-data documentation.",
+      "changed_components": ["mnar_sensitivity_assumption"],
+      "declared_impacts": {
+        "analysis_datasets": ["outputs/mnar_sensitivity_inputs.csv"],
+        "tlfs": ["T18", "T19"],
+        "qc": ["outputs/mnar_sensitivity_qc.csv"],
+        "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/mnar_sensitivity.md", "docs/sap_v0_12_mnar_addendum.md"],
+        "specs": ["spec/mnar_sensitivity.json"]
       }
     }
   ]
