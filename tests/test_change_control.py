@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from cdisc_portfolio.change_control import (
+    _matched_spec_version,
     assess_change,
     assess_change_requests,
     required_impacts,
@@ -100,6 +101,16 @@ def test_repository_change_requests_cover_every_graph_required_impact():
     assert len(results) == 5
     assert all(result["passed"] for result in results)
     assert all(not any(result["missing"].values()) for result in results)
+
+
+def test_repository_change_control_versions_match_v011():
+    graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
+    requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
+    assert _matched_spec_version(graph, requests) == "0.11.0"
+    broken = copy.deepcopy(requests)
+    broken["version"] = "0.10.0"
+    with pytest.raises(ValueError, match="version mismatch"):
+        _matched_spec_version(graph, broken)
 
 
 def test_repository_negative_control_detects_omitted_required_impact():
