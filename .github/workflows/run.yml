@@ -26,6 +26,8 @@ jobs:
         run: python scripts/run_all.py
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
+      - name: Randomisation and kit schedule QC
+        run: python scripts/run_randomisation.py
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -52,6 +54,12 @@ jobs:
           test -f outputs/protocol_design_summary.md && cat outputs/protocol_design_summary.md || true
           echo "--- Protocol design QC ---"
           test -f outputs/protocol_design_qc.csv && cat outputs/protocol_design_qc.csv || true
+          echo "--- Randomisation and initial-kit schedule ---"
+          test -f outputs/randomisation_summary.md && cat outputs/randomisation_summary.md || true
+          echo "--- Randomisation QC ---"
+          test -f outputs/randomisation_qc.csv && cat outputs/randomisation_qc.csv || true
+          echo "--- Randomisation balance ---"
+          test -f outputs/randomisation_balance.csv && cat outputs/randomisation_balance.csv || true
           echo "--- Independent R QC summary ---"
           test -f outputs/r_independent_qc_summary.md && cat outputs/r_independent_qc_summary.md || true
           echo "--- ACTOT MMRM summary ---"
