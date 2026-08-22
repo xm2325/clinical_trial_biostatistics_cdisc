@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.7.0 — 2026-08-22
+
+- Add a machine-readable three-arm protocol-design specification for a portfolio Week 24 ACTOT change-from-baseline planning scenario.
+- Define two active-versus-placebo comparisons with two-sided family-wise alpha 0.05 and Bonferroni per-comparison alpha 0.025.
+- Add continuous-endpoint sample-size utilities, dropout inflation and achieved-power back-calculation after integer rounding.
+- Evaluate six effect/power scenarios using common planning SD 6.0 and 15% anticipated dropout.
+- Verify scenario totals from 273 to 792 randomised subjects across the six illustrative scenarios; assumptions are explicitly not claimed as the source trial design.
+- Add seven required protocol-design QC checks covering alpha reconciliation, dropout inflation, achieved power, unique scenarios, total-N reconciliation and effect/power monotonicity; verified run passes 7/7.
+- Record SHA256 of the exact machine-readable design specification used by the calculation.
+- Add `docs/protocol_statistical_design.md` and a protocol statistical-review checklist covering design, endpoints, estimand components, multiplicity, sample size, populations, models, safety, programming implications and DSMB/interim-analysis boundaries.
+- Update the SAP and README to portfolio version 0.7 with the verified protocol-design outputs and current analysis/QC evidence.
+- Expand Python unit tests to 19 while retaining 24/24 Python pipeline QC, 16/16 R/Python programming QC, 11/11 MMRM QC and 15/15 SAP-to-TLF structural traceability.
+
+## 0.6.0 — 2026-08-22
+
+- Add a machine-readable SAP-to-TLF registry for 15 planned outputs spanning safety, ANCOVA and longitudinal MMRM analyses.
+- Add executable output contracts checking required files, minimum row counts and required columns.
+- Require every planned TLF to resolve to its analysis dataset(s) and QC evidence.
+- Record SHA256 identity for every generated TLF output.
+- Add an independent CI gate that validates the final generated artifacts rather than only checking static specifications.
+- Detect and correct a real T08 specification mismatch (`chg_mean` versus the generated `change_mean`) without weakening the validation rule; the final T08 contract also requires baseline, Week 24 and change mean/SD fields.
+- Verify 15/15 planned TLFs, 15/15 output files, 15/15 output contracts, 15/15 analysis-dataset links and 15/15 QC-evidence links.
+- Add `docs/analysis_traceability.md` and extend the CI artifact summary with traceability detail.
+
 ## 0.5.0 — 2026-08-22
 
 - Add an observed-data ACTOT longitudinal MMRM using Week 8, Week 16 and Week 24 change from baseline; LOCF values are not used in the repeated-measures model.
@@ -33,15 +57,15 @@
 
 ## 0.3.0 — 2026-08-22
 
-- Add pinned official CDISC QS Dataset-JSON input with 121,749 records.
-- Add official `ADQSCIBC` and `ADQSADAS` Dataset-JSON reference inputs.
+- Add pinned public CDISC QS Dataset-JSON input with 121,749 records.
+- Add public `ADQSCIBC` and `ADQSADAS` Dataset-JSON reference inputs.
 - Derive 705 CIBIC+ analysis records with Week 8/16/24 analysis windows and LOCF.
-- Reproduce 100% of official ADQSCIBC analysis keys, source `QSSEQ` values and `DTYPE` classifications.
-- Add source tracing for ten ADQSCIBC reference-value differences; all ten portfolio values match their selected official QS source records.
-- Profile official ADQSADAS: 12,463 rows, 254 subjects and 15 ADAS-Cog parameters.
+- Reproduce 100% of public ADQSCIBC analysis keys, source `QSSEQ` values and `DTYPE` classifications.
+- Add source tracing for ten ADQSCIBC reference-value differences; all ten portfolio values match their selected public QS source records.
+- Profile public ADQSADAS: 12,463 rows, 254 subjects and 15 ADAS-Cog parameters.
 - Add ACTOT baseline/change derivation, descriptive outputs, Week 24 ANCOVA and LOCF sensitivity analysis.
-- Reconstruct all 1,016 official selected ACTOT (`ANL01FL=Y`) keys with 100% `QSSEQ` and `DTYPE` agreement.
-- Add a separate 11-item ADAS-Cog total recalculation diagnostic without replacing the official source ACTOT values.
+- Reconstruct all 1,016 public selected ACTOT (`ANL01FL=Y`) keys with 100% `QSSEQ` and `DTYPE` agreement.
+- Add a separate 11-item ADAS-Cog total recalculation diagnostic without replacing the public source ACTOT values.
 - Split structural/source reference checks from informational value-agreement metrics when the public source and public reference disagree.
 - Expand unit tests to 10 and required pipeline QC to 24 checks.
 - Add a pre-analysis reference profiler to GitHub Actions so discrepancies remain inspectable even when the main workflow fails.
