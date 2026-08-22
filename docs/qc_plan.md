@@ -1,6 +1,6 @@
-# QC plan
+# QC plan — portfolio version 0.5
 
-The workflow distinguishes **required** QC checks from informational checks. `metrics.json` reports required Python-pipeline status, while `manifest.json` records `qc_all_passed`. `scripts/run_all.py` exits non-zero when required pipeline QC fails. The official-reference profiler has separate structural/source gates. Version 0.4 adds a second-language R implementation with its own required cross-language checks.
+The workflow separates four validation layers: **Python pipeline QC**, **official-reference validation**, **R/Python cross-language programming QC**, and **MMRM data/model QC**. A required failure exits non-zero. Informational discrepancies remain visible rather than being converted into pass/fail rules without justification.
 
 ## Python safety required checks
 
@@ -32,7 +32,7 @@ The workflow distinguishes **required** QC checks from informational checks. `me
 23. Official ADQSCIBC `QSSEQ` source-row agreement is exactly 100%.
 24. The pipeline records ADQSCIBC reference-value agreement and its mismatch trace without changing source-derived values.
 
-The verified v0.4 live run retains **24/24 required Python pipeline checks**.
+The verified v0.5 live run retains **24/24 required Python pipeline checks** and **10/10 Python unit tests**.
 
 ## Independent R/Python required checks
 
@@ -57,55 +57,66 @@ The following 16 checks are required:
 15. R ANCOVA contrast keys, analysis N and residual df equal Python.
 16. R ANCOVA estimates, standard errors, 95% confidence limits, p-values and baseline reference values agree with Python within `1e-8`.
 
-The verified live run passes **16/16**. Key measured results are:
+The verified v0.5 run passes **16/16**. Measured results include R/Python equality for 254 randomised subjects, 254 safety subjects, 110 completed subjects, 217 subjects with TEAE, 1,116 TEAE events, 705 CIBIC selected rows and 818 ACTOT source rows. The maximum ANCOVA numerical difference is `7.11e-15`.
 
-- randomised subjects: R 254, Python 254;
-- safety subjects: R 254, Python 254;
-- completed subjects: R 110, Python 110;
-- subjects with TEAE: R 217, Python 217;
-- TEAE events: R 1,116, Python 1,116;
-- DS exposure-end fallback subjects: R 2, Python 2;
-- risk-difference table maximum numeric difference: 0;
-- CIBIC selected rows: R 705, Python 705, with exact key/`QSSEQ`/`DTYPE`/source-value agreement;
-- ACTOT source rows: R 818, Python 818, with exact key/`AVAL`/`BASE`/`CHG`/flag agreement;
-- observed Week 24 ANCOVA N: R 116, Python 116;
-- LOCF ANCOVA N: R 235, Python 235;
-- maximum ANCOVA numeric difference: `7.11e-15`.
+This is a second implementation by the same portfolio author, not independent validation by a second human programmer.
 
-The R step also records R version, package version and `sessionInfo()`. GitHub Actions parses the R program before running it. Any failed required R check causes the workflow to fail.
+## MMRM required checks
 
-This provides cross-language implementation evidence, but it is not labelled as independent validation by a second human programmer.
+`R/mmrm_analysis.R` fits the v0.5 ACTOT longitudinal analysis after the Python derivation and independent R QC steps. MMRM inputs are observed Week 8, Week 16 and Week 24 ACTOT records only; LOCF values do not enter the model.
+
+The following 11 checks are required:
+
+1. all three planned treatment arms are present;
+2. Week 8, Week 16 and Week 24 are present;
+3. the covariance visit variable is an R factor;
+4. `USUBJID + AVISIT` is unique;
+5. `CHG = AVAL - BASE` within `1e-12`;
+6. `BASE` is constant within subject within `1e-12`;
+7. the primary unstructured MMRM returns a finite log likelihood;
+8. the heterogeneous AR(1) sensitivity MMRM returns a finite log likelihood;
+9. the primary fit produces exactly six active-versus-placebo visit contrasts;
+10. primary estimates, standard errors, df, confidence limits and p-values are finite;
+11. the primary fit produces exactly two Week 24 active-versus-placebo contrasts.
+
+The verified v0.5 run passes **11/11**. The checked input contains 451 observed post-baseline records from 189 subjects, with Week 8=189, Week 16=146 and Week 24=116. Both covariance fits use the L-BFGS-B optimiser and return finite model criteria.
+
+A model fit is not accepted merely because an R object is returned: the workflow separately checks finite likelihood, expected contrast cardinality and finite inferential quantities.
 
 ## Official-reference profiler hard gates
 
-`scripts/profile_official_references.py` runs before the main analysis in CI and checks two reference workflows.
+`scripts/profile_official_references.py` runs before the main analysis in CI.
 
 ### ADQSCIBC
 
-- reference analysis-key coverage must be 100%;
-- `DTYPE` agreement must be 100%;
-- `QSSEQ` agreement must be 100%;
-- if `AVAL` differs from the public reference, the portfolio `AVAL` must equal `QSSTRESN` from the selected official QS source row.
+Required:
+- reference analysis-key coverage = 100%;
+- `DTYPE` agreement = 100%;
+- `QSSEQ` agreement = 100%;
+- when `AVAL` differs from the public reference, the portfolio `AVAL` must equal `QSSTRESN` from the selected official QS source row.
 
-The verified run has 705/705 reference analysis keys, 100% `DTYPE`, 100% `QSSEQ` and 98.58% `AVAL` agreement. The ten value differences all satisfy the source-trace requirement.
+Verified: 705/705 analysis keys, 100% `DTYPE`, 100% `QSSEQ`, 98.58% `AVAL` agreement. All ten value differences satisfy the source-trace requirement.
 
 ### ADQSADAS / ACTOT
 
-For official `ACTOT` rows with `ANL01FL=Y`:
+For official `ACTOT` rows with `ANL01FL=Y`, selected `USUBJID + AVISIT` key coverage, `DTYPE` and selected `QSSEQ` must each agree at 100%.
 
-- selected `USUBJID + AVISIT` key coverage must be 100%;
-- `DTYPE` agreement must be 100%;
-- selected `QSSEQ` agreement must be 100%.
+Verified: all 1,016 selected ACTOT analysis keys are reconstructed with exact `DTYPE` and `QSSEQ` agreement.
 
-The official reference contains 1,016 selected ACTOT analysis records and the portfolio reconstructs all 1,016 keys with exact `DTYPE` and `QSSEQ` agreement.
+## Informational checks and retained diagnostics
 
-## Informational checks and metrics
-
+Informational items include:
 - AE records with missing start dates;
 - treatment-end fallback use and DS disposition fallback count;
 - ADQSCIBC `AVAL` agreement rate and full mismatch source trace;
 - ADQSADAS `AVAL`, `BASE` and `CHG` agreement rates;
 - item-recomputed ADAS-Cog(11) total comparison with official selected ACTOT rows;
-- R version, `jsonlite` version and complete R session information.
+- R/package/session information;
+- MMRM log likelihood, AIC and BIC for both covariance structures;
+- MMRM-versus-observed-Week-24-ANCOVA estimate differences.
 
-A reference-value mismatch is not automatically a derivation failure when the selected source row is identical and the portfolio value matches the official source. In that case the discrepancy is kept in an audit output instead of being silently changed.
+A reference-value mismatch is not automatically a derivation failure when the selected source row is identical and the portfolio value matches that source. Likewise, a difference between MMRM and Week 24 ANCOVA estimates is not automatically a failure because the analyses use different data structures. Both types of difference are preserved in audit outputs.
+
+## CI evidence retention
+
+GitHub Actions prints the main Python, R and MMRM summaries and uploads the `outputs/` directory even when a downstream analysis step fails where possible. This is intended to make failures diagnosable from retained source-reference traces, QC tables, model diagnostics and analysis summaries.

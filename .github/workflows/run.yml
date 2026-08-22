@@ -9,7 +9,7 @@ on:
 jobs:
   test-and-live-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,12 +29,16 @@ jobs:
         with:
           r-version: '4.6.1'
           use-public-rspm: true
-      - name: Parse R QC program
-        run: Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("R syntax OK\n")'
-      - name: Install R QC dependency
-        run: Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
+      - name: Parse R programs
+        run: |
+          Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
+      - name: Install R analysis dependencies
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
       - name: Independent R reconstruction and cross-language QC
         run: Rscript R/independent_qc.R
+      - name: ACTOT longitudinal MMRM
+        run: Rscript R/mmrm_analysis.R
 
       - name: Show measurable run summary
         if: always()
@@ -42,22 +46,28 @@ jobs:
           test -f outputs/analysis_run_note.md && cat outputs/analysis_run_note.md || true
           echo "--- Independent R QC summary ---"
           test -f outputs/r_independent_qc_summary.md && cat outputs/r_independent_qc_summary.md || true
+          echo "--- ACTOT MMRM summary ---"
+          test -f outputs/mmrm_run_summary.md && cat outputs/mmrm_run_summary.md || true
+          echo "--- MMRM QC ---"
+          test -f outputs/mmrm_qc.csv && cat outputs/mmrm_qc.csv || true
+          echo "--- MMRM model diagnostics ---"
+          test -f outputs/mmrm_model_diagnostics.csv && cat outputs/mmrm_model_diagnostics.csv || true
+          echo "--- MMRM primary contrasts ---"
+          test -f outputs/mmrm_treatment_contrasts.csv && cat outputs/mmrm_treatment_contrasts.csv || true
+          echo "--- MMRM covariance sensitivity ---"
+          test -f outputs/mmrm_covariance_sensitivity.csv && cat outputs/mmrm_covariance_sensitivity.csv || true
+          echo "--- MMRM vs observed Week 24 ANCOVA ---"
+          test -f outputs/mmrm_vs_week24_ancova.csv && cat outputs/mmrm_vs_week24_ancova.csv || true
           echo "--- Independent R QC checks ---"
           test -f outputs/r_independent_qc.csv && cat outputs/r_independent_qc.csv || true
           echo "--- R ACTOT ANCOVA contrasts ---"
           test -f outputs/r_actot_ancova_contrasts.csv && cat outputs/r_actot_ancova_contrasts.csv || true
           echo "--- ADQSADAS reference profile ---"
           test -f outputs/adqsadas_reference_profile.json && cat outputs/adqsadas_reference_profile.json || true
-          echo "--- ADQSADAS parameter counts ---"
-          test -f outputs/adqsadas_param_counts.csv && cat outputs/adqsadas_param_counts.csv || true
           echo "--- CIBIC source/reference mismatch trace ---"
           test -f outputs/adqscibc_mismatch_source_trace.csv && cat outputs/adqscibc_mismatch_source_trace.csv || true
-          echo "--- ADQSCIBC reference comparison ---"
-          test -f outputs/adqscibc_reference_metrics.csv && cat outputs/adqscibc_reference_metrics.csv || true
           echo "--- Python ACTOT ANCOVA contrasts ---"
           test -f outputs/table10_actot_ancova_contrasts.csv && cat outputs/table10_actot_ancova_contrasts.csv || true
-          echo "--- Python TEAE risk differences ---"
-          test -f outputs/table7_teae_risk_difference.csv && cat outputs/table7_teae_risk_difference.csv || true
           echo "--- Python QC ---"
           test -f outputs/qc_report.csv && cat outputs/qc_report.csv || true
       - uses: actions/upload-artifact@v4
