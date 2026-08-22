@@ -1,0 +1,49 @@
+{
+  "version": "0.12.0",
+  "method": "fixed_delta_pattern_mixture_mean_shift",
+  "evidence_boundary": "Portfolio sensitivity diagnostic only. This is not sponsor-approved MNAR multiple imputation, reference-based imputation or a regulatory tipping-point analysis.",
+  "endpoint": {
+    "parameter": "ACTOT",
+    "visit": "Week 24",
+    "measure": "change_from_baseline",
+    "scale_direction": "lower_better"
+  },
+  "reference_analysis": {
+    "method": "MMRM",
+    "covariance": "Unstructured",
+    "missing_data_assumption": "MAR",
+    "contrast_source": "outputs/mmrm_treatment_contrasts.csv",
+    "missingness_source": "outputs/table16_actot_missingness_by_visit.csv"
+  },
+  "delta_grid": {
+    "start": 0.0,
+    "stop": 6.0,
+    "step": 0.5,
+    "units": "ACTOT points"
+  },
+  "scenarios": [
+    {
+      "id": "COMMON_WORSENING",
+      "label": "Same positive delta applied to missing outcomes in every arm",
+      "active_multiplier": 1.0,
+      "placebo_multiplier": 1.0
+    },
+    {
+      "id": "ACTIVE_ONLY_WORSENING",
+      "label": "Positive delta applied only to missing active-arm outcomes",
+      "active_multiplier": 1.0,
+      "placebo_multiplier": 0.0
+    },
+    {
+      "id": "DIVERGENT_WORSENING",
+      "label": "Active missing outcomes worsen by delta while placebo missing outcomes improve by delta",
+      "active_multiplier": 1.0,
+      "placebo_multiplier": -1.0
+    }
+  ],
+  "tipping_definition": {
+    "primary": "effect_direction_crosses_zero",
+    "alpha": 0.05,
+    "significance_note": "Primary Week 24 MMRM contrasts are already non-significant at delta=0, so loss-of-significance tipping is not a meaningful primary threshold."
+  }
+}
