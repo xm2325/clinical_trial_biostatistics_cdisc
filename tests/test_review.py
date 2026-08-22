@@ -6,6 +6,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cdisc_portfolio.contracts import validate_dataset_contract
 from cdisc_portfolio.review import (
     check_adae_adsl_consistency,
     check_mmrm_source_consistency,
@@ -92,3 +93,32 @@ def test_mmrm_review_detects_source_value_corruption():
     passed, detail = check_mmrm_source_consistency(adqs, mmrm)
     assert not passed
     assert "numeric field mismatches=1" in detail
+
+
+def test_dataset_contract_detects_missing_required_column_and_invalid_flag():
+    frame = pd.DataFrame(
+        {
+            "STUDYID": ["S1"],
+            "USUBJID": ["01"],
+            "RANDFL": ["MAYBE"],
+        }
+    )
+    missing_contract = {
+        "key": ["STUDYID", "USUBJID"],
+        "required_columns": ["STUDYID", "USUBJID", "TRT01A", "RANDFL"],
+        "non_missing": ["STUDYID", "USUBJID", "TRT01A", "RANDFL"],
+        "controlled_values": {"RANDFL": {"values": ["Y", "N"], "allow_blank": False}},
+    }
+    passed, detail = validate_dataset_contract(frame, missing_contract)
+    assert not passed
+    assert "missing columns=['TRT01A']" in detail
+
+    invalid_flag_contract = {
+        "key": ["STUDYID", "USUBJID"],
+        "required_columns": ["STUDYID", "USUBJID", "RANDFL"],
+        "non_missing": ["STUDYID", "USUBJID", "RANDFL"],
+        "controlled_values": {"RANDFL": {"values": ["Y", "N"], "allow_blank": False}},
+    }
+    passed, detail = validate_dataset_contract(frame, invalid_flag_contract)
+    assert not passed
+    assert "controlled-value violations=1" in detail
