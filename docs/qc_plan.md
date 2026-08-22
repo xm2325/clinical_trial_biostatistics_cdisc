@@ -1,108 +1,137 @@
-# QC plan — portfolio version 0.11
+# QC plan — portfolio version 0.12
 
-The workflow separates required validation layers for Python derivation, official-reference checks, independent R/Python programming QC, MMRM data/model QC, ACTOT estimand/missing-data review, analysis-dataset/TLF review, statistical change-impact assessment and SAP-to-TLF traceability. Required failures exit non-zero. Informational discrepancies remain visible rather than being converted into pass/fail rules without justification.
+The workflow separates derivation QC, official-reference validation, separate R/Python programming checks, MMRM model/data QC, estimand/missing-data review, fixed-delta sensitivity QC, analysis-dataset/TLF review, statistical change-impact assessment and final SAP-to-TLF traceability. Required failures exit non-zero.
 
-## Python safety and efficacy pipeline
+Informational discrepancies remain visible rather than being converted into arbitrary acceptance rules.
 
-The core Python pipeline retains **24 required checks** covering ADSL-/ADAE-style keys and population flags, exposure dates, disposition, TEAE timing, ADQSCIBC/ACTOT derivations, Week 24 analysis sets and official-reference key/source-row agreement.
+## Verified v0.12 QC stack
 
-Key hard conditions include:
-- all safety subjects have observed exposure and usable treatment dates;
-- no portfolio-defined TEAE occurs outside the safety population or outside the 30-day treatment-emergent window;
+| Layer | Verified result |
+|---|---:|
+| Python unit tests | **57/57 passed** |
+| Core Python pipeline QC | **24/24 passed** |
+| Separate R/Python programming QC | **16/16 passed** |
+| MMRM data/model QC | **11/11 passed** |
+| Estimand/missing-data review | **21/21 passed** |
+| Fixed-delta sensitivity QC | **19/19 passed** |
+| Analysis-dataset/TLF reviewer | **24/24 passed** |
+| Protocol-design QC | **7/7 passed** |
+| Randomisation/initial-kit QC | **10/10 passed** |
+| Structural TLF traceability | **19/19 passed** |
+| Change-impact relationships | **118/118 covered and resolved** |
+
+## Core Python pipeline
+
+The 24 required checks cover ADSL-/ADAE-style keys and population flags, exposure/treatment dates, disposition, portfolio TEAE timing, CIBIC/ACTOT derivations, Week 24 analysis sets and official-reference structural/source-row agreement.
+
+Examples of blocking conditions:
+
+- safety subjects must have observed exposure and usable treatment dates;
+- portfolio-defined TEAEs cannot occur outside the safety population or the controlled treatment-emergent window;
 - ACTOT `CHG = AVAL - BASE`;
-- observed Week 24 ANCOVA has one row per subject;
-- official ADQSCIBC key, `DTYPE` and selected `QSSEQ` agreement are each 100%.
+- observed Week 24 ANCOVA must contain one row per subject;
+- official ADQSCIBC analysis-key, `DTYPE` and selected `QSSEQ` agreement must each be 100%.
 
-The v0.11 first-pass live run retained **24/24 required Python pipeline checks**.
+Reference `AVAL` disagreement is not automatically treated as failure when the selected public source row is the same and the source-derived value is preserved. Such differences are retained in explicit source-trace outputs.
 
-## Unit tests and negative controls
+## Separate R/Python programming QC
 
-Version 0.11 adds tests for the estimand and missing-data layer as well as a regression test for matching change-control specification versions. The final-head target is **49 unit tests**.
+`R/independent_qc.R` starts from the same cached public DM/EX/DS/AE/QS inputs and does not call Python derivation functions. Python outputs are read only for the final comparison.
 
-Negative controls include deliberately:
-- using LOCF as the primary estimand estimator;
-- removing an observed post-discontinuation ACTOT record from an MMRM fixture;
-- corrupting a missingness denominator;
-- omitting a graph-required TLF from a change request;
-- supplying unknown or cyclic change-impact dependencies;
-- mismatching graph/request specification versions;
-- corrupting analysis-dataset treatment, derivation, metadata or TLF denominators.
+The 16 required checks cover population counts, TEAE outputs, CIBIC selection/source values, ACTOT source rows/baseline/change and Week 24/LOCF ANCOVA inference. The verified maximum R/Python ANCOVA numerical difference is **4e-14**, below the controlled `1e-8` tolerance.
 
-Each injected defect is required to fail its corresponding validator.
+This is same-author cross-language replication, not independent validation by a second programmer.
 
-## Independent R/Python programming QC
+## MMRM QC
 
-`R/independent_qc.R` starts from the same cached public DM, EX, DS, AE and QS inputs and does not call Python derivation functions. Python outputs are read only for the final comparison.
+`R/mmrm_analysis.R` uses observed Week 8, Week 16 and Week 24 ACTOT records; LOCF rows do not enter the repeated-measures model.
 
-The **16 required checks** cover population counts, TEAE counts/risk differences, CIBIC selection and values, ACTOT source rows/baseline/change, and Week 24/LOCF ANCOVA estimates. The v0.11 first-pass live run retained **16/16** checks, with maximum R/Python ANCOVA numerical difference `4e-14`, below the pre-specified `1e-8` tolerance.
+The 11 required checks cover:
 
-This is a second implementation by the same portfolio author, not independent validation by a second human programmer.
+- all planned treatment/visit levels;
+- subject-visit uniqueness;
+- exact `CHG = AVAL - BASE`;
+- within-subject baseline consistency;
+- finite likelihood for unstructured and heterogeneous AR(1) fits;
+- expected primary contrast cardinality;
+- finite estimate/SE/df/CI/p-value output;
+- two primary Week 24 active-versus-placebo contrasts.
 
-## MMRM required checks
+Verified input: **451 observed post-baseline records / 189 subjects**.
 
-`R/mmrm_analysis.R` uses observed Week 8, Week 16 and Week 24 ACTOT records; LOCF values do not enter the primary model. Eleven hard checks cover planned treatment/visit levels, subject-visit uniqueness, `CHG`/`BASE` consistency, finite likelihood for unstructured and heterogeneous AR(1) covariance models, expected contrast cardinality and finite inference.
+## Estimand and missing-data review
 
-The v0.11 first-pass live run retained **11/11** checks on 451 observed post-baseline records from 189 subjects (Week 8=189, Week 16=146, Week 24=116).
+`spec/estimands.json` defines `EST-ACTOT-W24-TP` and separates the scientific estimand from the primary estimator and its assumptions.
 
-## ACTOT estimand and missing-data review
+The primary estimator remains the unstructured REML MMRM. MAR is a working missing-data assumption, not an estimand attribute. LOCF remains supportive only.
 
-The v0.11 gate is driven by `spec/estimands.json` and executes after MMRM generation. It separates the five ICH E9(R1)-style estimand attributes from estimator assumptions.
+The 21 required checks cover five-attribute completeness, treatment/visit definition, treatment-policy handling, no LOCF in the primary model, target-population/visit denominator reconciliation, disposition reconciliation, exact observed-record alignment and post-discontinuation retention logic.
 
-Portfolio estimand `EST-ACTOT-W24-TP` specifies:
-- treatment: three portfolio arms, each active arm compared with placebo;
-- population: randomised subjects with an observed baseline ACTOT score;
-- variable: ACTOT change from baseline at Week 24;
-- intercurrent event: treatment discontinuation, handled with a treatment-policy strategy;
-- population-level summary: active-versus-placebo difference in adjusted mean change.
+Verified target population: **254**; Week 24 observed/missing: **116/138**. The current public data contain **0 observed ACTOT arm-visit records after recorded treatment discontinuation**; the retention rule is therefore unit-tested with fixtures but has no positive live-data example.
 
-The primary estimator remains observed-data REML MMRM with unstructured covariance and Satterthwaite df. `MAR` is recorded as a working estimator assumption, not an estimand attribute. The existing LOCF Week 24 ANCOVA remains a supportive legacy-style stress test only.
+## v0.12 fixed-delta sensitivity QC
 
-The v0.11 first-pass live run passed **21/21 required estimand/missing-data checks**. In the public data, the target population is 254 subjects; Week 24 has 116 observed and 138 missing ACTOT values (**54.3% missing**). No observed arm-visit ACTOT records were identified after recorded treatment discontinuation in this public run (`0`). Therefore the treatment-policy retention rule is executable and negative-control tested, but the live dataset does not provide a positive post-discontinuation retention example.
+`spec/mnar_sensitivity.json` controls a fixed-delta pattern-mixture mean-shift diagnostic based on the primary Week 24 MMRM contrast and observed Week 24 missing proportions.
 
-T16 and T17 add descriptive evidence:
-- T16 reconciles observed/missing counts for all 3 arms × 3 visits and decomposes missingness by whether recorded discontinuation occurred before/on the nominal visit;
-- T17 reports the recorded disposition context among target-population subjects missing Week 24 ACTOT.
+The controlled formula is:
 
-These tables describe the observed dataset. They do not establish that MAR is true or identify an unobserved MNAR mechanism.
+```text
+theta_s(delta) = theta_MAR
+               + delta * (m_active * active_multiplier
+                          - m_placebo * placebo_multiplier)
+```
 
-## Analysis-dataset and TLF reviewer gate
+The grid is **0–6 ACTOT points by 0.5** under three pre-specified adverse scenarios.
 
-The v0.9+ reviewer remains separate from the derivation programs and checks generated analysis datasets and TLF denominators. The v0.11 first-pass run retained **24/24 required reviewer checks** across ADSL-style, ADAE-style, ACTOT, ANCOVA and MMRM outputs, with SHA256 identities for reviewed files.
+The **19 required checks** include:
 
-## Statistical change-control impact gate
+1. version/method/endpoint/reference-analysis consistency;
+2. complete unique scenario definitions and numeric multipliers;
+3. valid zero-based delta grid;
+4. all three Week 24 arm denominators and proportions;
+5. both finite primary Week 24 MMRM contrasts;
+6. complete **78-row** scenario × contrast × delta grid;
+7. exact delta-zero reproduction of primary MMRM estimates to `1e-12`;
+8. positive adverse shift coefficients for the current configured scenarios;
+9. monotone movement under increasing adverse delta;
+10. finite positive analytic directional tipping deltas;
+11. grid bracketing of each analytic threshold within one 0.5-point step;
+12. correct `not applicable` loss-of-significance status because current primary p-values are already >=0.05.
 
-Version 0.11 extends the dependency graph to estimand/missingness governance. The graph and change-request specifications must now declare the same version; a mismatch is a hard failure.
+Verified directional tipping deltas:
 
-Five illustrative portfolio scenarios are assessed:
+| Scenario | Low Dose vs Placebo | High Dose vs Placebo |
+|---|---:|---:|
+| Common worsening | 3.985 | 3.442 |
+| Active-only worsening | 2.244 | 1.589 |
+| Divergent worsening | 1.562 | 1.033 |
 
-| Change | Propagated components | Required impacts | TLF scope |
-|---|---:|---:|---|
-| CR-001 safety population definition | 4 | 18 | T01–T07 |
-| CR-002 TEAE follow-up window | 3 | 14 | T04–T07 |
-| CR-003 primary ACTOT visit | 6 | 27 | T08–T12, T15 |
-| CR-004 primary MMRM covariance | 3 | 11 | T11–T15 |
-| CR-005 treatment-discontinuation strategy | 4 | 18 | T11–T17 |
+All six thresholds lie inside the controlled grid.
 
-The v0.11 first-pass live run covered **88/88 graph-required impact declarations** and resolved **88/88 required resources**, with zero missing and zero extra declarations.
+T18 fixed-delta confidence intervals reuse the primary MMRM SE/df after deterministic mean shift. They do not include MI model/delta uncertainty and are not Rubin's-rules inference.
 
-CR-005 is hypothetical: it tests the impact of changing treatment discontinuation from treatment-policy to hypothetical strategy. It does **not** change the current analysed estimand or MMRM.
+## Analysis-dataset/TLF reviewer
 
-## SAP-to-TLF traceability
+The reviewer remains separate from the derivation programs and checks parentage, derivation consistency, dataset contracts, population consistency, TLF denominators and TLF structure. The verified v0.12 run retains **24/24** reviewer checks.
 
-The machine-readable registry now contains **17 planned TLFs**. T16 and T17 are linked to the v0.11 estimand review evidence. The v0.11 first-pass live run passed **17/17** output existence, output-contract, analysis-dataset-link and QC-evidence checks.
+Existing negative controls corrupt treatment consistency, safety denominators, MMRM `CHG`, a required dataset column and a controlled flag; validators must reject them.
 
-Structural traceability supplements rather than replaces analysis-specific statistical QC.
+## Statistical change-impact gate
 
-## Official-reference profiler
+The v0.12 graph/request specifications must both declare `0.12.0`. Six simulated requests cover **118/118 required impact relationships** and **118/118 resolved resources**.
 
-Required hard gates retain 100% selected-key/`DTYPE`/`QSSEQ` agreement for the official CIBIC/ACTOT reference comparisons where specified. Reference-value mismatches are retained with source-row traces rather than overwritten.
+New negative controls require failure when:
 
-Verified public reference results retained in v0.11 include 705 CIBIC selected rows and 1,016 selected ACTOT analysis keys.
+- treatment-discontinuation strategy review omits a missingness or MNAR TLF;
+- direct sensitivity-assumption change omits T19;
+- primary MMRM covariance changes do not propagate to T18/T19 and sensitivity QC;
+- graph/request versions disagree;
+- an unknown or cyclic dependency is introduced.
 
-## Informational diagnostics
+## 19-TLF structural traceability
 
-Informational evidence includes AE missing start dates, treatment-end fallbacks, official-reference value mismatch traces, model fit diagnostics, covariance sensitivity, MMRM-versus-ANCOVA differences, missingness patterns/disposition context and conservative extra change-impact declarations if present.
+The final traceability gate validates registry/contract agreement, generated files, required columns/minimum rows, analysis-data links, QC links and SHA256 output identity for T01–T19. The verified v0.12 run passes **19/19**.
 
 ## CI evidence retention
 
-GitHub Actions prints Python, R, MMRM, estimand/missingness, reviewer, change-control and traceability summaries and uploads `outputs/` even when a downstream analysis step fails where possible. This keeps the evidence needed to investigate a failed gate rather than hiding it behind a single pass/fail status.
+GitHub Actions prints the main run summaries and uploads `outputs/` even for many downstream failures. This preserves reference-discrepancy traces, model diagnostics, sensitivity QC, reviewer evidence and change-impact diagnostics for investigation.
