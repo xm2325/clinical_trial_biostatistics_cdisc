@@ -23,6 +23,7 @@ CDISC_BASE = (
 OFFICIAL_JSON_URLS = {
     "qs": f"{CDISC_BASE}/tabulations/sdtm/qs.json",
     "adqscibc_reference": f"{CDISC_BASE}/analysis/adam/datasets/adqscibc.json",
+    "adqsadas_reference": f"{CDISC_BASE}/analysis/adam/datasets/adqsadas.json",
 }
 
 
