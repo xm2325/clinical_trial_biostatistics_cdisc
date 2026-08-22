@@ -1,0 +1,31 @@
+{
+  "version": "0.15.0",
+  "planning_spec": "spec/protocol_design.json",
+  "source_output": "outputs/mmrm_treatment_contrasts.csv",
+  "family": {
+    "id": "ACTOT_W24_ACTIVE_VS_PLACEBO",
+    "endpoint": "ACTOT change from baseline",
+    "visit": "Week 24",
+    "covariance": "Unstructured",
+    "method": "Bonferroni",
+    "family_alpha": 0.05,
+    "two_sided": true,
+    "hypotheses": [
+      {
+        "id": "H_LOW",
+        "contrast": "Xanomeline Low Dose vs Placebo"
+      },
+      {
+        "id": "H_HIGH",
+        "contrast": "Xanomeline High Dose vs Placebo"
+      }
+    ]
+  },
+  "decision_rule": {
+    "comparison_count": 2,
+    "local_alpha": 0.025,
+    "adjusted_p_formula": "min(raw_p_value * comparison_count, 1)",
+    "reject_rule": "adjusted_p_value <= family_alpha"
+  },
+  "evidence_boundary": "Independent public-data portfolio multiplicity decision layer aligned to the existing illustrative protocol-design specification. It is not a sponsor-approved multiplicity strategy, confirmatory claim, regulatory analysis or validated production program."
+}

@@ -1,0 +1,60 @@
+name: v015-multiplicity-core
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["upgrade/v0.15-multiplicity"]
+  pull_request:
+    paths:
+      - "spec/multiplicity.json"
+      - "src/cdisc_portfolio/multiplicity.py"
+      - "scripts/run_multiplicity.py"
+      - "tests/test_multiplicity.py"
+      - ".github/workflows/v015-multiplicity-core.yml"
+
+jobs:
+  multiplicity-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Multiplicity unit tests
+        run: pytest -q tests/test_multiplicity.py
+      - name: Run public CDISC workflow
+        run: python scripts/run_all.py
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.6.1'
+          use-public-rspm: true
+      - name: Install MMRM dependencies
+        run: Rscript -e 'install.packages(c("mmrm", "emmeans"))'
+      - name: Run primary ACTOT MMRM
+        run: Rscript R/mmrm_analysis.R
+      - name: Run primary multiplicity decision gate
+        run: python scripts/run_multiplicity.py
+      - name: Show multiplicity evidence
+        if: always()
+        run: |
+          echo "--- Multiplicity summary ---"
+          test -f outputs/multiplicity_summary.md && cat outputs/multiplicity_summary.md || true
+          echo "--- Multiplicity decisions ---"
+          test -f outputs/table23_actot_multiplicity.csv && cat outputs/table23_actot_multiplicity.csv || true
+          echo "--- Multiplicity QC ---"
+          test -f outputs/multiplicity_qc.csv && cat outputs/multiplicity_qc.csv || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v015-multiplicity-core-outputs
+          path: |
+            outputs/mmrm_treatment_contrasts.csv
+            outputs/table23_actot_multiplicity.csv
+            outputs/multiplicity_qc.csv
+            outputs/multiplicity_metrics.json
+            outputs/multiplicity_summary.md
+          if-no-files-found: warn
