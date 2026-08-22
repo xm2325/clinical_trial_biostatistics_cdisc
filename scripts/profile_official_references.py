@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cdisc_portfolio.adas import (  # noqa: E402
+    compare_actot_analysis_reference,
+    derive_adqsadas_actot_analysis_style,
+)
 from cdisc_portfolio.derive import derive_adsl_style  # noqa: E402
 from cdisc_portfolio.efficacy import derive_adqscibc_style  # noqa: E402
 from cdisc_portfolio.io import (  # noqa: E402
@@ -65,12 +69,20 @@ def main() -> None:
     )
     actot_counts.to_csv(outputs / "adqsadas_actot_reference_counts.csv", index=False)
 
+    actot_derived = derive_adqsadas_actot_analysis_style(qs, adsl)
+    actot_metrics, actot_detail = compare_actot_analysis_reference(actot_derived, adqsadas_ref)
+    actot_derived.to_csv(outputs / "adqsadas_actot_analysis_style.csv", index=False)
+    actot_metrics.to_csv(outputs / "adqsadas_actot_comparison_metrics.csv", index=False)
+    actot_detail.to_csv(outputs / "adqsadas_actot_comparison_detail.csv", index=False)
+
     print("--- official ADQSADAS profile ---")
     print(json.dumps(profile, indent=2, sort_keys=True))
     print("--- official ADQSADAS parameter counts ---")
     print(params.to_csv(index=False))
     print("--- official ACTOT row semantics ---")
     print(actot_counts.to_csv(index=False))
+    print("--- source-derived ACTOT vs official selected ACTOT ---")
+    print(actot_metrics.to_csv(index=False))
     print("--- CIBIC reference mismatches traced to official QS ---")
     if trace.empty:
         print("none")
