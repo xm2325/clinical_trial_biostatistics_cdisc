@@ -1,10 +1,10 @@
-# Statistical Analysis Plan — portfolio version 0.5
+# Statistical Analysis Plan — portfolio version 0.7
 
 ## 1. Scope
 
 This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
 
-Version 0.3 added official-reference validation against public `ADQSCIBC` and `ADQSADAS` reference ADaM datasets. Version 0.4 added a separate R implementation for selected programming QC. Version 0.5 adds an observed-data longitudinal mixed model for repeated measures (MMRM) for ACTOT Week 8, Week 16 and Week 24 change from baseline, with a pre-specified covariance sensitivity analysis.
+Version 0.3 added public-reference validation against `ADQSCIBC` and `ADQSADAS`. Version 0.4 added a separate R implementation for selected programming QC. Version 0.5 added longitudinal ACTOT MMRM. Version 0.6 added executable SAP-to-TLF structural traceability. Version 0.7 adds a separate, machine-readable protocol-design and sample-size exercise with multiplicity, dropout inflation, achieved-power back-checking and design QC.
 
 ## 2. Analysis populations
 
@@ -18,11 +18,11 @@ A subject is in the safety population if at least one EX record is observed.
 
 ### 2.3 CIBIC+ analysis population
 
-Subjects must be randomised and have numeric official QS records with `QSTESTCD == "CIBIC"`. The output parameter code is `CIBICVAL`, matching the public reference ADaM.
+Subjects must be randomised and have numeric public QS records with `QSTESTCD == "CIBIC"`. The output parameter code is `CIBICVAL`, matching the public reference ADaM.
 
 ### 2.4 ACTOT efficacy population
 
-The independent portfolio efficacy analysis uses randomised subjects with a numeric ACTOT baseline and at least one numeric post-baseline ACTOT value.
+The portfolio efficacy analysis uses randomised subjects with a numeric ACTOT baseline and at least one numeric post-baseline ACTOT value.
 
 The Week 24 observed-case ANCOVA requires an observed Week 24 ACTOT value. The LOCF sensitivity uses the latest eligible post-baseline ACTOT value through analysis day 168.
 
@@ -51,18 +51,18 @@ Actual exposure dates are derived from EX:
 
 AE records are linked to the ADSL-style subject dataset by `STUDYID` and `USUBJID`.
 
-- `ASTDT`: parsed from `AESTDTC`.
-- `AENDT`: parsed from `AEENDTC` when available.
-- `TRTEMFL`: `Y` when `ASTDT >= TRTSDT` and `ASTDT <= TRTEDT + 30 days`.
-- `RELFL`: `Y` for `AEREL` in `POSSIBLE`, `PROBABLE`, `DEFINITE`, or `RELATED`.
-- `MODSEVFL`: `Y` for `AESEV` in `MODERATE` or `SEVERE`.
-- Serious TEAE: `AESER == "Y"` and `TRTEMFL == "Y"`.
+- `ASTDT`: parsed from `AESTDTC`;
+- `AENDT`: parsed from `AEENDTC` when available;
+- `TRTEMFL`: `Y` when `ASTDT >= TRTSDT` and `ASTDT <= TRTEDT + 30 days`;
+- `RELFL`: `Y` for `AEREL` in `POSSIBLE`, `PROBABLE`, `DEFINITE`, or `RELATED`;
+- `MODSEVFL`: `Y` for `AESEV` in `MODERATE` or `SEVERE`;
+- serious TEAE: `AESER == "Y"` and `TRTEMFL == "Y"`.
 
 No partial-date imputation is performed for AE start dates.
 
 ## 6. CIBIC+ analysis-window derivation
 
-Official QS is filtered to `QSTESTCD == "CIBIC"`. Numeric `QSSTRESN` is mapped to `AVAL`. The output uses `PARAMCD=CIBICVAL`.
+Public QS is filtered to `QSTESTCD == "CIBIC"`. Numeric `QSSTRESN` is mapped to `AVAL`. The output uses `PARAMCD=CIBICVAL`.
 
 | Analysis visit | Target day | Observation window |
 |---|---:|---|
@@ -72,15 +72,15 @@ Official QS is filtered to `QSTESTCD == "CIBIC"`. Numeric `QSSTRESN` is mapped t
 
 Within a window, the record nearest the target day is selected. If no record is present, the latest prior record is carried forward and `DTYPE=LOCF`. `AWTARGET`, `AWLO`, `AWHI`, `AWTDIFF`, source visit/date and `QSSEQ` are retained.
 
-The verified live run covers 705/705 public ADQSCIBC analysis keys with 100% `QSSEQ` and 100% `DTYPE` agreement. `AVAL` agreement is 695/705 (98.58%). For all ten value differences, the portfolio value equals the selected public SDTM QS `QSSTRESN`; the public reference ADaM value differs from that source record. These differences remain visible in `adqscibc_mismatch_source_trace.csv`.
+The verified live run covers 705/705 public ADQSCIBC analysis keys with 100% `QSSEQ` and 100% `DTYPE` agreement. `AVAL` agreement is 695/705 (98.58%). For all ten value differences, the portfolio value equals the selected public SDTM QS `QSSTRESN`; the public reference ADaM value differs from that selected source record. These differences remain visible in `outputs/adqscibc_mismatch_source_trace.csv`.
 
-## 7. Official ADQSADAS reference validation
+## 7. Public ADQSADAS reference validation
 
 The public `ADQSADAS` Dataset-JSON contains 12,463 rows for 254 subjects and 15 ADAS-Cog parameters. `ACTOT` (`Adas-Cog(11) Subscore`) contains 1,040 rows.
 
-The official selected ACTOT structure contains 1,016 `ANL01FL=Y` records. The portfolio reconstructs the same `USUBJID + AVISIT` keys and validates source `QSSEQ` and `DTYPE` against the public reference. Verified key, `QSSEQ` and `DTYPE` agreement are all 100%.
+The public selected ACTOT structure contains 1,016 `ANL01FL=Y` records. The portfolio reconstructs the same `USUBJID + AVISIT` keys and validates source `QSSEQ` and `DTYPE` against the public reference. Verified key, `QSSEQ` and `DTYPE` agreement are all 100%.
 
-A separate diagnostic recomputes ADAS-Cog(11) totals from component items. This diagnostic does not replace the source ACTOT values when public source and public reference values differ.
+A separate diagnostic recomputes ADAS-Cog(11) totals from component items. This diagnostic does not replace source ACTOT values when public source and reference values differ.
 
 ## 8. ACTOT baseline and change from baseline
 
@@ -130,7 +130,7 @@ CHG ~ TRT01A * AVISIT + BASE * AVISIT
 
 The primary within-subject covariance matrix is unstructured. Estimation uses restricted maximum likelihood (REML). Degrees of freedom for treatment contrasts use the Satterthwaite method.
 
-Visit-specific treatment least-squares means and two active-versus-placebo contrasts are reported at each visit. No multiplicity adjustment is applied because these portfolio analyses are exploratory.
+Visit-specific treatment least-squares means and two active-versus-placebo contrasts are reported at each visit. No multiplicity adjustment is applied because these observed-data portfolio analyses are exploratory.
 
 The verified primary Week 24 contrasts are:
 
@@ -143,20 +143,16 @@ The verified primary Week 24 contrasts are:
 
 The same fixed-effects model is refit using heterogeneous AR(1) covariance. Week 8, Week 16 and Week 24 are treated as equally spaced ordered analysis visits for this covariance structure.
 
-Verified diagnostics are:
-
 | Covariance | logLik | AIC | BIC |
 |---|---:|---:|---:|
 | Unstructured | -1299.3136 | 2610.6272 | 2630.0777 |
 | Heterogeneous AR(1) | -1309.7404 | 2627.4809 | 2640.4479 |
 
-The unstructured model has lower AIC/BIC in this dataset. Model-selection criteria are reported descriptively; they are not treated as proof that the same covariance choice is optimal for other trials.
+The unstructured model has lower AIC/BIC in this dataset. These are fit diagnostics, not a general covariance-selection rule.
 
 ### 11.5 Comparison with observed Week 24 ANCOVA
 
-The MMRM and observed-case Week 24 ANCOVA are reported side by side rather than required to match. The MMRM uses longitudinal Week 8/16/24 observations and a repeated-measures covariance model, while the ANCOVA uses Week 24 observations only.
-
-At Week 24:
+The MMRM and observed-case Week 24 ANCOVA are reported side by side rather than required to match. At Week 24:
 
 - High Dose: MMRM -0.9271 versus observed ANCOVA -0.9234;
 - Low Dose: MMRM -1.6131 versus observed ANCOVA -2.0283.
@@ -169,44 +165,122 @@ Age is summarised using mean, standard deviation, median, Q1 and Q3. Categorical
 
 For each Xanomeline arm versus placebo, the workflow reports subject-level TEAE risk, unadjusted risk difference, Wald 95% confidence interval and Fisher exact-test p-value.
 
-## 14. Multiplicity
+## 14. Multiplicity for analysed public data
 
-No confirmatory hypothesis family is defined. TEAE, ANCOVA and MMRM p-values are exploratory and are not multiplicity-adjusted.
+No confirmatory hypothesis family is defined for the portfolio analyses of the public study data. TEAE, ANCOVA and MMRM p-values are exploratory and are not multiplicity-adjusted.
+
+The separate protocol-design exercise in Section 17 does define a planning hypothesis family and applies Bonferroni control. That design exercise is not retroactively applied to the exploratory analyses above.
 
 ## 15. QC and acceptance
 
-The live workflow separates Python internal QC, official-reference validation, R/Python cross-language programming QC and MMRM model/data QC.
+The live workflow separates Python internal QC, public-reference validation, R/Python cross-language programming QC, MMRM model/data QC, structural SAP-to-TLF traceability and protocol-design QC.
 
-Required official-reference checks include 100% ADQSCIBC key coverage, 100% ADQSCIBC `DTYPE` agreement, 100% ADQSCIBC `QSSEQ` agreement, complete traceability of value discrepancies to the selected source row, and 100% selected ACTOT key/`DTYPE`/`QSSEQ` agreement.
+The verified v0.7 live run has:
 
-Reference `AVAL` agreement is informational when the public source and public reference differ. The workflow does not alter source-derived values merely to make a reference match.
+| QC layer | Result |
+|---|---:|
+| Python unit tests | **19/19 passed** |
+| Required Python pipeline QC | **24/24 passed** |
+| Required R/Python cross-language QC | **16/16 passed** |
+| Required MMRM QC | **11/11 passed** |
+| Complete SAP-to-TLF structural traceability | **15/15 TLFs** |
+| Required protocol-design QC | **7/7 passed** |
 
-### 15.1 Independent R/Python programming QC
+The latest maximum R/Python ANCOVA numerical difference is `4e-14`.
+
+### 15.1 R/Python programming QC
 
 `R/independent_qc.R` reimplements selected analysis rules from the same public raw inputs. It does not call Python derivation code. Discrete derivations require exact agreement; ANCOVA numerical outputs require absolute difference no greater than `1e-8`.
-
-The verified v0.5 run retains **16/16 required cross-language checks**, **10/10 Python unit tests** and **24/24 required Python pipeline QC checks**. The maximum R/Python ANCOVA numerical difference is `7.11e-15`.
 
 This is a separate implementation by the same portfolio author, not independent review by a second programmer.
 
 ### 15.2 MMRM QC
 
-Required MMRM checks are:
+Required MMRM checks cover treatment/visit completeness, factor-coded covariance visit, unique subject-visit keys, exact `CHG=AVAL-BASE`, constant subject baseline, finite likelihoods, finite contrast inference, six active-versus-placebo visit contrasts and two Week 24 primary contrasts. The verified run passes **11/11**.
 
-1. all three planned treatment arms are present;
-2. Week 8, Week 16 and Week 24 are present;
-3. the covariance visit variable is a factor;
-4. `USUBJID + AVISIT` is unique;
-5. `CHG = AVAL - BASE` exactly within numerical tolerance;
-6. `BASE` is constant within subject;
-7. the unstructured model returns a finite likelihood;
-8. the heterogeneous AR(1) sensitivity model returns a finite likelihood;
-9. six primary active-versus-placebo visit contrasts are produced;
-10. primary contrast estimates, standard errors, df, confidence limits and p-values are finite;
-11. two Week 24 primary contrasts are produced.
+### 15.3 SAP-to-TLF structural traceability
 
-The verified v0.5 live run passes **11/11 required MMRM checks**. A required failure causes the R analysis step to exit non-zero; GitHub Actions still retains diagnostic outputs where available.
+`spec/analysis_traceability.csv` and `spec/output_contracts.json` define the expected relationship between objectives, populations, endpoints, methods, source/analysis datasets, generated outputs and QC evidence.
 
-## 16. Sample-size demonstration
+For each of 15 planned TLFs, CI requires:
 
-A separate utility provides equal-allocation normal-approximation sample-size calculations for two-arm continuous and binary endpoints. These examples demonstrate the calculation workflow and are not presented as the original pilot study's design assumptions.
+- the output file to exist;
+- minimum row count and required columns to match its contract;
+- linked analysis dataset(s) to resolve;
+- linked QC evidence to resolve;
+- a SHA256 digest of the generated output to be recorded.
+
+The verified run passes **15/15** TLFs on all structural checks. This gate supplements rather than replaces analysis-specific statistical QC.
+
+## 16. TLF outputs
+
+The planned output set is documented in `docs/tlf_shells.md`. It covers demographics, disposition, exposure, TEAE summaries, Week 24 ACTOT descriptives and ANCOVA, MMRM least-squares means and contrasts, covariance sensitivity, model diagnostics and the Week 24 MMRM-versus-ANCOVA comparison.
+
+## 17. Protocol-design and sample-size exercise
+
+### 17.1 Status and objective
+
+Version 0.7 adds a separate illustrative planning exercise for a three-arm parallel-group study with Placebo, Xanomeline Low Dose and Xanomeline High Dose allocated 1:1:1. The planned continuous endpoint is Week 24 ACTOT change from baseline, with each active dose compared with placebo.
+
+This is not the original source trial's sample-size calculation and does not claim that its assumptions are clinically justified.
+
+### 17.2 Multiplicity and assumptions
+
+The machine-readable specification in `spec/protocol_design.json` uses:
+
+| Assumption | Value |
+|---|---:|
+| Family-wise two-sided alpha | 0.05 |
+| Active-versus-placebo comparisons | 2 |
+| Bonferroni alpha per comparison | 0.025 |
+| Common planning SD | 6.0 |
+| Anticipated dropout | 15% |
+| Target power | 80% or 90% |
+| Mean-difference scenarios | 2.0, 2.5 or 3.0 |
+
+For a continuous two-arm comparison within the three-arm design:
+
+```text
+n_evaluable_per_arm = ceil(
+    2 * SD^2 * (z_(1-alpha/2) + z_power)^2 / effect^2
+)
+
+n_randomised_per_arm = ceil(
+    n_evaluable_per_arm / (1 - dropout_rate)
+)
+
+total_randomised = 3 * n_randomised_per_arm
+```
+
+### 17.3 Verified planning scenarios
+
+| Scenario | Effect | Target power | Evaluable N/arm | Randomised N/arm | Total randomised | Achieved power |
+|---|---:|---:|---:|---:|---:|---:|
+| E2.0_P80 | 2.0 | 80% | 172 | 203 | 609 | 0.802 |
+| E2.0_P90 | 2.0 | 90% | 224 | 264 | 792 | 0.901 |
+| E2.5_P80 | 2.5 | 80% | 110 | 130 | 390 | 0.802 |
+| E2.5_P90 | 2.5 | 90% | 143 | 169 | 507 | 0.900 |
+| E3.0_P80 | 3.0 | 80% | 77 | 91 | 273 | 0.805 |
+| E3.0_P90 | 3.0 | 90% | 100 | 118 | 354 | 0.902 |
+
+The code back-calculates achieved power after integer rounding rather than assuming the requested power was preserved.
+
+### 17.4 Design QC
+
+The design run must pass all seven required checks:
+
+1. Bonferroni per-comparison alpha reconciles exactly to family alpha divided by the number of comparisons;
+2. dropout inflation does not reduce per-arm sample size;
+3. achieved power at rounded evaluable N meets each target;
+4. scenario identifiers are unique;
+5. total randomised N equals randomised N per arm multiplied by three arms;
+6. required N does not increase when the assumed treatment effect increases at fixed target power;
+7. required N does not decrease when target power increases at fixed effect.
+
+The verified v0.7 run passes **7/7**. `outputs/protocol_design_metrics.json` also records a SHA256 digest of the exact machine-readable design specification used for the run.
+
+## 18. Statistical protocol review
+
+`docs/protocol_statistical_review_checklist.md` records the statistical questions that should be resolved before a protocol is considered ready for SAP and programming work, including design, objectives/endpoints, estimand components, multiplicity, sample-size assumptions, analysis populations, missing data, model details, safety windows, programming implications and DSMB/interim-analysis boundaries.
+
+The checklist is a portfolio review aid. It does not represent sponsor protocol sign-off, DSMB work or regulatory-submission ownership.
