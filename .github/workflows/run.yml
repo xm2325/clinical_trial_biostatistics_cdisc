@@ -34,7 +34,7 @@ jobs:
           Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
       - name: Install R analysis dependencies
-        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"), repos="https://cloud.r-project.org")'
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
       - name: Independent R reconstruction and cross-language QC
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
