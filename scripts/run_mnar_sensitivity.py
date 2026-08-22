@@ -22,6 +22,17 @@ def main() -> None:
 
     grid, tipping, qc, metrics, summary = run_delta_sensitivity(spec, contrasts, missingness)
 
+    # Always retain the gate evidence first. If an input/QC failure returns an
+    # empty analysis grid, these files remain available in the CI artifact for
+    # investigation rather than being masked by a downstream dataframe error.
+    qc.to_csv(out / "mnar_sensitivity_qc.csv", index=False)
+    (out / "mnar_sensitivity_metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
+    (out / "mnar_sensitivity_summary.md").write_text(summary, encoding="utf-8")
+    print(summary)
+
+    if not metrics["all_required_passed"]:
+        raise SystemExit("MNAR sensitivity gate failed; inspect outputs/mnar_sensitivity_qc.csv")
+
     input_columns = [
         "scenario_id",
         "comparison",
@@ -44,13 +55,6 @@ def main() -> None:
     sensitivity_inputs.to_csv(out / "mnar_sensitivity_inputs.csv", index=False)
     grid.to_csv(out / "table18_actot_delta_sensitivity.csv", index=False)
     tipping.to_csv(out / "table19_actot_directional_tipping_points.csv", index=False)
-    qc.to_csv(out / "mnar_sensitivity_qc.csv", index=False)
-    (out / "mnar_sensitivity_metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
-    (out / "mnar_sensitivity_summary.md").write_text(summary, encoding="utf-8")
-
-    print(summary)
-    if not metrics["all_required_passed"]:
-        raise SystemExit("MNAR sensitivity gate failed; inspect outputs/mnar_sensitivity_qc.csv")
 
 
 if __name__ == "__main__":
