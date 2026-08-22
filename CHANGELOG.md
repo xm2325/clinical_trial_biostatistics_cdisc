@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.13.0 — 2026-08-22
+
+- Add controlled subject-level multiple-imputation sensitivity for Week 24 ACTOT using pairwise Xanomeline Low Dose versus Placebo and High Dose versus Placebo analyses.
+- Increase the controlled `rbmi` run from the earlier 50-imputation development setting to **200 imputations** per pairwise comparison.
+- Use approximate-Bayesian longitudinal MI with Week 8/16/24 ACTOT change-from-baseline history, unstructured covariance, REML and baseline-by-visit/treatment-by-visit model terms.
+- Analyse Week 24 within each imputed data set using baseline-adjusted ANCOVA and combine active-minus-placebo inference using Rubin pooling.
+- Add four controlled MI sensitivity scenarios: MAR, active +1, active +2, and active +1/placebo -1 for outcomes originally missing at Week 24; observed Week 24 and non-Week-24 outcomes cannot receive delta shifts.
+- Add a separate Monte Carlo precision gate requiring `MCSE(estimate) / pooled SE <= 7.5%` for both MAR active-versus-placebo comparisons. Model-fit success alone is not sufficient for MI acceptance.
+- Add T20 MAR pairwise MI and T21 delta-adjusted MI sensitivity to the formal SAP-to-TLF registry and executable output contracts, extending structural traceability from 19 to **21 TLFs**.
+- Require T20/T21 to resolve dedicated MI QC and MCSE QC; additionally require draw diagnostics for T20 and the delta audit for T21.
+- Add **CR-007** for controlled MI-assumption changes covering imputation count, longitudinal imputation model, MCSE threshold and delta scenarios, increasing the machine-readable request set from six to **seven change requests**.
+- Extend CR-003 primary-visit and CR-005 treatment-discontinuation/intercurrent-event strategy propagation to T20/T21 and their MI review/QC path so v0.13 sensitivity outputs cannot remain isolated from upstream statistical changes.
+- Add regression coverage after CI detected stale v0.12 assumptions hard-coded in tests, including the former six-change-request expectation; correct the tests rather than weakening the v0.13 specification.
+- Synchronise the consolidated README, SAP, QC plan, TLF shells, change-control document and analysis-traceability document to the current v0.13 state while retaining the versioned v0.13 addenda as change history.
+
+## 0.12.0 — 2026-08-22
+
+- Add a deterministic fixed-delta pattern-mixture mean-shift diagnostic for departures from the primary Week 24 MMRM MAR reference analysis.
+- Add three controlled adverse paths over a 0-6 ACTOT point grid in 0.5-point steps and analytic direction-of-effect tipping thresholds.
+- Add T18 fixed-delta sensitivity grid and T19 directional tipping-point output, extending the executable registry to **19 TLFs**.
+- Extend statistical change control to **six** simulated requests with CR-006 governing fixed-delta sensitivity assumptions and upstream primary-visit/MMRM/intercurrent-event changes propagating to T18/T19.
+- Keep the deterministic fixed-delta CI/p-value calculation explicitly separate from multiple-imputation inference; v0.12 does not claim Rubin pooling or reference-based imputation.
+
 ## 0.11.0 — 2026-08-22
 
 - Add machine-readable ACTOT estimand `EST-ACTOT-W24-TP` using the ICH E9(R1)-style five-attribute structure: treatment, population, variable, treatment-discontinuation strategy and population-level summary measure.
@@ -13,7 +36,7 @@
 - Add **21 required estimand/missing-data checks**, including five-attribute completeness, treatment-policy handling, observed-data MMRM alignment, denominator reconciliation and no LOCF in the primary model.
 - Add negative controls that make LOCF primary, remove a post-discontinuation observation from an MMRM fixture and corrupt a missingness denominator.
 - Extend SAP-to-TLF structural traceability from 15 to **17 planned TLFs**; first-pass live validation passes 17/17 output, contract, analysis-dataset and QC-evidence links.
-- Extend statistical change control with CR-005, an illustrative treatment-discontinuation strategy change from treatment-policy to hypothetical strategy, requiring review of T11–T17, MMRM inputs/QC, estimand QC, controlled documents and `spec/estimands.json`.
+- Extend statistical change control with CR-005, an illustrative treatment-discontinuation strategy change from treatment-policy to hypothetical strategy, requiring review of T11-T17, MMRM inputs/QC, estimand QC, controlled documents and `spec/estimands.json`.
 - Expand v0.11 change-control coverage to **88/88 required impact declarations** and **88/88 resolved resources** across five scenarios in the first-pass live run.
 - Remove the stale hard-coded change-control version: graph and request specifications must declare the same version, otherwise the gate fails. Add a regression test for version mismatch.
 - Expand the final-head Python unit-test target from 40 to **49** while retaining the established Python pipeline, R/Python, MMRM, reviewer, design and randomisation gates.
@@ -27,7 +50,7 @@
 - Propagate impacts transitively from each changed statistical component rather than relying on a manually entered flat affected-file list.
 - Verify **67/67 graph-required impact declarations** and **67/67 required downstream resources** in the live GitHub Actions run, with zero missing and zero extra declarations across the four scenarios.
 - Resolve every impacted TLF ID through the existing SAP-to-TLF registry and require the corresponding generated output to exist in the same live run.
-- Verify CR-001 across 4 propagated components / 18 impacts / T01–T07; CR-002 across 3 / 14 / T04–T07; CR-003 across 6 / 24 / T08–T12 plus T15; and CR-004 across 3 / 11 / T11–T15.
+- Verify CR-001 across 4 propagated components / 18 impacts / T01-T07; CR-002 across 3 / 14 / T04-T07; CR-003 across 6 / 24 / T08-T12 plus T15; and CR-004 across 3 / 11 / T11-T15.
 - Add hard validation for unknown dependency nodes and dependency cycles.
 - Add negative-control tests that remove a graph-required TLF declaration and require failure; retain explicit tests for transitive propagation and conservative extra review items.
 - Add `outputs/change_impact_assessment.csv`, `outputs/change_impact_metrics.json` and `outputs/change_impact_summary.md`, with SHA256 identity for the dependency graph, change requests and SAP-to-TLF registry.

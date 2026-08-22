@@ -1,8 +1,8 @@
-# Statistical Analysis Plan — consolidated portfolio version 0.12
+# Statistical Analysis Plan — consolidated portfolio version 0.13
 
 ## 1. Scope and evidence boundary
 
-This SAP specifies an independent clinical-trial biostatistics portfolio built from public CDISC pilot and pharmaverse SDTM test data. It consolidates the current analysis plan through v0.12 while the versioned addenda remain in the repository as change history.
+This SAP specifies an independent clinical-trial biostatistics portfolio built from public CDISC pilot and pharmaverse SDTM test data. It consolidates the current analysis plan through v0.13 while versioned addenda remain in the repository as change history.
 
 This is **not** a sponsor-approved SAP, regulatory-submission document or production clinical-trial programming record. `*-style` datasets are not claimed to be submission-ready ADaM.
 
@@ -15,10 +15,25 @@ The current portfolio includes:
 - separate R/Python programming QC;
 - an ICH E9(R1)-style ACTOT estimand specification;
 - arm/visit missingness and disposition review;
-- v0.12 fixed-delta missing-data sensitivity and directional tipping points;
-- TLF-style outputs T01–T19;
+- deterministic fixed-delta missing-data sensitivity and directional tipping points;
+- v0.13 subject-level multiple-imputation (MI) sensitivity with independent Monte Carlo precision QC;
+- TLF-style outputs T01-T21;
 - protocol-design/sample-size and randomisation/initial-kit portfolio exercises;
 - analysis-dataset/TLF reviewer and statistical change-impact gates.
+
+The controlled analysis sequence is:
+
+```text
+estimand
+  -> missingness review
+  -> primary MMRM
+  -> deterministic fixed-delta sensitivity
+  -> subject-level MI sensitivity
+  -> MCSE precision QC
+  -> TLF contracts
+  -> change impact
+  -> executable traceability
+```
 
 ## 2. Analysis populations
 
@@ -36,7 +51,7 @@ Subjects must be randomised and have numeric public QS records with `QSTESTCD ==
 
 ### 2.4 ACTOT estimand target population
 
-The v0.11+ estimand target population is randomised subjects with an observed numeric baseline ACTOT value. The verified public-data target N is **254**.
+The ACTOT estimand target population is randomised subjects with an observed numeric baseline ACTOT value. Verified public-data target N: **254**.
 
 ### 2.5 Week 24 observed ANCOVA population
 
@@ -49,6 +64,15 @@ Subjects with baseline ACTOT and an eligible post-baseline ACTOT value through a
 ### 2.7 MMRM population
 
 Subjects with baseline ACTOT and at least one observed numeric ACTOT value at Week 8, Week 16 or Week 24. LOCF rows do not enter the MMRM. Verified input: **451 observed post-baseline records from 189 subjects**.
+
+### 2.8 v0.13 MI pairwise populations
+
+The target population is the same 254 randomised subjects with observed baseline ACTOT. MI is run separately for:
+
+- Xanomeline Low Dose versus Placebo;
+- Xanomeline High Dose versus Placebo.
+
+Within each pairwise analysis, every included subject is expanded to the controlled Week 8, Week 16 and Week 24 visit grid. Observed ACTOT change-from-baseline values are retained; unobserved scheduled outcomes remain missing before imputation.
 
 ## 3. Treatment, exposure and disposition
 
@@ -87,22 +111,13 @@ Public QS is filtered to `QSTESTCD == "CIBIC"`; `QSSTRESN` maps to analysis `AVA
 
 | Analysis visit | Target day | Window |
 |---|---:|---|
-| Week 8 | 56 | days 2–84 |
-| Week 16 | 112 | days 85–140 |
+| Week 8 | 56 | days 2-84 |
+| Week 16 | 112 | days 85-140 |
 | Week 24 | 168 | day 141 onward |
 
 Within each window, the observed record nearest target day is selected. If no record exists, the latest prior post-baseline record is carried forward with `DTYPE=LOCF`.
 
-Source visit/date, analysis-window variables and `QSSEQ` are retained.
-
-Verified public-reference checks:
-
-- selected CIBIC keys: **705/705**;
-- `QSSEQ`: **100%** agreement;
-- `DTYPE`: **100%** agreement;
-- `AVAL`: 695/705 (98.58%) agreement.
-
-For all ten `AVAL` differences, the portfolio value matches the selected public QS source value. The reference/source disagreement is retained in an auditable trace and is not overwritten.
+Verified public-reference checks include 705/705 selected CIBIC keys, 100% `QSSEQ`, 100% `DTYPE`, and 695/705 (98.58%) `AVAL` agreement. The ten source/reference value differences remain visible and trace to the exact selected public QS source row.
 
 ## 6. ACTOT source derivation and public-reference review
 
@@ -120,14 +135,7 @@ Model:
 Week 24 AVAL = intercept + treatment + centred BASE + error
 ```
 
-Two analysis sets are reported:
-
-1. observed Week 24;
-2. LOCF supportive sensitivity.
-
-Treatment LS means and active-versus-placebo contrasts include estimate, SE, two-sided 95% CI, residual df and p-value.
-
-The LOCF analysis is not the primary estimator for the v0.11+ estimand.
+Two analysis sets are reported: observed Week 24 and LOCF supportive sensitivity. Treatment LS means and active-versus-placebo contrasts include estimate, SE, two-sided 95% CI, residual df and p-value. LOCF is not the primary estimator for the ACTOT estimand.
 
 ## 8. Primary longitudinal MMRM
 
@@ -137,15 +145,7 @@ The primary longitudinal ACTOT model uses observed Week 8, Week 16 and Week 24 c
 CHG ~ treatment * visit + BASE * visit
 ```
 
-Primary fit:
-
-- REML;
-- unstructured within-subject covariance;
-- Satterthwaite degrees of freedom;
-- visit-specific estimated marginal means;
-- Low Dose vs Placebo and High Dose vs Placebo contrasts at each visit.
-
-A heterogeneous AR(1) fit using the same fixed-effects structure is retained as a covariance sensitivity analysis.
+Primary fit uses REML, unstructured within-subject covariance and Satterthwaite degrees of freedom. A heterogeneous AR(1) fit with the same fixed-effects structure is retained as covariance sensitivity.
 
 Verified Week 24 primary contrasts:
 
@@ -160,31 +160,18 @@ These are portfolio analyses, not source-trial confirmatory efficacy results.
 
 Machine-readable estimand: `EST-ACTOT-W24-TP`.
 
-### 9.1 Treatment
+| Attribute | Portfolio specification |
+|---|---|
+| Treatment | Placebo, Low Dose, High Dose; each active arm versus placebo |
+| Population | Randomised subjects with observed baseline ACTOT |
+| Variable | Week 24 ACTOT change from baseline |
+| Intercurrent event | Treatment discontinuation |
+| Strategy | Treatment policy |
+| Population summary | Active-minus-placebo adjusted mean change |
 
-Placebo, Xanomeline Low Dose and Xanomeline High Dose, with each active arm compared with placebo.
+The primary observed-data MMRM is interpreted under a working MAR missing-data assumption. MAR is an estimator assumption, not an estimand attribute.
 
-### 9.2 Population
-
-Randomised subjects with observed baseline ACTOT.
-
-### 9.3 Variable
-
-ACTOT change from baseline at Week 24.
-
-### 9.4 Intercurrent event and strategy
-
-Recorded treatment discontinuation is handled with a **treatment-policy** strategy: observed outcomes after discontinuation would be retained.
-
-The current public run contains **0 observed ACTOT arm-visit records after recorded treatment discontinuation**. The retention rule is therefore executable and unit-tested but has no positive post-discontinuation live-data example in this dataset.
-
-### 9.5 Population-level summary
-
-Active-minus-placebo difference in adjusted mean Week 24 change.
-
-### 9.6 Estimator assumption
-
-The primary observed-data MMRM is interpreted under a working **MAR** missing-data assumption. MAR is an estimator assumption, not an estimand attribute.
+The current public run contains **0 observed ACTOT arm-visit records after recorded treatment discontinuation**. The treatment-policy retention rule is executable and unit-tested but has no positive post-discontinuation live-data example in this dataset.
 
 ## 10. Missingness review
 
@@ -199,13 +186,11 @@ Verified Week 24 missingness:
 | High Dose | 72 | 30 | 42 | 58.3% |
 | **Overall** | **254** | **116** | **138** | **54.3%** |
 
-Recorded final disposition is adverse event for 8/27 placebo, 49/69 Low Dose and 34/42 High Dose subjects missing Week 24.
+Recorded final disposition is adverse event for 8/27 placebo, 49/69 Low Dose and 34/42 High Dose subjects missing Week 24. These descriptive counts do not establish the truth of MAR or MNAR.
 
-These descriptive counts do not establish the truth of MAR or MNAR.
+## 11. Deterministic fixed-delta missing-data sensitivity
 
-## 11. v0.12 fixed-delta missing-data sensitivity
-
-The v0.12 sensitivity is a transparent fixed-delta pattern-mixture **mean-shift diagnostic**, not production MNAR multiple imputation or reference-based imputation.
+The v0.12 fixed-delta analysis remains a controlled deterministic pattern-mixture mean-shift diagnostic. It is not subject-level MI and is not reference-based imputation.
 
 For each primary Week 24 active-versus-placebo contrast:
 
@@ -215,33 +200,7 @@ theta_s(delta) = theta_MAR
                           - m_placebo * placebo_multiplier)
 ```
 
-where `m_active` and `m_placebo` are observed Week 24 missing proportions.
-
-ACTOT is treated as lower-is-better. Positive delta therefore represents a worse assumed missing outcome.
-
-### 11.1 Controlled grid
-
-```text
-delta = 0.0, 0.5, ..., 6.0 ACTOT points
-```
-
-### 11.2 Scenarios
-
-| Scenario | Active multiplier | Placebo multiplier |
-|---|---:|---:|
-| Common worsening | +1 | +1 |
-| Active-only worsening | +1 | 0 |
-| Divergent worsening | +1 | -1 |
-
-### 11.3 Primary sensitivity threshold
-
-Both primary Week 24 MMRM contrasts are already non-significant at delta=0. Therefore “loss of statistical significance” is not used as a tipping criterion.
-
-The v0.12 primary threshold is the positive delta at which the shifted active-minus-placebo point estimate reaches zero:
-
-```text
-delta* = -theta_MAR / contrast_shift_per_delta
-```
+The controlled grid is `0.0, 0.5, ..., 6.0` ACTOT points under common worsening, active-only worsening and divergent worsening. Both primary Week 24 MMRM contrasts are already non-significant at delta=0, so the primary threshold is the positive delta at which the shifted point estimate reaches zero.
 
 Verified thresholds:
 
@@ -251,80 +210,133 @@ Verified thresholds:
 | Active-only worsening | 2.244 | 1.589 |
 | Divergent worsening | 1.562 | 1.033 |
 
-All six analytic thresholds lie inside the controlled 0–6 grid.
+T18 fixed-delta CI/p-value columns reuse primary MMRM SE/df after deterministic shift. They do not include imputation-model or delta uncertainty and are not Rubin-pooling inference.
 
-T18 fixed-delta CI/p-value columns reuse the primary MMRM SE/df after deterministic shift. They do not include imputation-model/delta uncertainty and are not Rubin's-rules MI inference.
+## 12. v0.13 subject-level MI sensitivity
 
-## 12. Programming QC
+The controlled specification is `spec/mi_sensitivity.json`.
 
-A separate R implementation reconstructs selected safety/efficacy derivations from the same raw public sources and is compared with Python only after its own results are generated.
+Imputation model:
 
-Verified cross-language checks: **16/16 passed**. Maximum current ANCOVA numeric difference: **4e-14** against `1e-8` tolerance.
+- R package: `rbmi` 1.6.1;
+- method: approximate-Bayesian MI;
+- covariance: unstructured and common across the two treatment groups within each pairwise analysis;
+- estimation: REML;
+- history: Week 8, Week 16 and Week 24 ACTOT change from baseline;
+- model terms: baseline-by-visit and treatment-by-visit;
+- imputations: **200**;
+- maximum allowed bootstrap-fit failure fraction: **10%**;
+- fixed random seeds separately for the two active-versus-placebo comparisons.
 
-This remains same-author cross-language replication, not independent second-programmer review.
+Each imputed data set is analysed by Week 24 ANCOVA with treatment and baseline ACTOT. Active-minus-placebo estimates are combined using Rubin pooling. Reported inference includes estimate, SE, 95% CI, two-sided p-value and Monte Carlo standard errors.
 
-## 13. TLF plan
+The MAR pairwise MI estimates are compared with the existing three-arm Week 24 MMRM only as a diagnostic. Equality is not required because the estimators are different.
 
-Current TLF scope is T01–T19.
+### 12.1 Controlled departures from MAR
 
-- T01–T07: safety/demographics;
-- T08–T10: Week 24 ACTOT descriptives/ANCOVA;
-- T11–T15: longitudinal MMRM and diagnostics;
-- T16–T17: missingness/disposition context;
-- T18: 78-row fixed-delta sensitivity grid;
-- T19: six analytic directional tipping points.
+The same imputation draws are reused for four scenarios:
 
-`spec/analysis_traceability.csv` and `spec/output_contracts.json` are executable specifications for these outputs. Verified structural traceability: **19/19**.
+1. `MAR`: no delta adjustment;
+2. `ACTIVE_PLUS_1`: +1 ACTOT point for originally missing Week 24 outcomes in the active arm;
+3. `ACTIVE_PLUS_2`: +2 ACTOT points for originally missing Week 24 outcomes in the active arm;
+4. `DIVERGENT_1`: +1 in the active arm and -1 in placebo for originally missing Week 24 outcomes.
 
-## 14. Required QC gates
+Because lower ACTOT is favourable, positive active-arm deltas represent an adverse departure. Delta is permitted only for outcomes that were originally missing at Week 24. Observed Week 24 outcomes and non-Week-24 outcomes must not be shifted.
 
-Verified v0.12 live workflow:
+### 12.2 Monte Carlo precision gate
 
-| QC layer | Result |
-|---|---:|
-| Unit tests | 57/57 |
-| Python pipeline | 24/24 |
-| R/Python programming QC | 16/16 |
-| MMRM | 11/11 |
-| Estimand/missingness | 21/21 |
-| Fixed-delta sensitivity | 19/19 |
-| Dataset/TLF reviewer | 24/24 |
-| Protocol design | 7/7 |
-| Randomisation/kit | 10/10 |
-| TLF traceability | 19/19 |
-| Change-impact relationships | 118/118 |
+A separate QC gate calculates:
 
-Required failures exit non-zero and diagnostic outputs are retained where possible.
+```text
+MCSE(estimate) / pooled SE
+```
 
-## 15. Statistical change control
+for each MAR pairwise comparison. The controlled maximum is **7.5%**. Model convergence and Monte Carlo precision are separate acceptance questions: zero fit failures does not make a run acceptable if the finite-imputation MCSE ratio exceeds the threshold.
 
-`spec/change_impact_graph.json` and `spec/change_requests.json` are both version `0.12.0`.
+A sensitivity result that fails this precision gate is not accepted as QC-complete until it is rerun or the controlled MI assumptions are changed through change control.
 
-Six simulated changes test transitive downstream review. New v0.12 propagation ensures that changes to the primary ACTOT visit, primary MMRM covariance, treatment-discontinuation strategy or fixed-delta sensitivity assumptions reach T18/T19 and dedicated sensitivity QC.
+### 12.3 MI outputs
 
-Verified live result: **118/118 required impact relationships declared and 118/118 required resources resolved**.
+- T20: `outputs/table20_rbmi_mar_pairwise.csv`;
+- T21: `outputs/table21_rbmi_delta_sensitivity.csv`;
+- `outputs/rbmi_draw_diagnostics.csv`;
+- `outputs/rbmi_delta_audit.csv`;
+- `outputs/rbmi_mi_qc.csv`;
+- `outputs/rbmi_mcse_diagnostics.csv`;
+- `outputs/rbmi_mcse_qc.csv`;
+- `outputs/rbmi_vs_mmrm_week24.csv`.
 
-These requests are portfolio simulations and do not change the analysed results.
+## 13. Programming QC
 
-## 16. Protocol-design and randomisation exercises
+A separate R implementation reconstructs selected safety/efficacy derivations from the same raw public sources and is compared with Python only after its own results are generated. This is same-author cross-language replication, not independent second-programmer review.
+
+## 14. TLF plan
+
+Current effective TLF scope is **T01-T21**.
+
+- T01-T07: safety/demographics;
+- T08-T10: Week 24 ACTOT descriptives/ANCOVA;
+- T11-T15: longitudinal MMRM and diagnostics;
+- T16-T17: missingness/disposition context;
+- T18: 78-row deterministic fixed-delta sensitivity grid;
+- T19: six analytic directional tipping points;
+- T20: MAR subject-level MI pairwise analysis, minimum 2 rows;
+- T21: delta-adjusted MI sensitivity, minimum 8 rows.
+
+`spec/analysis_traceability.csv` and `spec/output_contracts.json` are executable specifications for these outputs. T20/T21 require their dedicated MI/MCSE/draw/delta QC evidence, not only final CSV structure.
+
+## 15. Required QC gates
+
+The v0.13 workflow retains separate blocking layers for:
+
+- Python derivation/pipeline QC;
+- public CDISC reference validation;
+- separate R/Python programming checks;
+- MMRM data/model/inference QC;
+- estimand/missing-data review;
+- deterministic fixed-delta sensitivity QC;
+- subject-level MI model/pooling/delta-application QC;
+- independent MCSE precision QC;
+- analysis-dataset/TLF reviewer;
+- protocol-design and randomisation/initial-kit QC;
+- statistical change-impact assessment;
+- **21-TLF** structural traceability.
+
+Required failures exit non-zero. Aggregate unit-test totals are intentionally not hard-coded into this SAP because the test suite can grow without changing the statistical plan.
+
+## 16. Statistical change control
+
+`spec/change_impact_graph.json` and `spec/change_requests.json` define the current controlled dependency model. There are **seven** simulated change requests.
+
+CR-006 controls the deterministic fixed-delta sensitivity assumptions for T18/T19. CR-007 controls v0.13 MI assumptions including imputation count, longitudinal imputation model, MCSE threshold and delta scenarios for T20/T21.
+
+Upstream changes must propagate rather than leave stale sensitivity analyses. In particular:
+
+- CR-003 primary ACTOT visit changes propagate to T20/T21;
+- CR-005 treatment-discontinuation/intercurrent-event strategy changes propagate to T20/T21;
+- CR-007 directly requires review/regeneration of MI analysis, MCSE QC, T20/T21, relevant specifications and controlled documents.
+
+These requests are portfolio simulations and do not themselves change the analysed results.
+
+## 17. Protocol-design and randomisation exercises
 
 A separate portfolio planning specification evaluates a three-arm Week 24 ACTOT design under two active-versus-placebo comparisons, Bonferroni family-wise alpha control, common SD assumptions, dropout inflation and target-power scenarios.
 
-The selected illustrative `E2.5_P80` scenario drives a deterministic 390-subject stratified permuted-block randomisation and initial-kit coding exercise.
+The selected illustrative `E2.5_P80` scenario drives a deterministic 390-subject stratified permuted-block randomisation and initial-kit coding exercise. This is not an IRT/IWRS production schedule and does not model drug-supply operations, resupply, expiry, replacement or emergency unblinding.
 
-This is not an IRT/IWRS production schedule and does not model drug-supply operations, resupply, expiry, replacement or emergency unblinding.
-
-## 17. Controlled supporting documents
+## 18. Controlled supporting documents
 
 - `docs/sap_v0_9_review_addendum.md`
 - `docs/sap_v0_10_change_control_addendum.md`
 - `docs/sap_v0_11_estimand_addendum.md`
 - `docs/sap_v0_12_mnar_addendum.md`
+- `docs/sap_v0_13_rbmi_addendum.md`
 - `docs/estimand_missing_data_review.md`
 - `docs/mnar_sensitivity.md`
 - `docs/qc_plan.md`
 - `docs/tlf_shells.md`
+- `docs/tlf_shells_v0_13_addendum.md`
 - `docs/analysis_traceability.md`
 - `docs/change_control_impact_assessment.md`
 
-The earlier addenda remain as portfolio change history; this consolidated document states the current v0.12 analysis plan.
+Earlier addenda remain as portfolio change history; this consolidated document states the current effective **v0.13** analysis plan.

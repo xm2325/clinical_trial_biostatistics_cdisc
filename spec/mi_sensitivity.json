@@ -1,0 +1,69 @@
+{
+  "version": "0.13.0",
+  "endpoint": {
+    "parameter": "ACTOT",
+    "measure": "change_from_baseline",
+    "analysis_visit": "24",
+    "direction": "lower_is_better"
+  },
+  "imputation": {
+    "package": "rbmi",
+    "required_version": "1.6.1",
+    "method": "approxbayes",
+    "covariance": "us",
+    "same_covariance_across_groups": true,
+    "reml": true,
+    "n_imputations": 200,
+    "failure_threshold": 0.10,
+    "max_mcse_estimate_to_se_ratio": 0.075,
+    "visits": ["8", "16", "24"],
+    "imputation_model_covariates": ["BASE*VISIT", "TRT01A*VISIT"]
+  },
+  "analysis": {
+    "method": "Week 24 ANCOVA",
+    "covariates": ["BASE"],
+    "pooling": "Rubin",
+    "confidence_level": 0.95,
+    "comparisons": [
+      {
+        "id": "LOW_VS_PLACEBO",
+        "active_arm": "Xanomeline Low Dose",
+        "reference_arm": "Placebo",
+        "seed": 13013
+      },
+      {
+        "id": "HIGH_VS_PLACEBO",
+        "active_arm": "Xanomeline High Dose",
+        "reference_arm": "Placebo",
+        "seed": 23013
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "MAR",
+      "label": "MAR reference",
+      "active_delta": 0.0,
+      "placebo_delta": 0.0
+    },
+    {
+      "id": "ACTIVE_PLUS_1",
+      "label": "Active missing outcomes +1 ACTOT point",
+      "active_delta": 1.0,
+      "placebo_delta": 0.0
+    },
+    {
+      "id": "ACTIVE_PLUS_2",
+      "label": "Active missing outcomes +2 ACTOT points",
+      "active_delta": 2.0,
+      "placebo_delta": 0.0
+    },
+    {
+      "id": "DIVERGENT_1",
+      "label": "Active +1 and placebo -1 ACTOT point",
+      "active_delta": 1.0,
+      "placebo_delta": -1.0
+    }
+  ],
+  "evidence_boundary": "Independent public-data portfolio sensitivity analysis. Approximate-Bayesian rbmi multiple imputation and Rubin pooling are used to quantify subject-level imputation uncertainty. This is not a sponsor-approved missing-data strategy, validated production program, regulatory analysis or reference-based imputation claim."
+}

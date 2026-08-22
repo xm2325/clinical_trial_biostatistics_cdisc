@@ -1,6 +1,6 @@
-# TLF shells — portfolio version 0.12
+# TLF shells — portfolio version 0.13
 
-These shells define the intended table structure for the portfolio analyses. They are planning documents, not sponsor-approved shells. Treatment columns use actual treatment (`TRT01A`) unless stated otherwise.
+These shells define the intended table structure for the portfolio analyses. They are planning documents, not sponsor-approved shells. Treatment columns use actual treatment (`TRT01A`) unless stated otherwise. The current effective registry is T01-T21; the v0.13 addendum is retained as change history.
 
 ## Table 1. Demographics — Safety population
 
@@ -184,6 +184,64 @@ Columns include:
 The primary threshold is the direction-of-effect crossing, not loss of statistical significance, because both primary Week 24 MMRM contrasts are already non-significant at delta zero.
 
 Produced by: `outputs/table19_actot_directional_tipping_points.csv`.
+
+## Table 20. ACTOT Week 24 MAR pairwise multiple-imputation sensitivity
+
+Population: randomised subjects with observed baseline ACTOT, analysed separately as Low Dose versus Placebo and High Dose versus Placebo.
+
+One row per active-versus-placebo comparison. Minimum rows: **2**.
+
+Required columns include:
+
+- comparison ID and label;
+- active and reference arm;
+- pooled active-minus-placebo estimate;
+- pooled standard error;
+- 95% confidence interval;
+- two-sided p-value;
+- Monte Carlo standard error of the estimate and standard error;
+- pooling method;
+- number of imputations.
+
+Method: approximate-Bayesian `rbmi` multiple imputation using Week 8/16/24 longitudinal ACTOT history, followed by Week 24 ANCOVA adjusted for baseline and Rubin pooling. The controlled number of imputations is **200**.
+
+Produced by: `outputs/table20_rbmi_mar_pairwise.csv`.
+
+Required linked QC evidence includes `outputs/rbmi_mi_qc.csv`, `outputs/rbmi_mcse_qc.csv` and `outputs/rbmi_draw_diagnostics.csv`.
+
+## Table 21. ACTOT Week 24 delta-adjusted multiple-imputation sensitivity
+
+Rows are pairwise comparison × controlled sensitivity scenario. Expected and minimum rows: **8** (2 comparisons × 4 scenarios).
+
+Required columns include all T20 inferential fields plus:
+
+- scenario ID and label;
+- active-arm delta;
+- placebo delta;
+- change in pooled estimate from the MAR scenario.
+
+Controlled scenarios:
+
+- MAR;
+- active missing Week 24 outcomes +1 ACTOT point;
+- active missing Week 24 outcomes +2 ACTOT points;
+- active +1 and placebo -1 ACTOT point for originally missing Week 24 outcomes.
+
+Observed Week 24 outcomes and non-Week-24 outcomes must not receive a delta shift. The same controlled imputation draws are reused across the four scenarios.
+
+Produced by: `outputs/table21_rbmi_delta_sensitivity.csv`.
+
+Required linked QC evidence includes `outputs/rbmi_mi_qc.csv`, `outputs/rbmi_mcse_qc.csv` and `outputs/rbmi_delta_audit.csv`.
+
+## T20/T21 Monte Carlo precision requirement
+
+T20/T21 are not accepted from table structure alone. For both MAR active-versus-placebo comparisons, the controlled criterion is:
+
+```text
+MCSE(estimate) / pooled SE <= 7.5%
+```
+
+This precision gate is separate from imputation-model fit/convergence.
 
 ## Figure shells
 
