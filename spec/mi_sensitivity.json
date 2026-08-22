@@ -13,8 +13,9 @@
     "covariance": "us",
     "same_covariance_across_groups": true,
     "reml": true,
-    "n_imputations": 50,
+    "n_imputations": 200,
     "failure_threshold": 0.10,
+    "max_mcse_estimate_to_se_ratio": 0.075,
     "visits": ["8", "16", "24"],
     "imputation_model_covariates": ["BASE*VISIT", "TRT01A*VISIT"]
   },
