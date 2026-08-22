@@ -1,0 +1,17 @@
+{
+  "T01": {"output_file": "outputs/table1_demographics.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T02": {"output_file": "outputs/table2_disposition.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T03": {"output_file": "outputs/table3_exposure.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T04": {"output_file": "outputs/table4_teae_overview.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T05": {"output_file": "outputs/table5_teae_soc_pt.csv", "required_columns": ["AEBODSYS", "AEDECOD", "TRT01A", "n", "denom", "n_pct"], "min_rows": 1},
+  "T06": {"output_file": "outputs/table6_teae_severity.csv", "required_columns": ["TRT01A", "Severity", "n", "denom", "n_pct"], "min_rows": 9},
+  "T07": {"output_file": "outputs/table7_teae_risk_difference.csv", "required_columns": ["comparison", "n_arm", "n_placebo", "risk_arm", "risk_placebo", "risk_difference", "ci95_lower", "ci95_upper", "fisher_p"], "min_rows": 2},
+  "T08": {"output_file": "outputs/table8_actot_descriptive.csv", "required_columns": ["TRT01A", "n", "baseline_mean", "week24_mean", "chg_mean"], "min_rows": 3},
+  "T09": {"output_file": "outputs/table9_actot_lsmeans.csv", "required_columns": ["analysis", "TRT01A", "n", "lsmean_week24", "se", "ci95_lower", "ci95_upper", "baseline_reference"], "min_rows": 6},
+  "T10": {"output_file": "outputs/table10_actot_ancova_contrasts.csv", "required_columns": ["analysis", "comparison", "n_total", "estimate", "se", "ci95_lower", "ci95_upper", "p_value", "df", "baseline_reference"], "min_rows": 4},
+  "T11": {"output_file": "outputs/mmrm_lsmeans.csv", "required_columns": ["TRT01A", "AVISIT", "emmean", "SE", "df", "lower.CL", "upper.CL", "covariance"], "min_rows": 9},
+  "T12": {"output_file": "outputs/mmrm_treatment_contrasts.csv", "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"], "min_rows": 6},
+  "T13": {"output_file": "outputs/mmrm_covariance_sensitivity.csv", "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"], "min_rows": 12},
+  "T14": {"output_file": "outputs/mmrm_model_diagnostics.csv", "required_columns": ["model", "covariance", "inference", "df_method", "observations", "subjects", "logLik", "AIC", "BIC", "optimizer", "fit_returned"], "min_rows": 2},
+  "T15": {"output_file": "outputs/mmrm_vs_week24_ancova.csv", "required_columns": ["comparison", "mmrm_estimate", "mmrm_se", "mmrm_ci95_lower", "mmrm_ci95_upper", "mmrm_p_value", "ancova_estimate", "ancova_se", "ancova_ci95_lower", "ancova_ci95_upper", "ancova_p_value", "estimate_difference_mmrm_minus_ancova"], "min_rows": 2}
+}
