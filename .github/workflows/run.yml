@@ -43,6 +43,8 @@ jobs:
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
         run: Rscript R/mmrm_analysis.R
+      - name: ACTOT estimand and missing-data review gate
+        run: python scripts/run_estimand_review.py
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
       - name: Statistical change-control impact gate
@@ -64,6 +66,14 @@ jobs:
           test -f outputs/randomisation_qc.csv && cat outputs/randomisation_qc.csv || true
           echo "--- Randomisation balance ---"
           test -f outputs/randomisation_balance.csv && cat outputs/randomisation_balance.csv || true
+          echo "--- ACTOT estimand and missing-data summary ---"
+          test -f outputs/estimand_summary.md && cat outputs/estimand_summary.md || true
+          echo "--- ACTOT missingness by visit ---"
+          test -f outputs/table16_actot_missingness_by_visit.csv && cat outputs/table16_actot_missingness_by_visit.csv || true
+          echo "--- Week 24 missingness by disposition ---"
+          test -f outputs/table17_week24_missingness_by_disposition.csv && cat outputs/table17_week24_missingness_by_disposition.csv || true
+          echo "--- Estimand review checks ---"
+          test -f outputs/estimand_review.csv && cat outputs/estimand_review.csv || true
           echo "--- Analysis-dataset and TLF reviewer summary ---"
           test -f outputs/analysis_dataset_review_summary.md && cat outputs/analysis_dataset_review_summary.md || true
           echo "--- Analysis-dataset and TLF reviewer checks ---"

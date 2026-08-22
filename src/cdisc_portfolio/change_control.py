@@ -177,12 +177,25 @@ def _resolve_resource(root: Path, category: str, resource: str, tlf_outputs: dic
     return resource, (root / resource).exists()
 
 
+def _matched_spec_version(graph: dict[str, Any], requests: dict[str, Any]) -> str:
+    graph_version = str(graph.get("version", "")).strip()
+    requests_version = str(requests.get("version", "")).strip()
+    if not graph_version or not requests_version:
+        raise ValueError("change-impact graph and request specifications must both declare version")
+    if graph_version != requests_version:
+        raise ValueError(
+            f"change-control specification version mismatch: graph={graph_version}; requests={requests_version}"
+        )
+    return graph_version
+
+
 def run_change_impact_assessment(root: Path) -> tuple[list[dict[str, Any]], dict[str, Any], str]:
     graph_path = root / "spec" / "change_impact_graph.json"
     requests_path = root / "spec" / "change_requests.json"
     traceability_path = root / "spec" / "analysis_traceability.csv"
     graph = load_json(graph_path)
     requests = load_json(requests_path)
+    change_control_version = _matched_spec_version(graph, requests)
     assessments = assess_change_requests(graph, requests)
     tlf_outputs = _load_traceability(traceability_path)
 
@@ -229,7 +242,7 @@ def run_change_impact_assessment(root: Path) -> tuple[list[dict[str, Any]], dict
 
     all_passed = missing_declared == 0 and unresolved_required == 0 and all(a["passed"] for a in assessments)
     metrics = {
-        "analysis_version": "0.10.0",
+        "analysis_version": change_control_version,
         "changes_assessed": len(assessments),
         "changed_components": sum(len(a["changed_components"]) for a in assessments),
         "propagated_component_links": sum(len(a["propagated_components"]) for a in assessments),
@@ -259,6 +272,8 @@ def run_change_impact_assessment(root: Path) -> tuple[list[dict[str, Any]], dict
 
     lines = [
         "# Statistical change-control impact assessment",
+        "",
+        f"Change-control specification version: **{change_control_version}**",
         "",
         "Portfolio simulation only; not a sponsor-approved protocol/SAP change-control record.",
         "",
