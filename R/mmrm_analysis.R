@@ -73,7 +73,9 @@ d$AVISIT <- unname(visit_map[d$AVISIT_U])
 d$TRT01A <- factor(d$TRT01A, levels = expected_arms)
 d$AVISIT <- factor(d$AVISIT, levels = expected_visits, ordered = TRUE)
 d$USUBJID <- factor(d$USUBJID)
-d$VISITN <- as.numeric(d$AVISIT)
+# mmrm covariance time-point variables must be factors. Keep visit timing labels
+# separate from AVISIT so the AR1H sensitivity is explicit and auditable.
+d$VISITN <- factor(d$AVISIT, levels = expected_visits, labels = c("8", "16", "24"), ordered = TRUE)
 d <- d[order(d$USUBJID, d$VISITN, d$QSSEQ), ]
 row.names(d) <- NULL
 
