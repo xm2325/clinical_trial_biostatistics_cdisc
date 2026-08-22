@@ -4,7 +4,7 @@ A reproducible clinical-trial biostatistics work sample built from public CDISC 
 
 The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, TLF-style outputs, public-reference validation, separate R/Python programming QC, longitudinal MMRM, executable SAP-to-TLF traceability, protocol-design/sample-size calculations, a controlled portfolio randomisation/initial-kit schedule, an executable analysis-dataset/TLF reviewer gate, and machine-readable statistical change-control impact assessment.
 
-> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does **not** claim sponsor/CRO production, strong SAS production, DSMB, regulatory-submission, formal ADaM conformance, IRT/IWRS production, or independent second-programmer validation experience. The v0.10 change requests are portfolio simulations, not sponsor-approved protocol/SAP amendments.
+> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does **not** claim sponsor/CRO production, SAS production, DSMB, regulatory-submission, formal ADaM conformance, IRT/IWRS production, or independent second-programmer validation experience. The v0.10 change requests are portfolio simulations, not sponsor-approved protocol/SAP amendments.
 
 ## Verified v0.10 live run
 
