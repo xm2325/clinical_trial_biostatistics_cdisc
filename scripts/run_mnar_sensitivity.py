@@ -22,6 +22,26 @@ def main() -> None:
 
     grid, tipping, qc, metrics, summary = run_delta_sensitivity(spec, contrasts, missingness)
 
+    input_columns = [
+        "scenario_id",
+        "comparison",
+        "active_arm",
+        "placebo_missing_prop",
+        "active_missing_prop",
+        "active_multiplier",
+        "placebo_multiplier",
+        "contrast_shift_per_delta",
+        "primary_estimate",
+        "SE_fixed_delta",
+        "df",
+    ]
+    sensitivity_inputs = (
+        grid.loc[grid["delta"].eq(0.0), input_columns]
+        .sort_values(["scenario_id", "comparison"])
+        .reset_index(drop=True)
+    )
+
+    sensitivity_inputs.to_csv(out / "mnar_sensitivity_inputs.csv", index=False)
     grid.to_csv(out / "table18_actot_delta_sensitivity.csv", index=False)
     tipping.to_csv(out / "table19_actot_directional_tipping_points.csv", index=False)
     qc.to_csv(out / "mnar_sensitivity_qc.csv", index=False)
