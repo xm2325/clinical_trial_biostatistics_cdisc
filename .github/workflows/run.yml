@@ -38,6 +38,7 @@ jobs:
           Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_sensitivity.R")); cat("rbmi_sensitivity.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/rbmi_mcse_qc.R")); cat("rbmi_mcse_qc.R syntax OK\n")'
       - name: Install R analysis dependencies
         run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi"))'
       - name: Independent R reconstruction and cross-language QC
@@ -50,6 +51,8 @@ jobs:
         run: python scripts/run_mnar_sensitivity.py
       - name: ACTOT rbmi subject-level MI sensitivity gate
         run: Rscript R/rbmi_sensitivity.R
+      - name: ACTOT rbmi Monte Carlo precision gate
+        run: Rscript R/rbmi_mcse_qc.R
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
       - name: Statistical change-control impact gate
@@ -93,6 +96,9 @@ jobs:
           test -f outputs/table21_rbmi_delta_sensitivity.csv && cat outputs/table21_rbmi_delta_sensitivity.csv || true
           echo "--- rbmi MI QC ---"
           test -f outputs/rbmi_mi_qc.csv && cat outputs/rbmi_mi_qc.csv || true
+          echo "--- rbmi Monte Carlo precision QC ---"
+          test -f outputs/rbmi_mcse_qc.csv && cat outputs/rbmi_mcse_qc.csv || true
+          test -f outputs/rbmi_mcse_diagnostics.csv && cat outputs/rbmi_mcse_diagnostics.csv || true
           echo "--- rbmi draw diagnostics ---"
           test -f outputs/rbmi_draw_diagnostics.csv && cat outputs/rbmi_draw_diagnostics.csv || true
           echo "--- rbmi vs primary MMRM diagnostic ---"
