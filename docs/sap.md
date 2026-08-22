@@ -1,10 +1,10 @@
-# Statistical Analysis Plan — portfolio version 0.7
+# Statistical Analysis Plan — portfolio version 0.8
 
 ## 1. Scope
 
 This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
 
-Version 0.3 added public-reference validation against `ADQSCIBC` and `ADQSADAS`. Version 0.4 added a separate R implementation for selected programming QC. Version 0.5 added longitudinal ACTOT MMRM. Version 0.6 added executable SAP-to-TLF structural traceability. Version 0.7 adds a separate, machine-readable protocol-design and sample-size exercise with multiplicity, dropout inflation, achieved-power back-checking and design QC.
+Version 0.3 added public-reference validation against `ADQSCIBC` and `ADQSADAS`. Version 0.4 added a separate R implementation for selected programming QC. Version 0.5 added longitudinal ACTOT MMRM. Version 0.6 added executable SAP-to-TLF structural traceability. Version 0.7 added a separate, machine-readable protocol-design and sample-size exercise with multiplicity, dropout inflation, achieved-power back-checking and design QC. Version 0.8 adds a reproducible stratified permuted-block randomisation and coded initial-kit schedule with blinded/unblinded output separation and required schedule QC.
 
 ## 2. Analysis populations
 
@@ -173,18 +173,19 @@ The separate protocol-design exercise in Section 17 does define a planning hypot
 
 ## 15. QC and acceptance
 
-The live workflow separates Python internal QC, public-reference validation, R/Python cross-language programming QC, MMRM model/data QC, structural SAP-to-TLF traceability and protocol-design QC.
+The live workflow separates Python internal QC, public-reference validation, R/Python cross-language programming QC, MMRM model/data QC, structural SAP-to-TLF traceability, protocol-design QC and randomisation/initial-kit schedule QC.
 
-The verified v0.7 live run has:
+The verified v0.8 live run has:
 
 | QC layer | Result |
 |---|---:|
-| Python unit tests | **19/19 passed** |
+| Python unit tests | **29/29 passed** |
 | Required Python pipeline QC | **24/24 passed** |
 | Required R/Python cross-language QC | **16/16 passed** |
 | Required MMRM QC | **11/11 passed** |
 | Complete SAP-to-TLF structural traceability | **15/15 TLFs** |
 | Required protocol-design QC | **7/7 passed** |
+| Required randomisation/initial-kit schedule QC | **10/10 passed** |
 
 The latest maximum R/Python ANCOVA numerical difference is `4e-14`.
 
@@ -220,7 +221,7 @@ The planned output set is documented in `docs/tlf_shells.md`. It covers demograp
 
 ### 17.1 Status and objective
 
-Version 0.7 adds a separate illustrative planning exercise for a three-arm parallel-group study with Placebo, Xanomeline Low Dose and Xanomeline High Dose allocated 1:1:1. The planned continuous endpoint is Week 24 ACTOT change from baseline, with each active dose compared with placebo.
+Version 0.7 added a separate illustrative planning exercise for a three-arm parallel-group study with Placebo, Xanomeline Low Dose and Xanomeline High Dose allocated 1:1:1. The planned continuous endpoint is Week 24 ACTOT change from baseline, with each active dose compared with placebo.
 
 This is not the original source trial's sample-size calculation and does not claim that its assumptions are clinically justified.
 
@@ -277,10 +278,56 @@ The design run must pass all seven required checks:
 6. required N does not increase when the assumed treatment effect increases at fixed target power;
 7. required N does not decrease when target power increases at fixed effect.
 
-The verified v0.7 run passes **7/7**. `outputs/protocol_design_metrics.json` also records a SHA256 digest of the exact machine-readable design specification used for the run.
+The verified v0.8 run retains **7/7** passing design checks. `outputs/protocol_design_metrics.json` records a SHA256 digest of the exact machine-readable design specification used for the run.
 
 ## 18. Statistical protocol review
 
 `docs/protocol_statistical_review_checklist.md` records the statistical questions that should be resolved before a protocol is considered ready for SAP and programming work, including design, objectives/endpoints, estimand components, multiplicity, sample-size assumptions, analysis populations, missing data, model details, safety windows, programming implications and DSMB/interim-analysis boundaries.
 
 The checklist is a portfolio review aid. It does not represent sponsor protocol sign-off, DSMB work or regulatory-submission ownership.
+
+## 19. Randomisation and initial-kit schedule
+
+### 19.1 Status and design link
+
+Version 0.8 adds an illustrative randomisation and initial-kit schedule linked to protocol-design scenario `E2.5_P80`, which plans 390 randomised subjects. The schedule is a portfolio simulation. It is not the source trial's randomisation list and is not an IRT/IWRS production schedule.
+
+### 19.2 Allocation
+
+The machine-readable specification in `spec/randomisation_schedule.json` uses:
+
+- three treatment arms in a 1:1:1 ratio;
+- five illustrative strata with 78 planned randomisations each;
+- stratified permuted blocks;
+- allowed block sizes 3 and 6;
+- a deterministic seed for public reproducibility only.
+
+The verified output contains 390 randomisation numbers and 390 unique initial-kit codes. Each treatment has 130 allocations overall and 26 within each stratum. The schedule contains 87 blocks: 44 blocks of size 3 and 43 blocks of size 6.
+
+### 19.3 Blinded and unblinded outputs
+
+`outputs/randomisation_schedule_blinded.csv` contains exactly:
+
+```text
+randomisation_id
+stratum
+kit_id
+```
+
+Treatment, blind code, block identifier, block size and within-block position are kept only in the unblinded portfolio output. The column boundary and blinded/unblinded key reconciliation are required automated checks.
+
+### 19.4 Initial-kit scope
+
+One illustrative initial kit is generated for each randomisation number. The separate unblinded kit code list maps kit ID to treatment/blind code. The verified run has zero kit-to-treatment mismatches.
+
+The exercise does not model resupply, site inventory, expiry, replacement kits, temperature excursions, emergency unblinding, depot/site shipments or IRT/IWRS transactions.
+
+### 19.5 Schedule QC and identity
+
+The verified run passes **10/10 required schedule checks** covering total N, unique randomisation/kit IDs, overall/stratum/block balance, kit-treatment consistency, blinded-column restriction, blinded/unblinded key reconciliation and complete kit-list coverage.
+
+The randomisation specification SHA256 is `3b0223721b9a81eacba26878f2c53a7f211924ea499fa0898256b591b7d9ed14`. Generated schedule CSVs are separately hashed in `outputs/randomisation_summary.md`.
+
+The longest same-treatment run is reported only as an informational diagnostic: 2, 2, 3, 2 and 3 across the five strata. No post-randomisation run-length restriction is imposed because it was not part of the pre-specified allocation method.
+
+In production, the seed, block structure, treatment allocation list and kit decoding list would require controlled access, independent verification, secure transfer and formal change control. Those operational responsibilities are not claimed by this portfolio.

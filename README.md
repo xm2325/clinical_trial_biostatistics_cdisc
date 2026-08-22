@@ -2,23 +2,24 @@
 
 A reproducible clinical-trial biostatistics work sample built from public CDISC pilot data and public pharmaverse SDTM test data.
 
-The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, TLF-style outputs, public-reference validation, separate R/Python programming QC, longitudinal MMRM, executable SAP-to-TLF traceability, and a reproducible protocol-design/sample-size exercise.
+The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, TLF-style outputs, public-reference validation, separate R/Python programming QC, longitudinal MMRM, executable SAP-to-TLF traceability, reproducible protocol-design/sample-size calculations, and a controlled portfolio randomisation/initial-kit schedule.
 
-> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS, DSMB, regulatory-submission experience, or validation by an independent second programmer.
+> **Evidence boundary:** this is an independent portfolio project. Outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS, DSMB, regulatory-submission, IRT/IWRS production experience, or validation by an independent second programmer.
 
-## Verified v0.7 live run
+## Verified v0.8 live run
 
 The full workflow has been executed in GitHub Actions against downloaded public source data and pinned public CDISC reference files.
 
 | Verification layer | Verified result |
 |---|---:|
-| Python unit tests | **19/19 passed** |
+| Python unit tests | **29/29 passed** |
 | Required Python pipeline QC | **24/24 passed** |
 | Required R/Python cross-language QC | **16/16 passed** |
 | Required MMRM QC | **11/11 passed** |
 | SAP-to-TLF structural traceability | **15/15 TLFs passed** |
 | Protocol-design/sample-size QC | **7/7 passed** |
-| Randomised / safety subjects | 254 / 254 |
+| Randomisation/initial-kit schedule QC | **10/10 passed** |
+| Randomised / safety subjects in public analysis | 254 / 254 |
 | Official CDISC QS rows | 121,749 |
 | Portfolio-defined TEAE events | 1,116 |
 | ACTOT observed Week 24 ANCOVA subjects | 116 |
@@ -52,6 +53,13 @@ Machine-readable protocol-design assumptions
         +--> sample size / dropout inflation
         +--> achieved-power back-check
         +--> design QC
+        |
+        +--> selected planning scenario E2.5_P80 (390 randomisations)
+                |
+                +--> stratified permuted-block randomisation
+                +--> blinded / unblinded schedule separation
+                +--> treatment-coded initial-kit allocation
+                +--> schedule QC + output hashes
 ```
 
 ## Public-reference validation
@@ -135,7 +143,7 @@ Version 0.6 introduced a machine-readable registry covering **15 planned TLFs**.
 - linked QC evidence;
 - SHA256 identity of the generated output.
 
-The verified v0.7 run retains **15/15** passing output contracts, **15/15** analysis-dataset links and **15/15** QC-evidence links.
+The verified v0.8 run retains **15/15** passing output contracts, **15/15** analysis-dataset links and **15/15** QC-evidence links.
 
 ## Protocol design and sample-size exercise
 
@@ -165,6 +173,32 @@ Verified calculations are:
 
 The design gate passes **7/7 required checks**, including alpha reconciliation, dropout inflation, achieved-power back-checking and monotonicity of required N as effect size or target power changes. The run also records the SHA256 of the exact design specification.
 
+## Randomisation and initial-kit schedule
+
+Version 0.8 links the illustrative `E2.5_P80` planning scenario to a reproducible **390-subject** randomisation and initial-kit schedule. This is a training simulation, not an IRT/IWRS production schedule.
+
+The verified schedule uses stratified permuted blocks with block sizes 3 and 6 across five illustrative strata. The CI artifact confirms:
+
+| Schedule property | Verified result |
+|---|---:|
+| Randomisation numbers | **390** |
+| Unique initial-kit codes | **390** |
+| Treatment allocation | **130 / 130 / 130** |
+| Strata | **5** |
+| Allocation within each stratum | **26 / 26 / 26** |
+| Permuted blocks | **87** |
+| Block-size 3 / block-size 6 | **44 / 43** |
+| Required schedule QC | **10/10 passed** |
+| Kit-to-treatment mismatches | **0** |
+
+The blinded schedule exposes only `randomisation_id`, `stratum` and `kit_id`; treatment, blind code and block structure are restricted to the unblinded portfolio outputs. CI tests this boundary explicitly.
+
+The schedule specification SHA256 from the verified run is `3b0223721b9a81eacba26878f2c53a7f211924ea499fa0898256b591b7d9ed14`. Generated schedule CSVs are also hashed in `outputs/randomisation_summary.md`.
+
+The longest consecutive same-treatment runs by stratum are reported as an informational diagnostic: 2, 2, 3, 2 and 3. No post-randomisation run-length restriction is imposed because it was not part of the pre-specified allocation rule.
+
+Production randomisation would additionally require controlled seed/list access, independent verification, secure transfer, treatment-code governance, IRT/vendor validation, emergency-unblinding procedures, version/change control and drug-supply reconciliation. Those operational responsibilities are not claimed here.
+
 ## Safety analysis
 
 The safety population requires at least one observed EX record. The portfolio-defined TEAE window is treatment start through 30 days after treatment end, with documented disposition-date fallback where exposure end is unavailable.
@@ -184,6 +218,7 @@ These comparisons are exploratory and not multiplicity-adjusted.
 - `docs/analysis_traceability.md` — executable SAP-to-TLF traceability design.
 - `docs/protocol_statistical_design.md` — protocol-design and sample-size rationale.
 - `docs/protocol_statistical_review_checklist.md` — statistical protocol review/sign-off checklist.
+- `docs/randomisation_kit_schedule.md` — randomisation, blinding boundary and initial-kit schedule design/QC.
 - `docs/analysis_dataset_spec.md` — source-to-analysis variable mapping.
 - `docs/qc_plan.md` — required and informational QC.
 - `docs/independent_programming_qc.md` — cross-language QC design.
@@ -196,6 +231,7 @@ pytest -q
 python scripts/profile_official_references.py
 python scripts/run_all.py
 python scripts/run_protocol_design.py
+python scripts/run_randomisation.py
 
 Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
 Rscript R/independent_qc.R

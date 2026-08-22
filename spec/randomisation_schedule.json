@@ -1,0 +1,34 @@
+{
+  "analysis_version": "0.8.0",
+  "schedule_status": "Illustrative portfolio randomisation and initial-kit schedule; not an IRT/IWRS production schedule and not for a real clinical trial.",
+  "design_link": {
+    "protocol_design_scenario": "E2.5_P80",
+    "planned_total_randomised": 390
+  },
+  "random_seed": 20260822,
+  "allocation": {
+    "method": "Stratified permuted blocks",
+    "arms": [
+      {"treatment": "Placebo", "blind_code": "T01"},
+      {"treatment": "Xanomeline Low Dose", "blind_code": "T02"},
+      {"treatment": "Xanomeline High Dose", "blind_code": "T03"}
+    ],
+    "ratio": [1, 1, 1],
+    "allowed_block_sizes": [3, 6]
+  },
+  "strata": [
+    {"stratum": "STRATUM_A", "planned_n": 78},
+    {"stratum": "STRATUM_B", "planned_n": 78},
+    {"stratum": "STRATUM_C", "planned_n": 78},
+    {"stratum": "STRATUM_D", "planned_n": 78},
+    {"stratum": "STRATUM_E", "planned_n": 78}
+  ],
+  "identifiers": {
+    "randomisation_prefix": "R",
+    "randomisation_width": 4,
+    "kit_prefix": "K",
+    "kit_width": 6,
+    "kit_start": 100001
+  },
+  "kit_scope": "One illustrative initial kit per randomisation number. No resupply, site inventory, expiry, replacement, emergency unblinding or IRT transaction logic is modelled."
+}
