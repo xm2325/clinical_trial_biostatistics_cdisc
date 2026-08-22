@@ -184,13 +184,13 @@ def run_delta_sensitivity(
         label = str(scenario.get("label", sid))
         a_mult = float(scenario["active_multiplier"])
         p_mult = float(scenario["placebo_multiplier"])
-        for r in primary.itertuples(index=False):
-            comparison = str(r.contrast)
+        for _, r in primary.iterrows():
+            comparison = str(r["contrast"])
             active_arm = EXPECTED_CONTRASTS[comparison]
-            primary_estimate = float(r.estimate)
-            se = float(r.SE)
-            df = float(r.df)
-            p0 = float(getattr(r, "p.value"))
+            primary_estimate = float(r["estimate"])
+            se = float(r["SE"])
+            df = float(r["df"])
+            p0 = float(r["p.value"])
             coefficient = miss_prop[active_arm] * a_mult - miss_prop["Placebo"] * p_mult
             tcrit = float(stats.t.ppf(1.0 - alpha / 2.0, df))
 
