@@ -1,10 +1,12 @@
-# Statistical Analysis Plan — portfolio version 0.3
+# Statistical Analysis Plan — portfolio version 0.4
 
 ## 1. Scope
 
 This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
 
-Version 0.3 adds two official-reference workflows. The first derives an `ADQSCIBC-style` CIBIC+ analysis dataset from the official CDISC QS Dataset-JSON and compares it with the public `ADQSCIBC` reference ADaM. The second profiles the official `ADQSADAS` reference, validates selected ADAS-Cog `ACTOT` analysis rows, and runs an independent Week 24 continuous-endpoint analysis using baseline adjustment and LOCF sensitivity.
+Version 0.3 added two official-reference workflows. The first derives an `ADQSCIBC-style` CIBIC+ analysis dataset from official CDISC QS and compares it with the public `ADQSCIBC` reference ADaM. The second profiles the official `ADQSADAS` reference, validates selected ADAS-Cog `ACTOT` analysis rows, and runs an independent Week 24 continuous-endpoint analysis using baseline adjustment and LOCF sensitivity.
+
+Version 0.4 adds a separate R implementation for selected programming QC. The R program independently reconstructs safety populations, TEAE results, CIBIC record selection, ACTOT baseline/change records and Week 24/LOCF ANCOVA from the same public source data. Python outputs are read only for the final R/Python comparison.
 
 ## 2. Analysis populations
 
@@ -116,9 +118,9 @@ No confirmatory hypothesis family is defined. TEAE and ACTOT p-values are explor
 
 ## 14. QC and acceptance
 
-The live workflow separates structural/source validation from reference-value agreement.
+The live workflow separates three types of checks: Python internal QC, official-reference validation, and R/Python cross-language programming QC.
 
-Required reference checks are:
+Required official-reference checks are:
 
 - 100% official ADQSCIBC analysis-key coverage;
 - 100% ADQSCIBC `DTYPE` agreement;
@@ -130,7 +132,25 @@ Required reference checks are:
 
 Reference `AVAL` agreement is reported as an informational metric when the official source and reference differ. The workflow does not change a source-derived value merely to make the reference match.
 
-The verified v0.3 run passes 24/24 required pipeline QC checks and all structural reference gates. The live script exits non-zero if a required QC condition fails, while GitHub Actions retains diagnostic outputs.
+### 14.1 Independent R/Python programming QC
+
+`R/independent_qc.R` reimplements selected analysis rules from the same raw public inputs. It does not call Python derivation code. The final comparison requires exact agreement for discrete derivations and an absolute difference no greater than `1e-8` for ANCOVA numerical outputs.
+
+The required cross-language comparisons cover:
+
+- randomised, safety and completed subject counts;
+- TEAE subject and event counts;
+- DS treatment-end fallback count;
+- any-TEAE risk-difference table;
+- CIBIC analysis keys, `QSSEQ`, `DTYPE` and source-derived `AVAL`;
+- ACTOT source-row keys, `AVAL`, `BASE`, `CHG` and flags;
+- ANCOVA contrast keys, N, residual df, estimates, standard errors, confidence limits, p-values and baseline reference values.
+
+The verified v0.4 run passes **16/16 required R/Python checks**. The maximum ANCOVA numeric difference is `7.11e-15`, below the `1e-8` acceptance tolerance. The same run retains **10/10 Python unit tests** and **24/24 required Python pipeline QC checks**.
+
+This cross-language check is a separate implementation by the same portfolio author. It is not described as independent review by a second programmer.
+
+The live scripts exit non-zero if a required QC condition fails, while GitHub Actions retains diagnostic outputs.
 
 ## 15. Sample-size demonstration
 
