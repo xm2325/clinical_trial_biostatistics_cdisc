@@ -12,22 +12,30 @@
     "subject_flag": "DCSFL",
     "subject_flag_value": "Y",
     "treatment_start_date": "TRTSDT",
-    "treatment_end_date": "TRTEDT",
-    "treatment_end_day_rule": "TRTEDT_minus_TRTSDT_plus_1",
+    "discontinuation_date": "EOSDT",
+    "discontinuation_day_rule": "EOSDT_minus_TRTSDT_plus_1",
+    "observed_outcome_date": "ADT",
     "nominal_visit_days": {
       "8": 56,
       "16": 112,
       "24": 168
     },
-    "first_affected_visit_rule": "first_nominal_visit_with_nominal_day_greater_than_treatment_end_day",
-    "require_zero_observed_post_ice_for_strategy_switch": true
+    "first_affected_visit_rule": "first_scheduled_visit_after_discontinuation_and_after_all_observed_pre_discontinuation_visits",
+    "retain_observed_on_or_before_discontinuation": true,
+    "require_zero_observed_after_discontinuation_date": true,
+    "require_zero_observed_on_or_after_first_affected_visit_for_strategy_switch": true
   },
   "reference_based_imputation": {
     "package": "rbmi",
     "required_version": "1.6.1",
     "reference_arm": "Placebo",
     "initial_draw_strategy": "JR",
-    "strategies": ["MAR", "JR", "CR", "CIR"],
+    "strategies": [
+      "MAR",
+      "JR",
+      "CR",
+      "CIR"
+    ],
     "apply_non_mar_to": "active_arm_discontinuers_with_affected_scheduled_visit",
     "reference_arm_discontinuers_strategy": "MAR",
     "reuse_parameter_draws_across_strategies": true,
@@ -36,10 +44,12 @@
   },
   "analysis": {
     "method": "Week 24 ANCOVA",
-    "covariates": ["BASE"],
+    "covariates": [
+      "BASE"
+    ],
     "pooling": "Rubin",
     "confidence_level": 0.95,
     "expected_strategy_rows_per_comparison": 4
   },
-  "evidence_boundary": "Independent public-data portfolio reference-based MI sensitivity analysis using recorded treatment-discontinuation timing. JR, CR and CIR are applied only to active-arm discontinuers with a scheduled visit after recorded treatment end; placebo remains MAR. This is not a sponsor-approved estimand strategy, validated production program or regulatory analysis."
+  "evidence_boundary": "Independent public-data portfolio reference-based MI sensitivity analysis using the recorded discontinuation date already used by the ACTOT estimand review. JR, CR and CIR are applied only to active-arm discontinuers with an affected scheduled visit; placebo remains MAR. This is not a sponsor-approved estimand strategy, validated production program or regulatory analysis."
 }

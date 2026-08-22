@@ -26,18 +26,27 @@ def validate_reference_based_mi_spec(spec: Mapping[str, Any]) -> None:
         "subject_flag": "DCSFL",
         "subject_flag_value": "Y",
         "treatment_start_date": "TRTSDT",
-        "treatment_end_date": "TRTEDT",
-        "treatment_end_day_rule": "TRTEDT_minus_TRTSDT_plus_1",
-        "first_affected_visit_rule": "first_nominal_visit_with_nominal_day_greater_than_treatment_end_day",
+        "discontinuation_date": "EOSDT",
+        "discontinuation_day_rule": "EOSDT_minus_TRTSDT_plus_1",
+        "observed_outcome_date": "ADT",
+        "first_affected_visit_rule": (
+            "first_scheduled_visit_after_discontinuation_and_after_all_"
+            "observed_pre_discontinuation_visits"
+        ),
     }
     for key, value in expected_ice.items():
         if ice.get(key) != value:
             raise ValueError(f"intercurrent_event.{key} must be {value}")
+
     visit_days = {str(k): int(v) for k, v in ice.get("nominal_visit_days", {}).items()}
     if visit_days != REQUIRED_VISIT_DAYS:
         raise ValueError("nominal visit days must remain Week 8=56, Week 16=112, Week 24=168")
-    if ice.get("require_zero_observed_post_ice_for_strategy_switch") is not True:
-        raise ValueError("strategy switching requires a zero observed post-ICE data gate")
+    if ice.get("retain_observed_on_or_before_discontinuation") is not True:
+        raise ValueError("observed outcomes on or before recorded discontinuation must be retained")
+    if ice.get("require_zero_observed_after_discontinuation_date") is not True:
+        raise ValueError("reference-based MI requires the actual-date post-discontinuation observation gate")
+    if ice.get("require_zero_observed_on_or_after_first_affected_visit_for_strategy_switch") is not True:
+        raise ValueError("strategy switching requires a zero observed post-ICE visit gate")
 
     rb = spec.get("reference_based_imputation", {})
     if rb.get("package") != "rbmi" or rb.get("required_version") != "1.6.1":
@@ -56,6 +65,7 @@ def validate_reference_based_mi_spec(spec: Mapping[str, Any]) -> None:
         raise ValueError("parameter draws must be reused across reference-based strategies")
     if rb.get("reuse_ice_timing_across_strategies") is not True:
         raise ValueError("ICE timing must be held fixed across reference-based strategies")
+
     mcse = rb.get("max_mcse_estimate_to_se_ratio")
     if not isinstance(mcse, (int, float)) or not 0 < float(mcse) <= 0.075:
         raise ValueError("reference-based MI MCSE ratio must be in (0, 0.075]")
