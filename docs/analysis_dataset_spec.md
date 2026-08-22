@@ -1,6 +1,6 @@
-# Analysis dataset specification
+# Analysis dataset specification — portfolio v0.9
 
-This document records the main source-to-derived-variable mappings used by v0.3. It is a compact portfolio analysis specification, not a formal CDISC metadata package.
+This document records the main source-to-derived-variable mappings used by the portfolio and the v0.9 machine-readable dataset contracts. It is a portfolio analysis specification, not a formal CDISC metadata package, Define-XML or claim of submission-ready ADaM conformance.
 
 ## ADSL-style
 
@@ -58,7 +58,7 @@ Source: official CDISC pilot QS Dataset-JSON, `QSTESTCD=CIBIC`, linked to ADSL-s
 | AWTDIFF | ADY / AWTARGET | absolute difference from target day |
 | QSSEQ | QS.QSSEQ | exact source-record identifier |
 
-Official-reference comparison uses `USUBJID + AVISIT`. The verified run covers 705/705 reference analysis keys and matches `QSSEQ` and `DTYPE` for every row. Ten reference `AVAL` values differ from the selected official QS source; these rows are retained in `adqscibc_mismatch_source_trace.csv`.
+Official-reference comparison uses `USUBJID + AVISIT`. The verified run covers 705/705 reference analysis keys and matches `QSSEQ` and `DTYPE` for every row. Ten reference `AVAL` values differ from the selected official QS source; these rows remain visible in `adqscibc_mismatch_source_trace.csv`.
 
 ## ADQS-style ACTOT for portfolio analysis
 
@@ -78,20 +78,13 @@ Source: official CDISC pilot QS Dataset-JSON, `QSTESTCD=ACTOT`.
 | EFFFL | baseline + post-baseline availability | portfolio efficacy flag |
 | QSSEQ | QS.QSSEQ | source traceability |
 
-The main ANCOVA uses this source-derived ACTOT dataset. It does not substitute official reference ADaM values when those values differ from the source QS.
+The main ANCOVA/MMRM inputs use this source-derived ACTOT dataset. They do not substitute official reference ADaM values when those values differ from the source QS.
 
 ## Official ADQSADAS selected ACTOT reconstruction
 
 The official `ADQSADAS` reference has 12,463 rows and 15 parameters. `ACTOT` has 1,040 rows. The selected reference set is defined by `PARAMCD=ACTOT` and `ANL01FL=Y`, giving 1,016 rows.
 
-The portfolio reconstructs one selected row for Baseline, Week 8, Week 16 and Week 24 for each of 254 subjects. Analysis windows and LOCF rules determine the source row. Validation uses:
-
-| Field | Validation role |
-|---|---|
-| USUBJID + AVISIT | analysis-row key |
-| QSSEQ | selected source record |
-| DTYPE | observed versus LOCF classification |
-| AVAL / BASE / CHG | reported value comparison |
+The portfolio reconstructs one selected row for Baseline, Week 8, Week 16 and Week 24 for each of 254 subjects. Analysis windows and LOCF rules determine the source row. Validation uses `USUBJID + AVISIT` as the analysis-row key, `QSSEQ` for selected source record, `DTYPE` for observed/LOCF classification, and `AVAL / BASE / CHG` for reported-value comparison.
 
 The verified live run has 100% key, `QSSEQ` and `DTYPE` agreement. Value agreement is reported separately because the public source and public reference differ for a subset of rows.
 
@@ -101,6 +94,24 @@ A separate diagnostic recalculates `ACTOT` from 11 component codes: `ACITM01`, `
 
 This diagnostic is not used to replace the official source `ACTOT` in the main analysis. It is retained to show whether discrepancies can be explained by a simple item sum and to make that assumption testable.
 
-## ANCOVA analysis-subject datasets
+## ANCOVA and MMRM analysis datasets
 
-Observed Week 24 uses an observed `WEEK 24` ACTOT record. LOCF sensitivity uses the latest numeric post-baseline ACTOT observation on or before day 168. Each analysis set contains one row per subject with treatment, `BASE`, analysis `AVAL`, `CHG`, source day and `DTYPE`.
+Observed Week 24 ANCOVA uses an observed Week 24 ACTOT record. LOCF sensitivity uses the latest numeric post-baseline ACTOT observation on or before day 168. Each ANCOVA set contains one row per subject with treatment, `BASE`, analysis `AVAL`, `CHG`, source day and `DTYPE`.
+
+The MMRM dataset contains observed Week 8/16/24 ACTOT records only. `STUDYID + USUBJID + AVISIT` is unique. `QSSEQ` is retained so each MMRM row can be traced back to its exact ACTOT source record.
+
+## v0.9 machine-readable dataset contracts
+
+`spec/analysis_dataset_contracts.json` defines contracts for five generated analysis datasets:
+
+| Contract | Key | Main controlled fields |
+|---|---|---|
+| ADSL-style | STUDYID + USUBJID | RANDFL, SAFFL, COMPLFL, DCSFL |
+| ADAE-style | STUDYID + USUBJID + AESEQ | SAFFL, TRTEMFL, RELFL, MODSEVFL |
+| ACTOT | STUDYID + USUBJID + QSSEQ | PARAMCD, ABLFL, EFFFL |
+| ANCOVA | analysis + STUDYID + USUBJID | analysis, DTYPE |
+| MMRM | STUDYID + USUBJID + AVISIT | AVISIT |
+
+For every contract the reviewer checks required columns, key uniqueness, non-missing fields and controlled-value validity. The verified v0.9 run passes **5/5 dataset-contract checks** as part of the wider **24/24 analysis-dataset/TLF reviewer gate**.
+
+The contract specification receives its own SHA256 in `outputs/analysis_dataset_review_metrics.json`. These contracts are intentionally narrower than formal ADaM conformance or submission metadata; their purpose is to make the portfolio's expected analysis-data structure executable and reviewable.
