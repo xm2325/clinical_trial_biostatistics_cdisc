@@ -4,17 +4,26 @@ import json
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cdisc_portfolio.contracts import load_dataset_contracts, review_dataset_contracts  # noqa: E402
 from cdisc_portfolio.io import sha256_file  # noqa: E402
-from cdisc_portfolio.review import REVIEW_FILES, run_dataset_review  # noqa: E402
+from cdisc_portfolio.review import REVIEW_FILES, load_review_frames, review_frames  # noqa: E402
 
 OUTPUT_DIR = ROOT / "outputs"
+CONTRACT_PATH = ROOT / "spec" / "analysis_dataset_contracts.json"
 
 
 def main() -> None:
-    review = run_dataset_review(OUTPUT_DIR)
+    frames = load_review_frames(OUTPUT_DIR)
+    review = review_frames(frames)
+    contract_spec = load_dataset_contracts(CONTRACT_PATH)
+    contract_review = review_dataset_contracts(frames, contract_spec)
+    review = pd.concat([review, contract_review], ignore_index=True)
+
     review_path = OUTPUT_DIR / "analysis_dataset_review.csv"
     review.to_csv(review_path, index=False)
 
@@ -31,6 +40,7 @@ def main() -> None:
         "all_required_review_passed": all_required_passed,
         "review_areas": sorted(review["area"].unique().tolist()),
         "reviewed_outputs_sha256": reviewed_sha256,
+        "dataset_contract_sha256": sha256_file(CONTRACT_PATH),
     }
     metrics_path = OUTPUT_DIR / "analysis_dataset_review_metrics.json"
     metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -44,8 +54,9 @@ def main() -> None:
         f"- Required reviewer checks: {int(required['passed'].sum())}/{len(required)} passed.",
         f"- Review areas: {', '.join(sorted(review['area'].unique()))}.",
         f"- Reviewed generated files: {len(REVIEW_FILES)}; SHA256 recorded for every reviewed file.",
+        "- Machine-readable dataset contracts: ADSL-style, ADAE-style, ACTOT, ANCOVA and MMRM; contract specification SHA256 recorded.",
         "",
-        "The gate checks cross-dataset parentage, treatment/population consistency, ACTOT baseline/change derivations, exact MMRM source-row traceability, and safety/efficacy TLF denominator reconciliation.",
+        "The gate checks metadata contracts, cross-dataset parentage, treatment/population consistency, ACTOT baseline/change derivations, exact MMRM source-row traceability, and safety/efficacy TLF denominator reconciliation.",
     ]
     if not failed.empty:
         summary.extend(["", "## Failed required checks"])
