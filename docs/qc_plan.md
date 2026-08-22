@@ -1,6 +1,6 @@
-# QC plan — portfolio version 0.5
+# QC plan — portfolio version 0.10
 
-The workflow separates four validation layers: **Python pipeline QC**, **official-reference validation**, **R/Python cross-language programming QC**, and **MMRM data/model QC**. A required failure exits non-zero. Informational discrepancies remain visible rather than being converted into pass/fail rules without justification.
+The workflow separates required validation layers for Python derivation, official-reference checks, R/Python cross-language programming QC, MMRM data/model QC, analysis-dataset/TLF review, statistical change-impact assessment and SAP-to-TLF traceability. Required failures exit non-zero. Informational discrepancies remain visible rather than being converted into pass/fail rules without justification.
 
 ## Python safety required checks
 
@@ -32,7 +32,7 @@ The workflow separates four validation layers: **Python pipeline QC**, **officia
 23. Official ADQSCIBC `QSSEQ` source-row agreement is exactly 100%.
 24. The pipeline records ADQSCIBC reference-value agreement and its mismatch trace without changing source-derived values.
 
-The verified v0.5 live run retains **24/24 required Python pipeline checks** and **10/10 Python unit tests**.
+The verified v0.10 live run retains **24/24 required Python pipeline checks** and **40/40 Python unit tests** across the full portfolio codebase.
 
 ## Independent R/Python required checks
 
@@ -57,13 +57,13 @@ The following 16 checks are required:
 15. R ANCOVA contrast keys, analysis N and residual df equal Python.
 16. R ANCOVA estimates, standard errors, 95% confidence limits, p-values and baseline reference values agree with Python within `1e-8`.
 
-The verified v0.5 run passes **16/16**. Measured results include R/Python equality for 254 randomised subjects, 254 safety subjects, 110 completed subjects, 217 subjects with TEAE, 1,116 TEAE events, 705 CIBIC selected rows and 818 ACTOT source rows. The maximum ANCOVA numerical difference is `7.11e-15`.
+The verified v0.10 run passes **16/16**. Measured results include R/Python equality for 254 randomised subjects, 254 safety subjects, 110 completed subjects, 217 subjects with TEAE, 1,116 TEAE events, 705 CIBIC selected rows and 818 ACTOT source rows. The latest maximum ANCOVA numerical difference is `4e-14`, below the pre-specified tolerance.
 
 This is a second implementation by the same portfolio author, not independent validation by a second human programmer.
 
 ## MMRM required checks
 
-`R/mmrm_analysis.R` fits the v0.5 ACTOT longitudinal analysis after the Python derivation and independent R QC steps. MMRM inputs are observed Week 8, Week 16 and Week 24 ACTOT records only; LOCF values do not enter the model.
+`R/mmrm_analysis.R` fits the ACTOT longitudinal analysis after the Python derivation and independent R QC steps. MMRM inputs are observed Week 8, Week 16 and Week 24 ACTOT records only; LOCF values do not enter the model.
 
 The following 11 checks are required:
 
@@ -79,9 +79,44 @@ The following 11 checks are required:
 10. primary estimates, standard errors, df, confidence limits and p-values are finite;
 11. the primary fit produces exactly two Week 24 active-versus-placebo contrasts.
 
-The verified v0.5 run passes **11/11**. The checked input contains 451 observed post-baseline records from 189 subjects, with Week 8=189, Week 16=146 and Week 24=116. Both covariance fits use the L-BFGS-B optimiser and return finite model criteria.
+The verified v0.10 run passes **11/11**. The checked input contains 451 observed post-baseline records from 189 subjects, with Week 8=189, Week 16=146 and Week 24=116.
 
 A model fit is not accepted merely because an R object is returned: the workflow separately checks finite likelihood, expected contrast cardinality and finite inferential quantities.
+
+## Analysis-dataset and TLF reviewer required checks
+
+The v0.9+ reviewer runs after the R MMRM and before change-control/traceability gates. It is separate from the derivation programs and checks consistency across generated files.
+
+The verified v0.10 run retains **24/24 required reviewer checks**: 19 cross-dataset, derivation, population, TLF-denominator and TLF-structure checks plus five machine-readable dataset contracts. The reviewer covers ADSL-style, ADAE-style, ACTOT, ANCOVA and MMRM analysis data and records SHA256 for 17 reviewed generated files.
+
+Required review includes exact MMRM source-row traceability through `STUDYID + USUBJID + QSSEQ`, treatment/population reconciliation across datasets, ACTOT baseline/change checks and independent reconstruction of safety/efficacy TLF denominators.
+
+Negative-control tests deliberately corrupt treatment consistency, a safety-table denominator, MMRM `CHG`, a required dataset column and a controlled-value flag; the corresponding validators must fail.
+
+## Statistical change-control impact gate
+
+The v0.10 gate uses `spec/change_impact_graph.json` to derive downstream review requirements from the changed statistical component and compares those graph-derived requirements with `spec/change_requests.json`.
+
+Five impact categories are controlled:
+
+1. generated analysis datasets;
+2. TLF IDs resolved through `spec/analysis_traceability.csv`;
+3. generated QC evidence;
+4. statistical/reviewer documents;
+5. machine-readable design or randomisation specifications.
+
+The verified v0.10 live run evaluates four portfolio change scenarios and covers **67/67 required impact declarations** with **67/67 required resources resolved**. No required declaration is missing and no extra declaration is present in the verified specifications.
+
+| Change | Propagated components | Required impacts | TLF scope |
+|---|---:|---:|---|
+| CR-001 safety population definition | 4 | 18 | T01–T07 |
+| CR-002 TEAE follow-up window | 3 | 14 | T04–T07 |
+| CR-003 primary ACTOT visit | 6 | 24 | T08–T12, T15 |
+| CR-004 primary MMRM covariance | 3 | 11 | T11–T15 |
+
+Required failure conditions include an omitted graph-required impact, an unknown changed component, a cyclic dependency graph, an unresolved static resource, an unmapped TLF ID or a required generated resource that does not exist in the live run. Conservative extra review declarations are permitted but reported.
+
+These four change requests are simulations. They do not change the current 30-day TEAE window, Week 24 analysis focus or unstructured primary MMRM.
 
 ## Official-reference profiler hard gates
 
@@ -113,10 +148,11 @@ Informational items include:
 - item-recomputed ADAS-Cog(11) total comparison with official selected ACTOT rows;
 - R/package/session information;
 - MMRM log likelihood, AIC and BIC for both covariance structures;
-- MMRM-versus-observed-Week-24-ANCOVA estimate differences.
+- MMRM-versus-observed-Week-24-ANCOVA estimate differences;
+- conservative extra change-impact declarations, if any.
 
 A reference-value mismatch is not automatically a derivation failure when the selected source row is identical and the portfolio value matches that source. Likewise, a difference between MMRM and Week 24 ANCOVA estimates is not automatically a failure because the analyses use different data structures. Both types of difference are preserved in audit outputs.
 
 ## CI evidence retention
 
-GitHub Actions prints the main Python, R and MMRM summaries and uploads the `outputs/` directory even when a downstream analysis step fails where possible. This is intended to make failures diagnosable from retained source-reference traces, QC tables, model diagnostics and analysis summaries.
+GitHub Actions prints the main Python, R, MMRM, reviewer, change-control and traceability summaries and uploads the `outputs/` directory even when a downstream analysis step fails where possible. This keeps source-reference traces, QC tables, model diagnostics, reviewer evidence and change-impact diagnostics available for investigation.

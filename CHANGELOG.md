@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 — 2026-08-22
+
+- Add a machine-readable statistical change-impact dependency graph spanning analysis datasets, TLFs, QC evidence, controlled documents and planning/schedule specifications.
+- Add four illustrative portfolio change requests: safety-population definition, TEAE follow-up window, primary ACTOT visit and primary MMRM covariance structure.
+- Propagate impacts transitively from each changed statistical component rather than relying on a manually entered flat affected-file list.
+- Verify **67/67 graph-required impact declarations** and **67/67 required downstream resources** in the live GitHub Actions run, with zero missing and zero extra declarations across the four scenarios.
+- Resolve every impacted TLF ID through the existing SAP-to-TLF registry and require the corresponding generated output to exist in the same live run.
+- Verify CR-001 across 4 propagated components / 18 impacts / T01–T07; CR-002 across 3 / 14 / T04–T07; CR-003 across 6 / 24 / T08–T12 plus T15; and CR-004 across 3 / 11 / T11–T15.
+- Add hard validation for unknown dependency nodes and dependency cycles.
+- Add negative-control tests that remove a graph-required TLF declaration and require failure; retain explicit tests for transitive propagation and conservative extra review items.
+- Add `outputs/change_impact_assessment.csv`, `outputs/change_impact_metrics.json` and `outputs/change_impact_summary.md`, with SHA256 identity for the dependency graph, change requests and SAP-to-TLF registry.
+- Make statistical change-impact review a blocking CI gate after the v0.9 dataset/TLF reviewer and before final SAP-to-TLF traceability validation.
+- Expand Python unit tests to **40/40 passed** while retaining 24/24 Python pipeline QC, 16/16 R/Python programming QC, 11/11 MMRM QC, 24/24 dataset/TLF reviewer QC, 15/15 SAP-to-TLF traceability, 7/7 protocol-design QC and 10/10 randomisation/kit QC.
+- Add `docs/change_control_impact_assessment.md` and a controlled v0.10 SAP change-control addendum. The four change requests remain portfolio simulations and do not alter the currently analysed 30-day TEAE window, Week 24 analysis focus or unstructured primary MMRM.
+
 ## 0.9.0 — 2026-08-22
 
 - Add a blocking post-generation analysis-dataset and TLF reviewer gate that runs after R MMRM and before final SAP-to-TLF traceability validation.
@@ -70,7 +85,7 @@
 
 ## 0.4.0 — 2026-08-22
 
-- Add an independent R implementation of selected safety and efficacy derivations using the same public DM, EX, DS, AE and official QS inputs.
+- Add an independent R implementation of selected safety and efficacy derivations using the same public DM, EX, DS, AE and QS inputs.
 - Keep executable derivation code separate: R does not call Python derivation functions and reads Python outputs only for the final comparison.
 - Independently reproduce randomised, safety and completed populations, TEAE counts and DS treatment-end fallback counts in R.
 - Independently reproduce the any-TEAE risk-difference table in R with zero difference at the reported precision.
