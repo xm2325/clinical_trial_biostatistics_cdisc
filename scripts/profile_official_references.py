@@ -81,7 +81,7 @@ def main() -> None:
     print(params.to_csv(index=False))
     print("--- official ACTOT row semantics ---")
     print(actot_counts.to_csv(index=False))
-    print("--- source-derived ACTOT vs official selected ACTOT ---")
+    print("--- item-recomputed ACTOT vs official selected ACTOT ---")
     print(actot_metrics.to_csv(index=False))
     print("--- CIBIC reference mismatches traced to official QS ---")
     if trace.empty:
@@ -95,6 +95,24 @@ def main() -> None:
             ] if c in trace.columns
         ]
         print(trace[display].to_csv(index=False))
+
+    cibic = metrics.iloc[0]
+    if float(cibic["reference_key_coverage"]) != 1.0:
+        raise SystemExit("CIBIC structural validation failed: incomplete reference key coverage")
+    if float(cibic["dtype_match_rate_on_overlap"]) != 1.0:
+        raise SystemExit("CIBIC structural validation failed: DTYPE mismatch")
+    if float(cibic["qsseq_match_rate_on_overlap"]) != 1.0:
+        raise SystemExit("CIBIC structural validation failed: QSSEQ mismatch")
+    if not trace.empty and not bool(trace["DERIVED_EQUALS_SOURCE"].all()):
+        raise SystemExit("CIBIC source trace failed: a derived mismatch does not equal official QS source")
+
+    actot = actot_metrics.iloc[0]
+    if float(actot["reference_key_coverage"]) != 1.0:
+        raise SystemExit("ACTOT structural validation failed: incomplete selected-reference key coverage")
+    if float(actot["dtype_match_rate_on_overlap"]) != 1.0:
+        raise SystemExit("ACTOT structural validation failed: DTYPE mismatch")
+    if float(actot["qsseq_match_rate_on_overlap"]) != 1.0:
+        raise SystemExit("ACTOT structural validation failed: QSSEQ mismatch")
 
 
 if __name__ == "__main__":
