@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.11.0 — 2026-08-22
+
+- Add machine-readable ACTOT estimand `EST-ACTOT-W24-TP` using the ICH E9(R1)-style five-attribute structure: treatment, population, variable, treatment-discontinuation strategy and population-level summary measure.
+- Keep estimator assumptions separate from the estimand: the primary analysis remains observed-data REML MMRM with unstructured covariance and Satterthwaite df; MAR is recorded as a working estimator assumption rather than an estimand attribute.
+- Keep the existing Week 24 LOCF ANCOVA only as a supportive legacy-style sensitivity/stress test; LOCF does not enter the primary MMRM.
+- Add executable arm-by-visit ACTOT missingness review and subject-level Week 8/16/24 observed/missing patterns.
+- Add T16 ACTOT missingness by visit and T17 Week 24 missingness by recorded disposition context.
+- Verify a first-pass public-data target population of 254 randomised subjects with observed baseline ACTOT: Week 24 observed=116 and missing=138 (**54.3% missing**).
+- Verify Week 24 missingness by arm as Placebo 27/86 (31.4%), Low Dose 69/96 (71.9%) and High Dose 42/72 (58.3%).
+- Record that the current public run contains **0 observed post-discontinuation arm-visit ACTOT records**; treatment-policy retention is therefore validated by executable rules and negative-control fixtures rather than a positive live-data example.
+- Add **21 required estimand/missing-data checks**, including five-attribute completeness, treatment-policy handling, observed-data MMRM alignment, denominator reconciliation and no LOCF in the primary model.
+- Add negative controls that make LOCF primary, remove a post-discontinuation observation from an MMRM fixture and corrupt a missingness denominator.
+- Extend SAP-to-TLF structural traceability from 15 to **17 planned TLFs**; first-pass live validation passes 17/17 output, contract, analysis-dataset and QC-evidence links.
+- Extend statistical change control with CR-005, an illustrative treatment-discontinuation strategy change from treatment-policy to hypothetical strategy, requiring review of T11–T17, MMRM inputs/QC, estimand QC, controlled documents and `spec/estimands.json`.
+- Expand v0.11 change-control coverage to **88/88 required impact declarations** and **88/88 resolved resources** across five scenarios in the first-pass live run.
+- Remove the stale hard-coded change-control version: graph and request specifications must declare the same version, otherwise the gate fails. Add a regression test for version mismatch.
+- Expand the final-head Python unit-test target from 40 to **49** while retaining the established Python pipeline, R/Python, MMRM, reviewer, design and randomisation gates.
+- Correct two historical reviewer prose labels: actual arm sizes are Placebo=86, Low Dose=96, High Dose=72; observed Week 24 Ns are Placebo=59, Low Dose=27, High Dose=30. Analysis outputs were unchanged.
+- Add `docs/estimand_missing_data_review.md`, `docs/sap_v0_11_estimand_addendum.md` and v0.11 TLF/QC documentation. This remains independent public-data portfolio work, not a sponsor-approved estimand, SAP decision or regulatory analysis.
+
 ## 0.10.0 — 2026-08-22
 
 - Add a machine-readable statistical change-impact dependency graph spanning analysis datasets, TLFs, QC evidence, controlled documents and planning/schedule specifications.
@@ -22,8 +42,8 @@
 - Add five machine-readable dataset contracts for ADSL-style, ADAE-style, ACTOT, ANCOVA and MMRM, covering keys, required columns, non-missing fields and controlled values.
 - Verify **24/24 required reviewer checks** in GitHub Actions across six review areas: analysis dataset, derivation, metadata contract, population, TLF denominator and TLF structure.
 - Review 17 generated files and record SHA256 for every reviewed file; also record the exact dataset-contract specification hash.
-- Reconstruct randomised/safety arm denominators as Placebo=86, High Dose=96 and Low Dose=72 and reconcile them to linked TLF-style outputs.
-- Reconstruct observed Week 24 Ns as Placebo=30, High Dose=59 and Low Dose=27 and reconcile Week 24 ANCOVA/MMRM output coverage to generated analysis datasets.
+- Reconstruct randomised/safety arm denominators as Placebo=86, Low Dose=96 and High Dose=72 and reconcile them to linked TLF-style outputs.
+- Reconstruct observed Week 24 Ns as Placebo=59, Low Dose=27 and High Dose=30 and reconcile Week 24 ANCOVA/MMRM output coverage to generated analysis datasets.
 - Require every MMRM row to trace to the exact ACTOT source record through `STUDYID + USUBJID + QSSEQ` with treatment, `AVAL`, `BASE` and `CHG` agreement.
 - Add negative-control tests that deliberately corrupt treatment consistency, a safety-table denominator, MMRM `CHG`, a required dataset column and a controlled flag; validators must reject the corrupted inputs.
 - Expand Python unit tests to **34/34 passed** while retaining 24/24 Python pipeline QC, 16/16 R/Python programming QC, 11/11 MMRM QC, 15/15 SAP-to-TLF traceability, 7/7 protocol-design QC and 10/10 randomisation/kit QC.
