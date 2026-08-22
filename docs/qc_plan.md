@@ -1,8 +1,8 @@
 # QC plan
 
-The workflow distinguishes **required** QC checks from informational checks. `metrics.json` reports required-check status, while `manifest.json` records the overall `qc_all_passed` flag. `scripts/run_all.py` exits non-zero when required pipeline QC fails. The official-reference profiler has separate hard structural/source gates.
+The workflow distinguishes **required** QC checks from informational checks. `metrics.json` reports required Python-pipeline status, while `manifest.json` records `qc_all_passed`. `scripts/run_all.py` exits non-zero when required pipeline QC fails. The official-reference profiler has separate structural/source gates. Version 0.4 adds a second-language R implementation with its own required cross-language checks.
 
-## Safety required checks
+## Python safety required checks
 
 1. ADSL-style `STUDYID + USUBJID` is unique.
 2. ADAE-style `STUDYID + USUBJID + AESEQ` is unique.
@@ -17,7 +17,7 @@ The workflow distinguishes **required** QC checks from informational checks. `me
 11. No TEAE starts before first exposure.
 12. No TEAE starts after the 30-day post-exposure window.
 
-## Efficacy required checks in the main pipeline
+## Python efficacy required checks
 
 13. ADQSCIBC-style `STUDYID + USUBJID + AVISIT` is unique.
 14. ADQSCIBC-style `AVAL` is non-missing.
@@ -32,7 +32,49 @@ The workflow distinguishes **required** QC checks from informational checks. `me
 23. Official ADQSCIBC `QSSEQ` source-row agreement is exactly 100%.
 24. The pipeline records ADQSCIBC reference-value agreement and its mismatch trace without changing source-derived values.
 
-The verified v0.3 live run passes **24/24 required pipeline checks**.
+The verified v0.4 live run retains **24/24 required Python pipeline checks**.
+
+## Independent R/Python required checks
+
+`R/independent_qc.R` starts from the same cached public DM, EX, DS, AE and QS inputs. It does not call Python derivation functions. Python outputs are read only after the R results have been reconstructed, for the final comparison.
+
+The following 16 checks are required:
+
+1. R randomised-subject count equals Python.
+2. R safety-subject count equals Python.
+3. R completed-subject count equals Python.
+4. R subject-with-TEAE count equals Python.
+5. R TEAE event count equals Python.
+6. R DS exposure-end fallback count equals Python.
+7. R any-TEAE risk-difference table matches Python at the reported precision.
+8. R CIBIC selected `STUDYID + USUBJID + AVISIT` keys equal Python.
+9. R CIBIC selected `QSSEQ` values equal Python.
+10. R CIBIC `DTYPE` values equal Python.
+11. R CIBIC source-derived `AVAL` values equal Python.
+12. R ACTOT source-row keys equal Python.
+13. R ACTOT `AVAL`, `BASE` and `CHG` equal Python.
+14. R ACTOT baseline and efficacy flags equal Python.
+15. R ANCOVA contrast keys, analysis N and residual df equal Python.
+16. R ANCOVA estimates, standard errors, 95% confidence limits, p-values and baseline reference values agree with Python within `1e-8`.
+
+The verified live run passes **16/16**. Key measured results are:
+
+- randomised subjects: R 254, Python 254;
+- safety subjects: R 254, Python 254;
+- completed subjects: R 110, Python 110;
+- subjects with TEAE: R 217, Python 217;
+- TEAE events: R 1,116, Python 1,116;
+- DS exposure-end fallback subjects: R 2, Python 2;
+- risk-difference table maximum numeric difference: 0;
+- CIBIC selected rows: R 705, Python 705, with exact key/`QSSEQ`/`DTYPE`/source-value agreement;
+- ACTOT source rows: R 818, Python 818, with exact key/`AVAL`/`BASE`/`CHG`/flag agreement;
+- observed Week 24 ANCOVA N: R 116, Python 116;
+- LOCF ANCOVA N: R 235, Python 235;
+- maximum ANCOVA numeric difference: `7.11e-15`.
+
+The R step also records R version, package version and `sessionInfo()`. GitHub Actions parses the R program before running it. Any failed required R check causes the workflow to fail.
+
+This provides cross-language implementation evidence, but it is not labelled as independent validation by a second human programmer.
 
 ## Official-reference profiler hard gates
 
@@ -63,6 +105,7 @@ The official reference contains 1,016 selected ACTOT analysis records and the po
 - treatment-end fallback use and DS disposition fallback count;
 - ADQSCIBC `AVAL` agreement rate and full mismatch source trace;
 - ADQSADAS `AVAL`, `BASE` and `CHG` agreement rates;
-- item-recomputed ADAS-Cog(11) total comparison with official selected ACTOT rows.
+- item-recomputed ADAS-Cog(11) total comparison with official selected ACTOT rows;
+- R version, `jsonlite` version and complete R session information.
 
 A reference-value mismatch is not automatically a derivation failure when the selected source row is identical and the portfolio value matches the official source. In that case the discrepancy is kept in an audit output instead of being silently changed.

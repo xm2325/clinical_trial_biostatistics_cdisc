@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — 2026-08-22
+
+- Add an independent R implementation of selected safety and efficacy derivations using the same public DM, EX, DS, AE and official QS inputs.
+- Keep executable derivation code separate: R does not call Python derivation functions and reads Python outputs only for the final comparison.
+- Independently reproduce randomised, safety and completed populations, TEAE counts and DS treatment-end fallback counts in R.
+- Independently reproduce the any-TEAE risk-difference table in R with zero difference at the reported precision.
+- Independently reconstruct all 705 CIBIC analysis records with exact R/Python key, `QSSEQ`, `DTYPE` and source-derived `AVAL` agreement.
+- Independently reconstruct all 818 ACTOT source rows with exact R/Python key, `AVAL`, `BASE`, `CHG`, baseline-flag and efficacy-flag agreement.
+- Refit observed Week 24 and LOCF ANCOVA models in R with the same N and residual df as Python.
+- Verify R/Python ANCOVA estimates, standard errors, confidence limits, p-values and baseline references with a maximum numeric difference of `7.11e-15` against a pre-specified `1e-8` tolerance.
+- Add 16 required cross-language QC checks; the verified live run passes 16/16 while retaining the existing 10/10 Python unit tests and 24/24 Python pipeline QC checks.
+- Pin the CI R runtime to R 4.6.1 and record `jsonlite` 2.0.0 plus full R session information.
+- Add an R syntax parse gate before the independent R analysis.
+- Add machine-readable R QC, R metrics, R safety/ANCOVA outputs and a dedicated cross-language QC design document.
+
 ## 0.3.0 — 2026-08-22
 
 - Add pinned official CDISC QS Dataset-JSON input with 121,749 records.
