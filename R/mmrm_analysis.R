@@ -73,14 +73,16 @@ d$AVISIT <- unname(visit_map[d$AVISIT_U])
 d$TRT01A <- factor(d$TRT01A, levels = expected_arms)
 d$AVISIT <- factor(d$AVISIT, levels = expected_visits, ordered = TRUE)
 d$USUBJID <- factor(d$USUBJID)
-# mmrm covariance time-point variables must be factors. Keep visit timing labels
-# separate from AVISIT so the AR1H sensitivity is explicit and auditable.
-d$VISITN <- factor(d$AVISIT, levels = expected_visits, labels = c("8", "16", "24"), ordered = TRUE)
-d <- d[order(d$USUBJID, d$VISITN, d$QSSEQ), ]
+# Use one factor for both fixed visit effects and within-subject covariance.
+# Week 8/16/24 are equally spaced, so ordered AVISIT levels provide the AR(1)
+# lag structure without introducing a duplicate visit variable that emmeans could
+# interpret as a nesting relationship.
+d <- d[order(d$USUBJID, d$AVISIT, d$QSSEQ), ]
 row.names(d) <- NULL
 
 add_check("MMRM analysis has all three treatment arms", identical(levels(droplevels(d$TRT01A)), expected_arms), paste(levels(droplevels(d$TRT01A)), collapse = ", "))
 add_check("MMRM analysis has Week 8/16/24", identical(levels(droplevels(d$AVISIT)), expected_visits), paste(levels(droplevels(d$AVISIT)), collapse = ", "))
+add_check("MMRM visit variable is a factor", is.factor(d$AVISIT), paste0("class=", paste(class(d$AVISIT), collapse = "/")))
 
 dup_key <- duplicated(paste(d$USUBJID, d$AVISIT, sep = "|"))
 add_check("MMRM subject-visit key unique", !any(dup_key), paste0("duplicate rows=", sum(dup_key)))
@@ -103,7 +105,7 @@ fit_model <- function(covariance = c("US", "AR1H")) {
   if (covariance == "US") {
     formula <- CHG ~ TRT01A * AVISIT + BASE * AVISIT + us(AVISIT | USUBJID)
   } else {
-    formula <- CHG ~ TRT01A * AVISIT + BASE * AVISIT + ar1h(VISITN | USUBJID)
+    formula <- CHG ~ TRT01A * AVISIT + BASE * AVISIT + ar1h(AVISIT | USUBJID)
   }
   mmrm(
     formula = formula,
