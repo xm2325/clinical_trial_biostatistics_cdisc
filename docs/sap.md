@@ -1,333 +1,330 @@
-# Statistical Analysis Plan — portfolio version 0.8
+# Statistical Analysis Plan — consolidated portfolio version 0.12
 
-## 1. Scope
+## 1. Scope and evidence boundary
 
-This Statistical Analysis Plan (SAP) specifies independent portfolio safety and questionnaire-efficacy analyses using public CDISC pilot data. It is not sponsor-approved and is not a regulatory-submission SAP.
+This SAP specifies an independent clinical-trial biostatistics portfolio built from public CDISC pilot and pharmaverse SDTM test data. It consolidates the current analysis plan through v0.12 while the versioned addenda remain in the repository as change history.
 
-Version 0.3 added public-reference validation against `ADQSCIBC` and `ADQSADAS`. Version 0.4 added a separate R implementation for selected programming QC. Version 0.5 added longitudinal ACTOT MMRM. Version 0.6 added executable SAP-to-TLF structural traceability. Version 0.7 added a separate, machine-readable protocol-design and sample-size exercise with multiplicity, dropout inflation, achieved-power back-checking and design QC. Version 0.8 adds a reproducible stratified permuted-block randomisation and coded initial-kit schedule with blinded/unblinded output separation and required schedule QC.
+This is **not** a sponsor-approved SAP, regulatory-submission document or production clinical-trial programming record. `*-style` datasets are not claimed to be submission-ready ADaM.
+
+The current portfolio includes:
+
+- ADSL-/ADAE-style safety derivations;
+- CIBIC+/ACTOT efficacy derivations and public-reference checks;
+- observed Week 24 ANCOVA and LOCF supportive analysis;
+- observed-data ACTOT longitudinal MMRM;
+- separate R/Python programming QC;
+- an ICH E9(R1)-style ACTOT estimand specification;
+- arm/visit missingness and disposition review;
+- v0.12 fixed-delta missing-data sensitivity and directional tipping points;
+- TLF-style outputs T01–T19;
+- protocol-design/sample-size and randomisation/initial-kit portfolio exercises;
+- analysis-dataset/TLF reviewer and statistical change-impact gates.
 
 ## 2. Analysis populations
 
 ### 2.1 Randomised population
 
-A subject is randomised if DS contains a record with `DSDECOD == "RANDOMIZED"`.
+A subject is randomised when DS contains `DSDECOD == "RANDOMIZED"`.
 
 ### 2.2 Safety population
 
-A subject is in the safety population if at least one EX record is observed.
+A subject is in the safety population when at least one EX record is observed.
 
 ### 2.3 CIBIC+ analysis population
 
-Subjects must be randomised and have numeric public QS records with `QSTESTCD == "CIBIC"`. The output parameter code is `CIBICVAL`, matching the public reference ADaM.
+Subjects must be randomised and have numeric public QS records with `QSTESTCD == "CIBIC"`. The analysis parameter code is `CIBICVAL`.
 
-### 2.4 ACTOT efficacy population
+### 2.4 ACTOT estimand target population
 
-The portfolio efficacy analysis uses randomised subjects with a numeric ACTOT baseline and at least one numeric post-baseline ACTOT value.
+The v0.11+ estimand target population is randomised subjects with an observed numeric baseline ACTOT value. The verified public-data target N is **254**.
 
-The Week 24 observed-case ANCOVA requires an observed Week 24 ACTOT value. The LOCF sensitivity uses the latest eligible post-baseline ACTOT value through analysis day 168.
+### 2.5 Week 24 observed ANCOVA population
 
-The MMRM analysis uses observed ACTOT values at Week 8, Week 16 and Week 24 only. A subject can contribute one, two or three post-baseline observations. LOCF records are not introduced into the MMRM.
+Subjects in the ACTOT target population with an observed Week 24 ACTOT value. Verified N: **116**.
 
-## 3. Treatment and exposure
+### 2.6 LOCF supportive population
 
-Planned and actual treatment labels are taken from DM and carried to `TRT01P` and `TRT01A`.
+Subjects with baseline ACTOT and an eligible post-baseline ACTOT value through analysis day 168. The latest eligible value is carried forward for the supportive Week 24 ANCOVA. Verified N: **235**.
 
-Actual exposure dates are derived from EX:
+### 2.7 MMRM population
 
-- `TRTSDT`: minimum parsed `EXSTDTC`;
-- `TRTEDT`: maximum parsed `EXENDTC`; if unavailable, DM `RFXENDTC`, then the final DS disposition date;
-- `EXDURN_RAW`: inclusive duration based only on non-missing EX start/end dates;
-- `TRTDURN`: final inclusive treatment-window duration after documented date fallbacks;
-- `EXN`: number of observed EX records;
-- `EXDOSE_MAX` and `EXDOSE_MEAN`: subject-level numeric dose summaries.
+Subjects with baseline ACTOT and at least one observed numeric ACTOT value at Week 8, Week 16 or Week 24. LOCF rows do not enter the MMRM. Verified input: **451 observed post-baseline records from 189 subjects**.
 
-`TRTSDTSRC` and `TRTEDTSRC` preserve the selected source for final treatment dates.
+## 3. Treatment, exposure and disposition
 
-## 4. Disposition
+Treatment labels are carried from DM into planned/actual treatment variables.
 
-`RANDFL` is based on a DS randomisation record. `COMPLFL` is `Y` if DS contains `DSDECOD == "COMPLETED"`. The final disposition event is the last record with `DSCAT == "DISPOSITION EVENT"` ordered by date and sequence. A randomised subject without completion is flagged `DCSFL == "Y"`.
+Exposure summaries use EX:
 
-## 5. Adverse-event derivations
+- `TRTSDT`: earliest parsed exposure start;
+- `TRTEDT`: latest parsed exposure end, with documented DM/DS fallback when required;
+- `EXDURN_RAW`: duration based only on observed EX dates;
+- `TRTDURN`: final treatment-window duration after controlled fallback;
+- `EXN`: observed EX-record count;
+- dose summaries from numeric EX dose values.
 
-AE records are linked to the ADSL-style subject dataset by `STUDYID` and `USUBJID`.
+Disposition uses DS. `COMPLFL` identifies completed subjects; final disposition and discontinuation context are derived from the last disposition event by date/sequence.
 
-- `ASTDT`: parsed from `AESTDTC`;
-- `AENDT`: parsed from `AEENDTC` when available;
-- `TRTEMFL`: `Y` when `ASTDT >= TRTSDT` and `ASTDT <= TRTEDT + 30 days`;
-- `RELFL`: `Y` for `AEREL` in `POSSIBLE`, `PROBABLE`, `DEFINITE`, or `RELATED`;
-- `MODSEVFL`: `Y` for `AESEV` in `MODERATE` or `SEVERE`;
-- serious TEAE: `AESER == "Y"` and `TRTEMFL == "Y"`.
+## 4. Safety analysis
 
-No partial-date imputation is performed for AE start dates.
+AE records are linked to subject treatment/population context.
 
-## 6. CIBIC+ analysis-window derivation
+Portfolio TEAE definition:
 
-Public QS is filtered to `QSTESTCD == "CIBIC"`. Numeric `QSSTRESN` is mapped to `AVAL`. The output uses `PARAMCD=CIBICVAL`.
+```text
+ASTDT >= TRTSDT
+and
+ASTDT <= TRTEDT + 30 days
+```
 
-| Analysis visit | Target day | Observation window |
+No partial-date imputation is applied to missing AE start dates.
+
+Safety TLFs include demographics, disposition, exposure, TEAE overview, SOC/PT, severity and exploratory any-TEAE risk differences. Exploratory risk-difference comparisons are not multiplicity-adjusted.
+
+## 5. CIBIC+ derivation
+
+Public QS is filtered to `QSTESTCD == "CIBIC"`; `QSSTRESN` maps to analysis `AVAL`.
+
+| Analysis visit | Target day | Window |
 |---|---:|---|
 | Week 8 | 56 | days 2–84 |
 | Week 16 | 112 | days 85–140 |
 | Week 24 | 168 | day 141 onward |
 
-Within a window, the record nearest the target day is selected. If no record is present, the latest prior record is carried forward and `DTYPE=LOCF`. `AWTARGET`, `AWLO`, `AWHI`, `AWTDIFF`, source visit/date and `QSSEQ` are retained.
+Within each window, the observed record nearest target day is selected. If no record exists, the latest prior post-baseline record is carried forward with `DTYPE=LOCF`.
 
-The verified live run covers 705/705 public ADQSCIBC analysis keys with 100% `QSSEQ` and 100% `DTYPE` agreement. `AVAL` agreement is 695/705 (98.58%). For all ten value differences, the portfolio value equals the selected public SDTM QS `QSSTRESN`; the public reference ADaM value differs from that selected source record. These differences remain visible in `outputs/adqscibc_mismatch_source_trace.csv`.
+Source visit/date, analysis-window variables and `QSSEQ` are retained.
 
-## 7. Public ADQSADAS reference validation
+Verified public-reference checks:
 
-The public `ADQSADAS` Dataset-JSON contains 12,463 rows for 254 subjects and 15 ADAS-Cog parameters. `ACTOT` (`Adas-Cog(11) Subscore`) contains 1,040 rows.
+- selected CIBIC keys: **705/705**;
+- `QSSEQ`: **100%** agreement;
+- `DTYPE`: **100%** agreement;
+- `AVAL`: 695/705 (98.58%) agreement.
 
-The public selected ACTOT structure contains 1,016 `ANL01FL=Y` records. The portfolio reconstructs the same `USUBJID + AVISIT` keys and validates source `QSSEQ` and `DTYPE` against the public reference. Verified key, `QSSEQ` and `DTYPE` agreement are all 100%.
+For all ten `AVAL` differences, the portfolio value matches the selected public QS source value. The reference/source disagreement is retained in an auditable trace and is not overwritten.
 
-A separate diagnostic recomputes ADAS-Cog(11) totals from component items. This diagnostic does not replace source ACTOT values when public source and reference values differ.
+## 6. ACTOT source derivation and public-reference review
 
-## 8. ACTOT baseline and change from baseline
+ACTOT records are derived from public QS with baseline, post-baseline analysis visit, source sequence, `BASE` and `CHG = AVAL - BASE` retained.
 
-The portfolio ACTOT analysis dataset uses public QS `ACTOT` records. `AVAL` is numeric `QSSTRESN`. `BASE` is taken from the baseline-flagged ACTOT record. For post-baseline records:
+Official `ADQSADAS` contains 12,463 rows for 254 subjects across 15 ADAS-Cog parameters. The portfolio reconstructs all **1,016/1,016** selected ACTOT analysis keys with exact selected `QSSEQ` and `DTYPE` agreement.
 
-```text
-CHG = AVAL - BASE
-```
+An 11-item ADAS-Cog total recalculation is retained only as a diagnostic. It does not replace the public source ACTOT value.
 
-Source visit, analysis day/date and `QSSEQ` are retained for traceability.
+## 7. Week 24 ANCOVA
 
-## 9. Week 24 observed-case ANCOVA
-
-The observed-case model is:
-
-```text
-AVAL_Week24 = intercept + treatment + centred BASE + error
-```
-
-Placebo is the reference treatment. Least-squares means are evaluated at the analysis-set mean baseline. Active-versus-placebo contrasts are reported with standard errors, two-sided 95% t-based confidence intervals and two-sided p-values.
-
-The verified analysis contains 116 subjects. Estimates are -2.0283 for Xanomeline Low Dose versus Placebo and -0.9234 for Xanomeline High Dose versus Placebo.
-
-## 10. LOCF sensitivity analysis
-
-A separate LOCF sensitivity uses the latest numeric post-baseline ACTOT observation on or before analysis day 168 and fits the same Week 24 ANCOVA specification. It contains 235 subjects.
-
-LOCF is retained as a separate sensitivity analysis and is not used as input to the MMRM in Section 11.
-
-## 11. ACTOT longitudinal MMRM
-
-### 11.1 Objective
-
-The longitudinal analysis estimates treatment differences in ACTOT change from baseline at Week 8, Week 16 and Week 24 while using all observed data at those scheduled visits under the model assumptions.
-
-### 11.2 Analysis records
-
-Only observed post-baseline ACTOT records at Week 8, Week 16 and Week 24 enter the model. Each subject contributes at most one record per analysis visit. The verified dataset contains 451 observations from 189 subjects: Week 8=189, Week 16=146 and Week 24=116.
-
-### 11.3 Primary model
-
-The response is `CHG`. Treatment and visit are categorical. The fixed-effects model is:
+Model:
 
 ```text
-CHG ~ TRT01A * AVISIT + BASE * AVISIT
+Week 24 AVAL = intercept + treatment + centred BASE + error
 ```
 
-The primary within-subject covariance matrix is unstructured. Estimation uses restricted maximum likelihood (REML). Degrees of freedom for treatment contrasts use the Satterthwaite method.
+Two analysis sets are reported:
 
-Visit-specific treatment least-squares means and two active-versus-placebo contrasts are reported at each visit. No multiplicity adjustment is applied because these observed-data portfolio analyses are exploratory.
+1. observed Week 24;
+2. LOCF supportive sensitivity.
 
-The verified primary Week 24 contrasts are:
+Treatment LS means and active-versus-placebo contrasts include estimate, SE, two-sided 95% CI, residual df and p-value.
 
-| Contrast | Estimate | SE | 95% CI | df | p-value |
-|---|---:|---:|---:|---:|---:|
-| Xanomeline Low Dose vs Placebo | -1.6131 | 1.1678 | [-3.9216, 0.6953] | 142.05 | 0.1693 |
-| Xanomeline High Dose vs Placebo | -0.9271 | 1.1512 | [-3.2032, 1.3489] | 139.44 | 0.4220 |
+The LOCF analysis is not the primary estimator for the v0.11+ estimand.
 
-### 11.4 Covariance sensitivity
+## 8. Primary longitudinal MMRM
 
-The same fixed-effects model is refit using heterogeneous AR(1) covariance. Week 8, Week 16 and Week 24 are treated as equally spaced ordered analysis visits for this covariance structure.
+The primary longitudinal ACTOT model uses observed Week 8, Week 16 and Week 24 change from baseline:
 
-| Covariance | logLik | AIC | BIC |
-|---|---:|---:|---:|
-| Unstructured | -1299.3136 | 2610.6272 | 2630.0777 |
-| Heterogeneous AR(1) | -1309.7404 | 2627.4809 | 2640.4479 |
+```text
+CHG ~ treatment * visit + BASE * visit
+```
 
-The unstructured model has lower AIC/BIC in this dataset. These are fit diagnostics, not a general covariance-selection rule.
+Primary fit:
 
-### 11.5 Comparison with observed Week 24 ANCOVA
+- REML;
+- unstructured within-subject covariance;
+- Satterthwaite degrees of freedom;
+- visit-specific estimated marginal means;
+- Low Dose vs Placebo and High Dose vs Placebo contrasts at each visit.
 
-The MMRM and observed-case Week 24 ANCOVA are reported side by side rather than required to match. At Week 24:
+A heterogeneous AR(1) fit using the same fixed-effects structure is retained as a covariance sensitivity analysis.
 
-- High Dose: MMRM -0.9271 versus observed ANCOVA -0.9234;
-- Low Dose: MMRM -1.6131 versus observed ANCOVA -2.0283.
+Verified Week 24 primary contrasts:
 
-## 12. Descriptive statistics
+| Contrast | Estimate | SE | 95% CI | p-value |
+|---|---:|---:|---:|---:|
+| Low Dose vs Placebo | -1.6131 | 1.1678 | [-3.9216, 0.6953] | 0.1693 |
+| High Dose vs Placebo | -0.9271 | 1.1512 | [-3.2032, 1.3489] | 0.4220 |
 
-Age is summarised using mean, standard deviation, median, Q1 and Q3. Categorical variables are summarised as counts and percentages. Safety incidence uses subject-level denominators. ACTOT outputs report baseline, post-baseline and change-from-baseline summaries by treatment where applicable.
+These are portfolio analyses, not source-trial confirmatory efficacy results.
 
-## 13. Exploratory any-TEAE treatment comparison
+## 9. ACTOT estimand
 
-For each Xanomeline arm versus placebo, the workflow reports subject-level TEAE risk, unadjusted risk difference, Wald 95% confidence interval and Fisher exact-test p-value.
+Machine-readable estimand: `EST-ACTOT-W24-TP`.
 
-## 14. Multiplicity for analysed public data
+### 9.1 Treatment
 
-No confirmatory hypothesis family is defined for the portfolio analyses of the public study data. TEAE, ANCOVA and MMRM p-values are exploratory and are not multiplicity-adjusted.
+Placebo, Xanomeline Low Dose and Xanomeline High Dose, with each active arm compared with placebo.
 
-The separate protocol-design exercise in Section 17 does define a planning hypothesis family and applies Bonferroni control. That design exercise is not retroactively applied to the exploratory analyses above.
+### 9.2 Population
 
-## 15. QC and acceptance
+Randomised subjects with observed baseline ACTOT.
 
-The live workflow separates Python internal QC, public-reference validation, R/Python cross-language programming QC, MMRM model/data QC, structural SAP-to-TLF traceability, protocol-design QC and randomisation/initial-kit schedule QC.
+### 9.3 Variable
 
-The verified v0.8 live run has:
+ACTOT change from baseline at Week 24.
+
+### 9.4 Intercurrent event and strategy
+
+Recorded treatment discontinuation is handled with a **treatment-policy** strategy: observed outcomes after discontinuation would be retained.
+
+The current public run contains **0 observed ACTOT arm-visit records after recorded treatment discontinuation**. The retention rule is therefore executable and unit-tested but has no positive post-discontinuation live-data example in this dataset.
+
+### 9.5 Population-level summary
+
+Active-minus-placebo difference in adjusted mean Week 24 change.
+
+### 9.6 Estimator assumption
+
+The primary observed-data MMRM is interpreted under a working **MAR** missing-data assumption. MAR is an estimator assumption, not an estimand attribute.
+
+## 10. Missingness review
+
+T16 reports arm × Week 8/16/24 observed/missing ACTOT counts in the estimand target population. T17 reports recorded final-disposition context among subjects missing Week 24.
+
+Verified Week 24 missingness:
+
+| Arm | Target N | Observed | Missing | Missing % |
+|---|---:|---:|---:|---:|
+| Placebo | 86 | 59 | 27 | 31.4% |
+| Low Dose | 96 | 27 | 69 | 71.9% |
+| High Dose | 72 | 30 | 42 | 58.3% |
+| **Overall** | **254** | **116** | **138** | **54.3%** |
+
+Recorded final disposition is adverse event for 8/27 placebo, 49/69 Low Dose and 34/42 High Dose subjects missing Week 24.
+
+These descriptive counts do not establish the truth of MAR or MNAR.
+
+## 11. v0.12 fixed-delta missing-data sensitivity
+
+The v0.12 sensitivity is a transparent fixed-delta pattern-mixture **mean-shift diagnostic**, not production MNAR multiple imputation or reference-based imputation.
+
+For each primary Week 24 active-versus-placebo contrast:
+
+```text
+theta_s(delta) = theta_MAR
+               + delta * (m_active * active_multiplier
+                          - m_placebo * placebo_multiplier)
+```
+
+where `m_active` and `m_placebo` are observed Week 24 missing proportions.
+
+ACTOT is treated as lower-is-better. Positive delta therefore represents a worse assumed missing outcome.
+
+### 11.1 Controlled grid
+
+```text
+delta = 0.0, 0.5, ..., 6.0 ACTOT points
+```
+
+### 11.2 Scenarios
+
+| Scenario | Active multiplier | Placebo multiplier |
+|---|---:|---:|
+| Common worsening | +1 | +1 |
+| Active-only worsening | +1 | 0 |
+| Divergent worsening | +1 | -1 |
+
+### 11.3 Primary sensitivity threshold
+
+Both primary Week 24 MMRM contrasts are already non-significant at delta=0. Therefore “loss of statistical significance” is not used as a tipping criterion.
+
+The v0.12 primary threshold is the positive delta at which the shifted active-minus-placebo point estimate reaches zero:
+
+```text
+delta* = -theta_MAR / contrast_shift_per_delta
+```
+
+Verified thresholds:
+
+| Scenario | Low vs Placebo | High vs Placebo |
+|---|---:|---:|
+| Common worsening | 3.985 | 3.442 |
+| Active-only worsening | 2.244 | 1.589 |
+| Divergent worsening | 1.562 | 1.033 |
+
+All six analytic thresholds lie inside the controlled 0–6 grid.
+
+T18 fixed-delta CI/p-value columns reuse the primary MMRM SE/df after deterministic shift. They do not include imputation-model/delta uncertainty and are not Rubin's-rules MI inference.
+
+## 12. Programming QC
+
+A separate R implementation reconstructs selected safety/efficacy derivations from the same raw public sources and is compared with Python only after its own results are generated.
+
+Verified cross-language checks: **16/16 passed**. Maximum current ANCOVA numeric difference: **4e-14** against `1e-8` tolerance.
+
+This remains same-author cross-language replication, not independent second-programmer review.
+
+## 13. TLF plan
+
+Current TLF scope is T01–T19.
+
+- T01–T07: safety/demographics;
+- T08–T10: Week 24 ACTOT descriptives/ANCOVA;
+- T11–T15: longitudinal MMRM and diagnostics;
+- T16–T17: missingness/disposition context;
+- T18: 78-row fixed-delta sensitivity grid;
+- T19: six analytic directional tipping points.
+
+`spec/analysis_traceability.csv` and `spec/output_contracts.json` are executable specifications for these outputs. Verified structural traceability: **19/19**.
+
+## 14. Required QC gates
+
+Verified v0.12 live workflow:
 
 | QC layer | Result |
 |---|---:|
-| Python unit tests | **29/29 passed** |
-| Required Python pipeline QC | **24/24 passed** |
-| Required R/Python cross-language QC | **16/16 passed** |
-| Required MMRM QC | **11/11 passed** |
-| Complete SAP-to-TLF structural traceability | **15/15 TLFs** |
-| Required protocol-design QC | **7/7 passed** |
-| Required randomisation/initial-kit schedule QC | **10/10 passed** |
+| Unit tests | 57/57 |
+| Python pipeline | 24/24 |
+| R/Python programming QC | 16/16 |
+| MMRM | 11/11 |
+| Estimand/missingness | 21/21 |
+| Fixed-delta sensitivity | 19/19 |
+| Dataset/TLF reviewer | 24/24 |
+| Protocol design | 7/7 |
+| Randomisation/kit | 10/10 |
+| TLF traceability | 19/19 |
+| Change-impact relationships | 118/118 |
 
-The latest maximum R/Python ANCOVA numerical difference is `4e-14`.
+Required failures exit non-zero and diagnostic outputs are retained where possible.
 
-### 15.1 R/Python programming QC
+## 15. Statistical change control
 
-`R/independent_qc.R` reimplements selected analysis rules from the same public raw inputs. It does not call Python derivation code. Discrete derivations require exact agreement; ANCOVA numerical outputs require absolute difference no greater than `1e-8`.
+`spec/change_impact_graph.json` and `spec/change_requests.json` are both version `0.12.0`.
 
-This is a separate implementation by the same portfolio author, not independent review by a second programmer.
+Six simulated changes test transitive downstream review. New v0.12 propagation ensures that changes to the primary ACTOT visit, primary MMRM covariance, treatment-discontinuation strategy or fixed-delta sensitivity assumptions reach T18/T19 and dedicated sensitivity QC.
 
-### 15.2 MMRM QC
+Verified live result: **118/118 required impact relationships declared and 118/118 required resources resolved**.
 
-Required MMRM checks cover treatment/visit completeness, factor-coded covariance visit, unique subject-visit keys, exact `CHG=AVAL-BASE`, constant subject baseline, finite likelihoods, finite contrast inference, six active-versus-placebo visit contrasts and two Week 24 primary contrasts. The verified run passes **11/11**.
+These requests are portfolio simulations and do not change the analysed results.
 
-### 15.3 SAP-to-TLF structural traceability
+## 16. Protocol-design and randomisation exercises
 
-`spec/analysis_traceability.csv` and `spec/output_contracts.json` define the expected relationship between objectives, populations, endpoints, methods, source/analysis datasets, generated outputs and QC evidence.
+A separate portfolio planning specification evaluates a three-arm Week 24 ACTOT design under two active-versus-placebo comparisons, Bonferroni family-wise alpha control, common SD assumptions, dropout inflation and target-power scenarios.
 
-For each of 15 planned TLFs, CI requires:
+The selected illustrative `E2.5_P80` scenario drives a deterministic 390-subject stratified permuted-block randomisation and initial-kit coding exercise.
 
-- the output file to exist;
-- minimum row count and required columns to match its contract;
-- linked analysis dataset(s) to resolve;
-- linked QC evidence to resolve;
-- a SHA256 digest of the generated output to be recorded.
+This is not an IRT/IWRS production schedule and does not model drug-supply operations, resupply, expiry, replacement or emergency unblinding.
 
-The verified run passes **15/15** TLFs on all structural checks. This gate supplements rather than replaces analysis-specific statistical QC.
+## 17. Controlled supporting documents
 
-## 16. TLF outputs
+- `docs/sap_v0_9_review_addendum.md`
+- `docs/sap_v0_10_change_control_addendum.md`
+- `docs/sap_v0_11_estimand_addendum.md`
+- `docs/sap_v0_12_mnar_addendum.md`
+- `docs/estimand_missing_data_review.md`
+- `docs/mnar_sensitivity.md`
+- `docs/qc_plan.md`
+- `docs/tlf_shells.md`
+- `docs/analysis_traceability.md`
+- `docs/change_control_impact_assessment.md`
 
-The planned output set is documented in `docs/tlf_shells.md`. It covers demographics, disposition, exposure, TEAE summaries, Week 24 ACTOT descriptives and ANCOVA, MMRM least-squares means and contrasts, covariance sensitivity, model diagnostics and the Week 24 MMRM-versus-ANCOVA comparison.
-
-## 17. Protocol-design and sample-size exercise
-
-### 17.1 Status and objective
-
-Version 0.7 added a separate illustrative planning exercise for a three-arm parallel-group study with Placebo, Xanomeline Low Dose and Xanomeline High Dose allocated 1:1:1. The planned continuous endpoint is Week 24 ACTOT change from baseline, with each active dose compared with placebo.
-
-This is not the original source trial's sample-size calculation and does not claim that its assumptions are clinically justified.
-
-### 17.2 Multiplicity and assumptions
-
-The machine-readable specification in `spec/protocol_design.json` uses:
-
-| Assumption | Value |
-|---|---:|
-| Family-wise two-sided alpha | 0.05 |
-| Active-versus-placebo comparisons | 2 |
-| Bonferroni alpha per comparison | 0.025 |
-| Common planning SD | 6.0 |
-| Anticipated dropout | 15% |
-| Target power | 80% or 90% |
-| Mean-difference scenarios | 2.0, 2.5 or 3.0 |
-
-For a continuous two-arm comparison within the three-arm design:
-
-```text
-n_evaluable_per_arm = ceil(
-    2 * SD^2 * (z_(1-alpha/2) + z_power)^2 / effect^2
-)
-
-n_randomised_per_arm = ceil(
-    n_evaluable_per_arm / (1 - dropout_rate)
-)
-
-total_randomised = 3 * n_randomised_per_arm
-```
-
-### 17.3 Verified planning scenarios
-
-| Scenario | Effect | Target power | Evaluable N/arm | Randomised N/arm | Total randomised | Achieved power |
-|---|---:|---:|---:|---:|---:|---:|
-| E2.0_P80 | 2.0 | 80% | 172 | 203 | 609 | 0.802 |
-| E2.0_P90 | 2.0 | 90% | 224 | 264 | 792 | 0.901 |
-| E2.5_P80 | 2.5 | 80% | 110 | 130 | 390 | 0.802 |
-| E2.5_P90 | 2.5 | 90% | 143 | 169 | 507 | 0.900 |
-| E3.0_P80 | 3.0 | 80% | 77 | 91 | 273 | 0.805 |
-| E3.0_P90 | 3.0 | 90% | 100 | 118 | 354 | 0.902 |
-
-The code back-calculates achieved power after integer rounding rather than assuming the requested power was preserved.
-
-### 17.4 Design QC
-
-The design run must pass all seven required checks:
-
-1. Bonferroni per-comparison alpha reconciles exactly to family alpha divided by the number of comparisons;
-2. dropout inflation does not reduce per-arm sample size;
-3. achieved power at rounded evaluable N meets each target;
-4. scenario identifiers are unique;
-5. total randomised N equals randomised N per arm multiplied by three arms;
-6. required N does not increase when the assumed treatment effect increases at fixed target power;
-7. required N does not decrease when target power increases at fixed effect.
-
-The verified v0.8 run retains **7/7** passing design checks. `outputs/protocol_design_metrics.json` records a SHA256 digest of the exact machine-readable design specification used for the run.
-
-## 18. Statistical protocol review
-
-`docs/protocol_statistical_review_checklist.md` records the statistical questions that should be resolved before a protocol is considered ready for SAP and programming work, including design, objectives/endpoints, estimand components, multiplicity, sample-size assumptions, analysis populations, missing data, model details, safety windows, programming implications and DSMB/interim-analysis boundaries.
-
-The checklist is a portfolio review aid. It does not represent sponsor protocol sign-off, DSMB work or regulatory-submission ownership.
-
-## 19. Randomisation and initial-kit schedule
-
-### 19.1 Status and design link
-
-Version 0.8 adds an illustrative randomisation and initial-kit schedule linked to protocol-design scenario `E2.5_P80`, which plans 390 randomised subjects. The schedule is a portfolio simulation. It is not the source trial's randomisation list and is not an IRT/IWRS production schedule.
-
-### 19.2 Allocation
-
-The machine-readable specification in `spec/randomisation_schedule.json` uses:
-
-- three treatment arms in a 1:1:1 ratio;
-- five illustrative strata with 78 planned randomisations each;
-- stratified permuted blocks;
-- allowed block sizes 3 and 6;
-- a deterministic seed for public reproducibility only.
-
-The verified output contains 390 randomisation numbers and 390 unique initial-kit codes. Each treatment has 130 allocations overall and 26 within each stratum. The schedule contains 87 blocks: 44 blocks of size 3 and 43 blocks of size 6.
-
-### 19.3 Blinded and unblinded outputs
-
-`outputs/randomisation_schedule_blinded.csv` contains exactly:
-
-```text
-randomisation_id
-stratum
-kit_id
-```
-
-Treatment, blind code, block identifier, block size and within-block position are kept only in the unblinded portfolio output. The column boundary and blinded/unblinded key reconciliation are required automated checks.
-
-### 19.4 Initial-kit scope
-
-One illustrative initial kit is generated for each randomisation number. The separate unblinded kit code list maps kit ID to treatment/blind code. The verified run has zero kit-to-treatment mismatches.
-
-The exercise does not model resupply, site inventory, expiry, replacement kits, temperature excursions, emergency unblinding, depot/site shipments or IRT/IWRS transactions.
-
-### 19.5 Schedule QC and identity
-
-The verified run passes **10/10 required schedule checks** covering total N, unique randomisation/kit IDs, overall/stratum/block balance, kit-treatment consistency, blinded-column restriction, blinded/unblinded key reconciliation and complete kit-list coverage.
-
-The randomisation specification SHA256 is `3b0223721b9a81eacba26878f2c53a7f211924ea499fa0898256b591b7d9ed14`. Generated schedule CSVs are separately hashed in `outputs/randomisation_summary.md`.
-
-The longest same-treatment run is reported only as an informational diagnostic: 2, 2, 3, 2 and 3 across the five strata. No post-randomisation run-length restriction is imposed because it was not part of the pre-specified allocation method.
-
-In production, the seed, block structure, treatment allocation list and kit decoding list would require controlled access, independent verification, secure transfer and formal change control. Those operational responsibilities are not claimed by this portfolio.
+The earlier addenda remain as portfolio change history; this consolidated document states the current v0.12 analysis plan.

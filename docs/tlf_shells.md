@@ -1,4 +1,4 @@
-# TLF shells — portfolio version 0.11
+# TLF shells — portfolio version 0.12
 
 These shells define the intended table structure for the portfolio analyses. They are planning documents, not sponsor-approved shells. Treatment columns use actual treatment (`TRT01A`) unless stated otherwise.
 
@@ -149,6 +149,41 @@ Columns:
 This is descriptive missingness context. It does not establish an MAR or MNAR mechanism and does not infer unrecorded intercurrent events.
 
 Produced by: `outputs/table17_week24_missingness_by_disposition.csv`.
+
+## Table 18. ACTOT fixed-delta missing-data sensitivity grid
+
+Rows are sensitivity scenario × active-versus-placebo Week 24 contrast × delta value. The controlled delta grid is 0 to 6 ACTOT points in 0.5-point steps, giving **78 expected rows** for three scenarios and two contrasts.
+
+Columns include:
+- scenario and comparison;
+- active and placebo Week 24 missing proportions;
+- scenario multipliers and contrast shift per delta;
+- primary MMRM estimate;
+- shifted estimate;
+- reused primary MMRM SE and df;
+- fixed-delta 95% CI and p-value;
+- direction of the shifted point estimate.
+
+`delta=0` must reproduce the primary MMRM estimate exactly. The fixed-delta CI/p-value columns are diagnostic and do not represent multiple-imputation uncertainty.
+
+Produced by: `outputs/table18_actot_delta_sensitivity.csv`.
+
+## Table 19. ACTOT direction-of-effect tipping points
+
+Six rows are expected: three fixed-delta scenarios × two active-versus-placebo Week 24 contrasts.
+
+Columns include:
+- scenario and comparison;
+- contrast shift per delta;
+- primary estimate and p-value;
+- analytic delta at which the point estimate reaches zero;
+- whether that threshold lies within the controlled grid;
+- first grid delta whose shifted estimate is non-negative;
+- significance-tipping status.
+
+The primary threshold is the direction-of-effect crossing, not loss of statistical significance, because both primary Week 24 MMRM contrasts are already non-significant at delta zero.
+
+Produced by: `outputs/table19_actot_directional_tipping_points.csv`.
 
 ## Figure shells
 
