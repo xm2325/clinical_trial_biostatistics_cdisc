@@ -1,5 +1,5 @@
 {
-  "version": "0.12.0",
+  "version": "0.13.0",
   "components": {
     "safety_population_definition": {
       "description": "Definition of the safety analysis population.",
@@ -26,7 +26,7 @@
     "teae_tlfs": {"description": "TEAE overview, SOC/PT, severity and risk-difference outputs.", "downstream": [], "impacts": {"tlfs": ["T04", "T05", "T06", "T07"]}},
     "actot_primary_visit": {
       "description": "Selected primary ACTOT analysis visit and corresponding primary contrast focus.",
-      "downstream": ["ancova_primary_analysis", "mmrm_primary_contrast_focus", "protocol_design_assumptions", "mnar_sensitivity_assumption"],
+      "downstream": ["ancova_primary_analysis", "mmrm_primary_contrast_focus", "protocol_design_assumptions", "mnar_sensitivity_assumption", "mi_sensitivity_assumption"],
       "impacts": {
         "documents": ["docs/protocol_summary.md", "docs/sap.md", "docs/analysis_dataset_spec.md", "docs/tlf_shells.md", "docs/protocol_statistical_design.md", "docs/sap_v0_9_review_addendum.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
         "specs": ["spec/estimands.json"]
@@ -66,7 +66,7 @@
     "mmrm_tlfs": {"description": "Longitudinal MMRM LS means, contrasts, covariance sensitivity, diagnostics and Week-24 comparison outputs.", "downstream": [], "impacts": {"tlfs": ["T11", "T12", "T13", "T14", "T15"]}},
     "treatment_discontinuation_strategy": {
       "description": "Estimand strategy used to address treatment discontinuation as an intercurrent event.",
-      "downstream": ["actot_missingness_review", "mmrm_estimand_alignment", "mnar_sensitivity_assumption"],
+      "downstream": ["actot_missingness_review", "mmrm_estimand_alignment", "mnar_sensitivity_assumption", "mi_sensitivity_assumption"],
       "impacts": {
         "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/sap_v0_11_estimand_addendum.md"],
         "specs": ["spec/estimands.json"]
@@ -99,6 +99,27 @@
       "description": "Fixed-delta sensitivity grid and directional tipping-point outputs.",
       "downstream": [],
       "impacts": {"tlfs": ["T18", "T19"]}
+    },
+    "mi_sensitivity_assumption": {
+      "description": "Subject-level multiple-imputation method, visit history, Monte Carlo precision and Week 24 delta assumptions.",
+      "downstream": ["mi_sensitivity_calculation"],
+      "impacts": {
+        "documents": ["docs/sap.md", "docs/tlf_shells.md", "docs/qc_plan.md", "docs/estimand_missing_data_review.md", "docs/rbmi_mi_sensitivity.md", "docs/sap_v0_13_rbmi_addendum.md"],
+        "specs": ["spec/mi_sensitivity.json"]
+      }
+    },
+    "mi_sensitivity_calculation": {
+      "description": "Approximate-Bayesian rbmi draws, Week 24 ANCOVA Rubin pooling, delta application and Monte Carlo precision review.",
+      "downstream": ["mi_sensitivity_tlfs"],
+      "impacts": {
+        "analysis_datasets": ["outputs/rbmi_pairwise_input_counts.csv"],
+        "qc": ["outputs/rbmi_mi_qc.csv", "outputs/rbmi_mcse_qc.csv", "outputs/rbmi_draw_diagnostics.csv", "outputs/rbmi_delta_audit.csv"]
+      }
+    },
+    "mi_sensitivity_tlfs": {
+      "description": "MAR pairwise MI and delta-adjusted MI sensitivity outputs.",
+      "downstream": [],
+      "impacts": {"tlfs": ["T20", "T21"]}
     }
   }
 }
