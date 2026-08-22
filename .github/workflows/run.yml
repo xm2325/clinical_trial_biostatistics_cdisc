@@ -37,8 +37,9 @@ jobs:
         run: |
           Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/rbmi_sensitivity.R")); cat("rbmi_sensitivity.R syntax OK\n")'
       - name: Install R analysis dependencies
-        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi"))'
       - name: Independent R reconstruction and cross-language QC
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
@@ -47,6 +48,8 @@ jobs:
         run: python scripts/run_estimand_review.py
       - name: ACTOT fixed-delta MNAR sensitivity gate
         run: python scripts/run_mnar_sensitivity.py
+      - name: ACTOT rbmi subject-level MI sensitivity gate
+        run: Rscript R/rbmi_sensitivity.R
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
       - name: Statistical change-control impact gate
@@ -82,6 +85,18 @@ jobs:
           test -f outputs/table19_actot_directional_tipping_points.csv && cat outputs/table19_actot_directional_tipping_points.csv || true
           echo "--- MNAR sensitivity QC ---"
           test -f outputs/mnar_sensitivity_qc.csv && cat outputs/mnar_sensitivity_qc.csv || true
+          echo "--- rbmi subject-level MI summary ---"
+          test -f outputs/rbmi_mi_summary.md && cat outputs/rbmi_mi_summary.md || true
+          echo "--- rbmi MAR pairwise results ---"
+          test -f outputs/table20_rbmi_mar_pairwise.csv && cat outputs/table20_rbmi_mar_pairwise.csv || true
+          echo "--- rbmi delta sensitivity results ---"
+          test -f outputs/table21_rbmi_delta_sensitivity.csv && cat outputs/table21_rbmi_delta_sensitivity.csv || true
+          echo "--- rbmi MI QC ---"
+          test -f outputs/rbmi_mi_qc.csv && cat outputs/rbmi_mi_qc.csv || true
+          echo "--- rbmi draw diagnostics ---"
+          test -f outputs/rbmi_draw_diagnostics.csv && cat outputs/rbmi_draw_diagnostics.csv || true
+          echo "--- rbmi vs primary MMRM diagnostic ---"
+          test -f outputs/rbmi_vs_mmrm_week24.csv && cat outputs/rbmi_vs_mmrm_week24.csv || true
           echo "--- Analysis-dataset and TLF reviewer summary ---"
           test -f outputs/analysis_dataset_review_summary.md && cat outputs/analysis_dataset_review_summary.md || true
           echo "--- Analysis-dataset and TLF reviewer checks ---"
