@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0 — 2026-08-22
+
+- Add a deterministic portfolio randomisation and initial-kit schedule linked to the v0.7 `E2.5_P80` planning scenario with 390 planned randomisations.
+- Generate stratified permuted-block 1:1:1 allocation across five illustrative strata using block sizes 3 and 6.
+- Verify 390 unique randomisation numbers and 390 unique initial kit codes with exactly 130 allocations per treatment arm and 26 allocations per arm within every stratum.
+- Generate 87 balanced blocks: 44 blocks of size 3 and 43 blocks of size 6; every block is balanced across all three treatment arms.
+- Separate blinded and unblinded schedule outputs. The blinded schedule contains only `randomisation_id`, `stratum` and `kit_id`; treatment, blind-code and block information remain in unblinded outputs.
+- Add a kit-to-treatment decoding list and verify zero mismatches between assigned kits and unblinded treatment allocations.
+- Add 10 required randomisation/kit QC checks covering planned count, unique IDs, overall/stratum/block balance, kit reconciliation, blinded-column isolation and key reconciliation; the verified live run passes 10/10.
+- Report longest same-treatment runs by stratum as an informational diagnostic rather than a post hoc acceptance constraint.
+- Record SHA256 digests for the randomisation specification and generated schedule/QC outputs.
+- Expand Python unit tests to 29 while retaining 24/24 Python pipeline QC, 16/16 R/Python programming QC, 11/11 MMRM QC, 15/15 SAP-to-TLF traceability and 7/7 protocol-design QC.
+- Update README and SAP to portfolio version 0.8 and document the access-control boundary: this public exercise is not an IRT/IWRS production schedule and does not model resupply, site inventory, expiry, replacement or emergency-unblinding transactions.
+
 ## 0.7.0 — 2026-08-22
 
 - Add a machine-readable three-arm protocol-design specification for a portfolio Week 24 ACTOT change-from-baseline planning scenario.
