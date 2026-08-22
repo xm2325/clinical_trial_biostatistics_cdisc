@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from cdisc_portfolio.io import sha256_file
-from cdisc_portfolio.review import REVIEW_FILES, run_dataset_review
-
-
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from cdisc_portfolio.io import sha256_file  # noqa: E402
+from cdisc_portfolio.review import REVIEW_FILES, run_dataset_review  # noqa: E402
+
 OUTPUT_DIR = ROOT / "outputs"
 
 
