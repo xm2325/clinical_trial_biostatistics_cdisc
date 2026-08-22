@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0 — 2026-08-22
+
+- Add a blocking post-generation analysis-dataset and TLF reviewer gate that runs after R MMRM and before final SAP-to-TLF traceability validation.
+- Add 19 required cross-dataset, derivation, population, TLF-denominator and TLF-structure checks across generated ADSL-style, ADAE-style, ACTOT, ANCOVA, MMRM and safety/efficacy outputs.
+- Add five machine-readable dataset contracts for ADSL-style, ADAE-style, ACTOT, ANCOVA and MMRM, covering keys, required columns, non-missing fields and controlled values.
+- Verify **24/24 required reviewer checks** in GitHub Actions across six review areas: analysis dataset, derivation, metadata contract, population, TLF denominator and TLF structure.
+- Review 17 generated files and record SHA256 for every reviewed file; also record the exact dataset-contract specification hash.
+- Reconstruct randomised/safety arm denominators as Placebo=86, High Dose=96 and Low Dose=72 and reconcile them to linked TLF-style outputs.
+- Reconstruct observed Week 24 Ns as Placebo=30, High Dose=59 and Low Dose=27 and reconcile Week 24 ANCOVA/MMRM output coverage to generated analysis datasets.
+- Require every MMRM row to trace to the exact ACTOT source record through `STUDYID + USUBJID + QSSEQ` with treatment, `AVAL`, `BASE` and `CHG` agreement.
+- Add negative-control tests that deliberately corrupt treatment consistency, a safety-table denominator, MMRM `CHG`, a required dataset column and a controlled flag; validators must reject the corrupted inputs.
+- Expand Python unit tests to **34/34 passed** while retaining 24/24 Python pipeline QC, 16/16 R/Python programming QC, 11/11 MMRM QC, 15/15 SAP-to-TLF traceability, 7/7 protocol-design QC and 10/10 randomisation/kit QC.
+- Add `docs/analysis_dataset_review.md`, update the analysis-dataset specification for v0.9 and add a versioned SAP review addendum rather than silently overwriting the v0.8 analysis plan.
+
 ## 0.8.0 — 2026-08-22
 
 - Add a deterministic portfolio randomisation and initial-kit schedule linked to the v0.7 `E2.5_P80` planning scenario with 390 planned randomisations.

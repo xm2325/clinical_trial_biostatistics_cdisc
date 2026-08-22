@@ -1,0 +1,65 @@
+{
+  "analysis_version": "0.9.0",
+  "status": "Portfolio analysis-dataset contracts; not formal ADaM metadata or submission conformance rules.",
+  "datasets": {
+    "adsl": {
+      "label": "ADSL-style",
+      "file": "adsl_style.csv",
+      "key": ["STUDYID", "USUBJID"],
+      "required_columns": ["STUDYID", "USUBJID", "TRT01P", "TRT01A", "TRTSDT", "TRTEDT", "RANDFL", "SAFFL", "COMPLFL", "DCSFL"],
+      "non_missing": ["STUDYID", "USUBJID", "RANDFL", "SAFFL", "COMPLFL", "DCSFL"],
+      "controlled_values": {
+        "RANDFL": {"values": ["Y", "N"], "allow_blank": false},
+        "SAFFL": {"values": ["Y", "N"], "allow_blank": false},
+        "COMPLFL": {"values": ["Y", "N"], "allow_blank": false},
+        "DCSFL": {"values": ["Y", "N"], "allow_blank": false}
+      }
+    },
+    "adae": {
+      "label": "ADAE-style",
+      "file": "adae_style.csv",
+      "key": ["STUDYID", "USUBJID", "AESEQ"],
+      "required_columns": ["STUDYID", "USUBJID", "AESEQ", "AEDECOD", "TRT01A", "TRTSDT", "TRTEDT", "SAFFL", "TRTEMFL", "RELFL", "MODSEVFL"],
+      "non_missing": ["STUDYID", "USUBJID", "AESEQ", "AEDECOD", "TRT01A", "SAFFL", "TRTEMFL", "RELFL", "MODSEVFL"],
+      "controlled_values": {
+        "SAFFL": {"values": ["Y", "N"], "allow_blank": false},
+        "TRTEMFL": {"values": ["Y", "N"], "allow_blank": false},
+        "RELFL": {"values": ["Y", "N"], "allow_blank": false},
+        "MODSEVFL": {"values": ["Y", "N"], "allow_blank": false}
+      }
+    },
+    "adqs": {
+      "label": "ADQS-style ACTOT",
+      "file": "adqs_actot_style.csv",
+      "key": ["STUDYID", "USUBJID", "QSSEQ"],
+      "required_columns": ["STUDYID", "USUBJID", "QSSEQ", "TRT01A", "PARAMCD", "AVISIT", "AVAL", "BASE", "CHG", "ABLFL", "EFFFL"],
+      "non_missing": ["STUDYID", "USUBJID", "QSSEQ", "TRT01A", "PARAMCD", "AVAL", "BASE", "CHG", "EFFFL"],
+      "controlled_values": {
+        "PARAMCD": {"values": ["ACTOT"], "allow_blank": false},
+        "ABLFL": {"values": ["Y"], "allow_blank": true},
+        "EFFFL": {"values": ["Y", "N"], "allow_blank": false}
+      }
+    },
+    "ancova": {
+      "label": "Week 24 / LOCF ANCOVA analysis subjects",
+      "file": "ancova_analysis_subjects.csv",
+      "key": ["analysis", "STUDYID", "USUBJID"],
+      "required_columns": ["analysis", "STUDYID", "USUBJID", "TRT01A", "BASE", "AVAL", "CHG", "ADY", "DTYPE"],
+      "non_missing": ["analysis", "STUDYID", "USUBJID", "TRT01A", "BASE", "AVAL", "CHG", "ADY"],
+      "controlled_values": {
+        "analysis": {"values": ["Observed Week 24", "LOCF sensitivity"], "allow_blank": false},
+        "DTYPE": {"values": ["LOCF"], "allow_blank": true}
+      }
+    },
+    "mmrm": {
+      "label": "MMRM analysis dataset",
+      "file": "mmrm_analysis_dataset.csv",
+      "key": ["STUDYID", "USUBJID", "AVISIT"],
+      "required_columns": ["STUDYID", "USUBJID", "QSSEQ", "TRT01A", "AVISIT", "AVAL", "BASE", "CHG"],
+      "non_missing": ["STUDYID", "USUBJID", "QSSEQ", "TRT01A", "AVISIT", "AVAL", "BASE", "CHG"],
+      "controlled_values": {
+        "AVISIT": {"values": ["Week 8", "Week 16", "Week 24"], "allow_blank": false}
+      }
+    }
+  }
+}

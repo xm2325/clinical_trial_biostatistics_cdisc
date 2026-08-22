@@ -43,6 +43,8 @@ jobs:
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
         run: Rscript R/mmrm_analysis.R
+      - name: Analysis-dataset and TLF reviewer gate
+        run: python scripts/run_dataset_review.py
       - name: Validate SAP-to-TLF traceability
         run: python scripts/validate_traceability.py
 
@@ -60,6 +62,10 @@ jobs:
           test -f outputs/randomisation_qc.csv && cat outputs/randomisation_qc.csv || true
           echo "--- Randomisation balance ---"
           test -f outputs/randomisation_balance.csv && cat outputs/randomisation_balance.csv || true
+          echo "--- Analysis-dataset and TLF reviewer summary ---"
+          test -f outputs/analysis_dataset_review_summary.md && cat outputs/analysis_dataset_review_summary.md || true
+          echo "--- Analysis-dataset and TLF reviewer checks ---"
+          test -f outputs/analysis_dataset_review.csv && cat outputs/analysis_dataset_review.csv || true
           echo "--- Independent R QC summary ---"
           test -f outputs/r_independent_qc_summary.md && cat outputs/r_independent_qc_summary.md || true
           echo "--- ACTOT MMRM summary ---"
