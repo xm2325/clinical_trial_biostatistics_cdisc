@@ -45,6 +45,8 @@ jobs:
         run: Rscript R/mmrm_analysis.R
       - name: ACTOT estimand and missing-data review gate
         run: python scripts/run_estimand_review.py
+      - name: ACTOT fixed-delta MNAR sensitivity gate
+        run: python scripts/run_mnar_sensitivity.py
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
       - name: Statistical change-control impact gate
@@ -74,6 +76,12 @@ jobs:
           test -f outputs/table17_week24_missingness_by_disposition.csv && cat outputs/table17_week24_missingness_by_disposition.csv || true
           echo "--- Estimand review checks ---"
           test -f outputs/estimand_review.csv && cat outputs/estimand_review.csv || true
+          echo "--- ACTOT fixed-delta MNAR sensitivity ---"
+          test -f outputs/mnar_sensitivity_summary.md && cat outputs/mnar_sensitivity_summary.md || true
+          echo "--- Directional tipping points ---"
+          test -f outputs/table19_actot_directional_tipping_points.csv && cat outputs/table19_actot_directional_tipping_points.csv || true
+          echo "--- MNAR sensitivity QC ---"
+          test -f outputs/mnar_sensitivity_qc.csv && cat outputs/mnar_sensitivity_qc.csv || true
           echo "--- Analysis-dataset and TLF reviewer summary ---"
           test -f outputs/analysis_dataset_review_summary.md && cat outputs/analysis_dataset_review_summary.md || true
           echo "--- Analysis-dataset and TLF reviewer checks ---"
