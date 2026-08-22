@@ -1,4 +1,4 @@
-# TLF shells — portfolio version 0.5
+# TLF shells — portfolio version 0.11
 
 These shells define the intended table structure for the portfolio analyses. They are planning documents, not sponsor-approved shells. Treatment columns use actual treatment (`TRT01A`) unless stated otherwise.
 
@@ -55,168 +55,100 @@ Produced by: `outputs/table4_teae_overview.csv`.
 
 ## Table 5. TEAEs by system organ class / preferred term — Safety population
 
-Treatment columns.
-
-Rows are system organ class and preferred term. Arm cells show unique-subject n (%). Preferred terms are ranked by overall subject incidence within the portfolio output. System organ class is carried from `AEBODSYS`.
+Treatment columns. Rows are system organ class and preferred term. Arm cells show unique-subject n (%). Preferred terms are ranked by overall subject incidence within the portfolio output.
 
 Produced by: `outputs/table5_teae_soc_pt.csv`.
 
 ## Table 6. TEAEs by severity — Safety population
 
-Treatment columns.
-
-Rows:
-- mild;
-- moderate;
-- severe.
-
-Cells contain unique-subject n (%). A subject can contribute to more than one severity row.
+Rows: mild, moderate and severe. Cells contain unique-subject n (%). A subject can contribute to more than one severity row.
 
 Produced by: `outputs/table6_teae_severity.csv`.
 
 ## Table 7. Exploratory any-TEAE risk difference versus placebo — Safety population
 
-One row per active arm versus placebo.
-
-Columns:
-- comparison;
-- active-arm N;
-- placebo N;
-- active-arm risk;
-- placebo risk;
-- risk difference;
-- 95% Wald confidence interval;
-- Fisher exact-test p-value.
+One row per active arm versus placebo with arm N, placebo N, risks, risk difference, 95% Wald confidence interval and Fisher exact-test p-value.
 
 Produced by: `outputs/table7_teae_risk_difference.csv`.
 
 ## Table 8. ACTOT observed Week 24 descriptive statistics — Efficacy population
 
-One row per treatment arm.
-
-Columns:
-- treatment;
-- N;
-- baseline mean and SD;
-- observed Week 24 mean and SD;
-- change-from-baseline mean and SD.
+One row per treatment arm with N, baseline mean/SD, observed Week 24 mean/SD and change-from-baseline mean/SD.
 
 Produced by: `outputs/table8_actot_descriptive.csv`.
 
 ## Table 9. ACTOT Week 24 ANCOVA least-squares means
 
-Separate blocks for:
-1. observed Week 24;
-2. LOCF sensitivity.
-
-One row per treatment arm.
-
-Columns:
-- analysis;
-- treatment;
-- N;
-- least-squares mean at the analysis-set mean baseline;
-- standard error;
-- two-sided 95% confidence interval;
-- baseline reference value.
+Separate blocks for observed Week 24 and LOCF sensitivity. One row per treatment arm with N, adjusted mean, SE, 95% CI and baseline reference.
 
 Produced by: `outputs/table9_actot_lsmeans.csv`.
 
 ## Table 10. ACTOT Week 24 ANCOVA active-versus-placebo contrasts
 
-Separate blocks for observed Week 24 and LOCF sensitivity.
-
-One row per active arm versus placebo.
-
-Columns:
-- analysis;
-- comparison;
-- total analysis N;
-- estimate;
-- standard error;
-- two-sided 95% confidence interval;
-- residual degrees of freedom;
-- two-sided p-value;
-- baseline reference value.
+Separate blocks for observed Week 24 and LOCF sensitivity. One row per active arm versus placebo with total N, estimate, SE, 95% CI, residual df, p-value and baseline reference.
 
 Produced by: `outputs/table10_actot_ancova_contrasts.csv`.
 
 ## Table 11. ACTOT MMRM least-squares means by visit — Primary unstructured covariance
 
-Rows are treatment within Week 8, Week 16 and Week 24.
-
-Columns:
-- analysis visit;
-- treatment;
-- estimated marginal mean of ACTOT change from baseline;
-- standard error;
-- Satterthwaite degrees of freedom;
-- two-sided 95% confidence interval.
+Rows are treatment within Week 8, Week 16 and Week 24, reporting estimated marginal mean of ACTOT change, SE, Satterthwaite df and 95% CI.
 
 Produced by: `outputs/mmrm_lsmeans.csv`.
 
 ## Table 12. ACTOT MMRM active-versus-placebo contrasts by visit — Primary unstructured covariance
 
-Two rows per visit: Low Dose versus Placebo and High Dose versus Placebo.
-
-Columns:
-- analysis visit;
-- comparison;
-- treatment difference in change from baseline;
-- standard error;
-- Satterthwaite degrees of freedom;
-- two-sided 95% confidence interval;
-- t statistic;
-- two-sided p-value;
-- covariance label.
-
-Expected primary rows: **6**.
+Two rows per visit: Low Dose versus Placebo and High Dose versus Placebo. Expected primary rows: **6**.
 
 Produced by: `outputs/mmrm_treatment_contrasts.csv`.
 
 ## Table 13. ACTOT MMRM covariance sensitivity
 
-The same six visit-specific active-versus-placebo contrasts are reported under:
-- primary unstructured covariance;
-- heterogeneous AR(1) covariance.
-
-Columns follow Table 12 and include the covariance label.
-
-Expected rows: **12**.
+The same six visit-specific active-versus-placebo contrasts are reported under primary unstructured and heterogeneous AR(1) covariance. Expected rows: **12**.
 
 Produced by: `outputs/mmrm_covariance_sensitivity.csv`.
 
 ## Table 14. MMRM model diagnostics
 
-One row per covariance specification.
-
-Columns:
-- covariance model;
-- estimation method;
-- degrees-of-freedom method;
-- observations;
-- subjects;
-- log likelihood;
-- AIC;
-- BIC;
-- optimiser;
-- fit-returned flag.
+One row per covariance specification with estimation method, df method, observations, subjects, log likelihood, AIC, BIC, optimiser and fit-returned flag.
 
 Produced by: `outputs/mmrm_model_diagnostics.csv`.
 
 ## Table 15. Week 24 MMRM versus observed-case ANCOVA
 
-One row per active arm versus placebo.
-
-Columns:
-- comparison;
-- MMRM estimate, SE, 95% CI and p-value;
-- observed-case ANCOVA estimate, SE, 95% CI and p-value;
-- MMRM minus ANCOVA estimate difference.
-
-This table is diagnostic. Equality of the two estimates is not an acceptance criterion because the analyses use different information sets.
+One row per active arm versus placebo with MMRM and observed-case ANCOVA estimate, SE, 95% CI and p-value, plus their estimate difference. This table is diagnostic; equality is not an acceptance criterion because the analyses use different information sets.
 
 Produced by: `outputs/mmrm_vs_week24_ancova.csv`.
+
+## Table 16. ACTOT missingness by treatment and visit — Estimand target population
+
+One row per treatment arm at Week 8, Week 16 and Week 24. The denominator is randomised subjects with an observed baseline ACTOT value.
+
+Columns:
+- treatment and analysis visit;
+- nominal visit day;
+- target N;
+- observed N;
+- missing N and missing percentage;
+- subjects discontinued before/on the nominal visit;
+- missing subjects with and without recorded discontinuation before/on the visit;
+- observed records occurring after recorded treatment discontinuation.
+
+Produced by: `outputs/table16_actot_missingness_by_visit.csv`.
+
+## Table 17. Week 24 ACTOT missingness by recorded disposition context
+
+Among target-population subjects missing Week 24 ACTOT, rows report the recorded final disposition category within treatment arm.
+
+Columns:
+- treatment;
+- disposition/missingness category;
+- n;
+- arm-specific number missing Week 24;
+- percentage of arm-specific missing subjects.
+
+This is descriptive missingness context. It does not establish an MAR or MNAR mechanism and does not infer unrecorded intercurrent events.
+
+Produced by: `outputs/table17_week24_missingness_by_disposition.csv`.
 
 ## Figure shells
 
