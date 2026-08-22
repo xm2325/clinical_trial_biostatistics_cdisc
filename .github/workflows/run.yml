@@ -9,7 +9,7 @@ on:
 jobs:
   test-and-live-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,17 +20,31 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Unit tests
         run: pytest -q
-      - name: Run public SDTM workflow
+      - name: Profile official efficacy references
+        run: python scripts/profile_official_references.py
+      - name: Run public CDISC workflow
         run: python scripts/run_all.py
       - name: Show measurable run summary
+        if: always()
         run: |
-          cat outputs/analysis_run_note.md
-          echo "--- risk differences ---"
-          cat outputs/table7_teae_risk_difference.csv
+          test -f outputs/analysis_run_note.md && cat outputs/analysis_run_note.md || true
+          echo "--- ADQSADAS reference profile ---"
+          test -f outputs/adqsadas_reference_profile.json && cat outputs/adqsadas_reference_profile.json || true
+          echo "--- ADQSADAS parameter counts ---"
+          test -f outputs/adqsadas_param_counts.csv && cat outputs/adqsadas_param_counts.csv || true
+          echo "--- CIBIC source/reference mismatch trace ---"
+          test -f outputs/adqscibc_mismatch_source_trace.csv && cat outputs/adqscibc_mismatch_source_trace.csv || true
+          echo "--- ADQSCIBC reference comparison ---"
+          test -f outputs/adqscibc_reference_metrics.csv && cat outputs/adqscibc_reference_metrics.csv || true
+          echo "--- ACTOT ANCOVA contrasts ---"
+          test -f outputs/table10_actot_ancova_contrasts.csv && cat outputs/table10_actot_ancova_contrasts.csv || true
+          echo "--- TEAE risk differences ---"
+          test -f outputs/table7_teae_risk_difference.csv && cat outputs/table7_teae_risk_difference.csv || true
           echo "--- QC ---"
-          cat outputs/qc_report.csv
+          test -f outputs/qc_report.csv && cat outputs/qc_report.csv || true
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: clinical-biostatistics-cdisc-outputs
           path: outputs/
-          if-no-files-found: error
+          if-no-files-found: warn

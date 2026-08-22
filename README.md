@@ -1,14 +1,14 @@
 # Clinical Trial Biostatistics & CDISC Portfolio
 
-A reproducible clinical-trial statistics workflow built on public SDTM test data from `pharmaverse/pharmaversesdtm`.
+A reproducible clinical-trial statistics work sample using public CDISC pilot data and public pharmaverse SDTM test data.
 
-The project is designed as a **work sample for clinical biostatistics / statistical programming roles**. It demonstrates traceability from SDTM source domains through analysis-ready datasets, pre-specified safety analyses, TLF-style outputs, inferential summaries, QC and provenance tracking.
+The project demonstrates source-to-analysis traceability, analysis populations, safety and questionnaire efficacy derivations, statistical analysis, TLF-style outputs, QC, provenance tracking, and comparison with official CDISC reference ADaM datasets.
 
-> **Evidence boundary:** this is an independent portfolio project. The derived datasets are labelled **ADSL-style** and **ADAE-style** because they are not claimed to be fully CDISC-conformant ADaM submission datasets. The repository does not claim sponsor/CRO production, SAS, DSMB or regulatory-submission experience.
+> **Evidence boundary:** this is an independent portfolio project. Portfolio outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS, DSMB or regulatory-submission experience.
 
-## Verified v0.2 live run
+## Verified v0.3 live run
 
-The full workflow has been run in GitHub Actions against the public source CSVs, not only against local fixtures.
+The complete workflow has been run in GitHub Actions against downloaded public source data and pinned official CDISC reference files.
 
 | Item | Verified result |
 |---|---:|
@@ -16,105 +16,129 @@ The full workflow has been run in GitHub Actions against the public source CSVs,
 | AE rows | 1,191 |
 | DS rows | 850 |
 | EX rows | 591 |
+| Official CDISC QS rows | 121,749 |
+| Official ADQSCIBC rows | 730 |
+| Official ADQSADAS rows | 12,463 |
+| Official ADQSADAS subjects | 254 |
+| ADQSADAS parameters | 15 |
+| ACTOT reference rows | 1,040 |
+| ACTOT selected `ANL01FL=Y` rows | 1,016 |
 | Randomised subjects | 254 |
-| Safety-population subjects | 254 |
-| Completed subjects | 110 |
+| Safety subjects | 254 |
 | Subjects with >=1 portfolio-defined TEAE | 217 |
 | Portfolio-defined TEAE events | 1,116 |
-| Exposure-end fallbacks | 2 / 254 |
-| Required QC checks | **13 / 13 passed** |
-| Unit tests | **6 / 6 passed** |
+| Required QC checks | **24 / 24 passed** |
+| Unit tests | **10 / 10 passed** |
 
-Two safety subjects had observed EX records but no usable EX/DM exposure-end date. v0.2 therefore uses the final DS disposition date as a documented fallback for those two subjects and records `TRTEDTSRC=DS_DISPOSITION_FALLBACK`. Raw EX duration remains separate from the final treatment-window duration so the source-data limitation stays visible.
+### Official-reference validation
 
-### Exploratory any-TEAE comparisons
+For CIBIC+, the portfolio derives 705 `ADQSCIBC-style` analysis rows from official SDTM `QS` records with `QSTESTCD=CIBIC`. Against the official CDISC `ADQSCIBC` analysis records, the live run obtains:
 
-These are **unadjusted portfolio analyses**, not confirmatory results for the source trial.
+| Check | Result |
+|---|---:|
+| Analysis-key coverage | **100% (705/705)** |
+| `QSSEQ` source-row agreement | **100%** |
+| `DTYPE` agreement | **100%** |
+| `AVAL` agreement | 98.58% (695/705) |
+
+The ten `AVAL` differences are not hidden or overwritten. For all ten, the portfolio value equals the selected official SDTM QS `QSSTRESN`, while the official reference ADaM value differs from that source row. `outputs/adqscibc_mismatch_source_trace.csv` records subject, analysis visit, source `QSSEQ`, source text/value, derived value and reference value.
+
+This distinction matters for QC: v0.3 requires exact agreement on **which source record was selected** and **how the analysis record was classified**, while reference-value agreement is reported separately when the public source and public reference disagree.
+
+The official `ADQSADAS` dataset is also used as a second validation source. It contains 12,463 rows across 15 ADAS-Cog parameters, including 1,040 `ACTOT` records. The selected `ACTOT` analysis structure contains 1,016 `ANL01FL=Y` rows: baseline plus Week 8, Week 16 and Week 24 analysis records for 254 subjects. The portfolio reproduces those selected keys, `QSSEQ` source rows and `DTYPE` classifications at 100%; value differences are retained as diagnostic evidence rather than changed to match the reference.
+
+## Analysis flow
+
+```text
+Safety workflow
+DM + EX + DS ──> ADSL-style ───────────────┐
+AE ─────────────────> ADAE-style ──────────┼──> safety TLFs + TEAE comparisons
+                                            └──> QC + provenance
+
+Official efficacy workflow
+CDISC QS Dataset-JSON (121,749 rows)
+  ├── CIBIC ──> analysis windows + LOCF ──> ADQSCIBC-style
+  │                                      └─> official ADQSCIBC comparison
+  └── ACTOT / ADAS-Cog items
+         ├── baseline + change from baseline
+         ├── Week 24 ANCOVA + LOCF sensitivity
+         └── selected-row reconstruction ──> official ADQSADAS comparison
+```
+
+## Efficacy analysis
+
+The main continuous portfolio endpoint is `ACTOT`, labelled by the official reference as **Adas-Cog(11) Subscore**. The source QS baseline flag defines `BASE`; post-baseline change is `CHG = AVAL - BASE`.
+
+The observed Week 24 model is:
+
+```text
+Week24 AVAL = intercept + treatment + centred baseline + error
+```
+
+Placebo is the reference arm. The live run includes 116 subjects with an observed Week 24 value. A separate LOCF sensitivity analysis includes 235 subjects.
+
+| Analysis | Contrast | Estimate | 95% CI | p-value |
+|---|---|---:|---:|---:|
+| Observed Week 24 | Xanomeline Low Dose vs Placebo | -2.028 | [-4.596, 0.539] | 0.1204 |
+| Observed Week 24 | Xanomeline High Dose vs Placebo | -0.923 | [-3.411, 1.564] | 0.4635 |
+| LOCF sensitivity | Xanomeline Low Dose vs Placebo | -1.218 | [-2.830, 0.394] | 0.1378 |
+| LOCF sensitivity | Xanomeline High Dose vs Placebo | -1.191 | [-2.921, 0.538] | 0.1760 |
+
+These are independent portfolio analyses. They are not presented as the original trial's confirmatory efficacy results.
+
+## Safety result retained from v0.2
+
+The portfolio safety definition uses at least one observed EX record for the safety population and a TEAE window from treatment start through 30 days after treatment end. Two safety subjects require a documented DS disposition-date fallback for treatment end; this remains visible through `TRTEDTSRC=DS_DISPOSITION_FALLBACK`.
+
+Exploratory subject-level any-TEAE comparisons are:
 
 | Comparison | Active risk | Placebo risk | Risk difference | 95% Wald CI | Fisher p |
 |---|---:|---:|---:|---:|---:|
 | Xanomeline Low Dose vs Placebo | 0.8750 | 0.7558 | +0.1192 | [0.0068, 0.2315] | 0.053041 |
 | Xanomeline High Dose vs Placebo | 0.9444 | 0.7558 | +0.1886 | [0.0835, 0.2937] | 0.001726 |
 
-The confidence interval and Fisher p-value use different inferential procedures, so their threshold behaviour does not have to match exactly. No multiplicity correction is applied.
+No multiplicity correction is applied to the exploratory comparisons.
 
-## What v0.2 adds
-
-v0.2 moves beyond the initial DM/AE-only workflow:
-
-- uses **EX** records to define observed exposure and the safety population;
-- uses **DS** records to derive randomisation, completion and discontinuation status;
-- retains DM dates and explicit treatment-date source flags for traceability;
-- separates raw EX duration (`EXDURN_RAW`) from final treatment-window duration (`TRTDURN`);
-- derives ADSL-style and ADAE-style datasets with treatment-emergent, related and moderate/severe flags;
-- produces demographics, disposition, exposure and safety TLF-style tables;
-- adds subject-level any-TEAE **risk differences vs placebo with 95% confidence intervals and Fisher exact p-values** as an exploratory analysis;
-- runs required QC checks on keys, populations, dates, referential integrity and the TEAE window;
-- writes SHA256 hashes for downloaded inputs and generated core outputs;
-- runs the complete public-data workflow in GitHub Actions and uploads all outputs as a workflow artifact.
-
-## Analysis flow
-
-```text
-Public SDTM test data
-  DM ───────────────┐
-  EX ── exposure ───┼──> ADSL-style ───────────────┐
-  DS ─ disposition ─┘                               │
-                                                   ├──> TLF-style outputs
-  AE ───────────────────────> ADAE-style ──────────┤
-                                                   ├──> exploratory TEAE risk differences
-                                                   └──> QC + provenance manifest
-```
-
-## Pre-specified portfolio definitions
-
-**Randomised population:** `DSDECOD == RANDOMIZED` is observed in DS.
-
-**Safety population:** at least one EX record is observed for the subject.
-
-**Treatment start:** first non-missing `EXSTDTC`, with DM `RFXSTDTC` retained as a documented fallback.
-
-**Treatment end:** last non-missing `EXENDTC`; if unavailable, DM `RFXENDTC`; if both are unavailable, final DS disposition date. `TRTSDTSRC` and `TRTEDTSRC` preserve the selected source.
-
-**Treatment-emergent adverse event (TEAE):** AE start date on/after treatment start and no later than 30 days after treatment end, inclusive.
-
-**Related TEAE:** portfolio flag for `AEREL` in `POSSIBLE`, `PROBABLE`, `DEFINITE`, or `RELATED`.
-
-These are explicit portfolio assumptions and are not presented as the original pilot protocol's rules.
-
-## Outputs
-
-Running the workflow creates:
+## Key outputs
 
 ```text
 outputs/
   adsl_style.csv
   adae_style.csv
+  adqscibc_style.csv
+  adqs_actot_style.csv
+  adqscibc_reference_metrics.csv
+  adqscibc_reference_detail.csv
+  adqscibc_mismatch_source_trace.csv
+  adqsadas_reference_profile.json
+  adqsadas_param_counts.csv
+  adqsadas_actot_reference_counts.csv
+  adqsadas_actot_analysis_style.csv
+  adqsadas_actot_comparison_metrics.csv
   table1_demographics.csv
-  table2_disposition.csv
-  table3_exposure.csv
-  table4_teae_overview.csv
-  table5_teae_soc_pt.csv
-  table6_teae_severity.csv
+  ...
   table7_teae_risk_difference.csv
+  table8_actot_descriptive.csv
+  table9_actot_lsmeans.csv
+  table10_actot_ancova_contrasts.csv
   qc_report.csv
-  sample_size_examples.json
   metrics.json
   manifest.json
   analysis_run_note.md
 ```
 
-`metrics.json` contains machine-readable run counts and QC status. `manifest.json` records source URLs, SHA256 input/output hashes and analysis version.
+`manifest.json` records pinned source URLs and SHA256 hashes. Reference diagnostic outputs are created before the strict live analysis, so a failed analysis still leaves enough evidence to locate the discrepancy.
 
 ## Reproduce
 
 ```bash
 python -m pip install -r requirements.txt
 pytest -q
+python scripts/profile_official_references.py
 python scripts/run_all.py
 ```
 
-The unit-test suite does not require network access. The analysis run downloads the four public CSV inputs on first use and caches them in `cache/`.
+The unit tests do not require network access. The two analysis scripts download public inputs on first use and cache them in `cache/`.
 
 ## Repository structure
 
@@ -130,16 +154,18 @@ src/cdisc_portfolio/
   io.py
   derive.py
   analysis.py
+  efficacy.py
+  adas.py
+  reference.py
   qc.py
+  efficacy_qc.py
   sample_size.py
   pipeline.py
-scripts/run_all.py
+scripts/
+  profile_official_references.py
+  run_all.py
 tests/
 .github/workflows/run.yml
 ```
 
-## Why this is a biostatistics work sample
-
-The statistical model is intentionally simple. The work sample focuses on tasks that matter in a clinical-trial workflow: converting an analysis rule into explicit derivations, keeping source-to-analysis traceability, defining analysis populations, producing reproducible tables, quantifying uncertainty, separating descriptive from inferential outputs, and checking derived results against pre-specified QC rules.
-
-See `docs/sap.md` for the analysis specification, `docs/analysis_dataset_spec.md` for source-to-derived-variable traceability, and `docs/qc_plan.md` for required versus informational checks.
+See `docs/sap.md` for analysis rules, `docs/analysis_dataset_spec.md` for source-to-derived-variable mapping, and `docs/qc_plan.md` for required and informational QC checks.
