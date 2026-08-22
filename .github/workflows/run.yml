@@ -39,6 +39,8 @@ jobs:
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
         run: Rscript R/mmrm_analysis.R
+      - name: Validate SAP-to-TLF traceability
+        run: python scripts/validate_traceability.py
 
       - name: Show measurable run summary
         if: always()
@@ -48,6 +50,10 @@ jobs:
           test -f outputs/r_independent_qc_summary.md && cat outputs/r_independent_qc_summary.md || true
           echo "--- ACTOT MMRM summary ---"
           test -f outputs/mmrm_run_summary.md && cat outputs/mmrm_run_summary.md || true
+          echo "--- SAP-to-TLF traceability summary ---"
+          test -f outputs/traceability_summary.md && cat outputs/traceability_summary.md || true
+          echo "--- SAP-to-TLF validation detail ---"
+          test -f outputs/traceability_validation.csv && cat outputs/traceability_validation.csv || true
           echo "--- MMRM QC ---"
           test -f outputs/mmrm_qc.csv && cat outputs/mmrm_qc.csv || true
           echo "--- MMRM model diagnostics ---"
