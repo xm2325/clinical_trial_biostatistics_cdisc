@@ -97,7 +97,7 @@ def test_repository_change_requests_cover_every_graph_required_impact():
     graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
     requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
     results = assess_change_requests(graph, requests)
-    assert len(results) == 4
+    assert len(results) == 5
     assert all(result["passed"] for result in results)
     assert all(not any(result["missing"].values()) for result in results)
 
@@ -110,3 +110,13 @@ def test_repository_negative_control_detects_omitted_required_impact():
     result = assess_change(graph, corrupted)
     assert not result["passed"]
     assert result["missing"]["tlfs"] == ["T04"]
+
+
+def test_estimand_strategy_change_requires_missingness_tlfs():
+    graph = json.loads((ROOT / "spec" / "change_impact_graph.json").read_text(encoding="utf-8"))
+    requests = json.loads((ROOT / "spec" / "change_requests.json").read_text(encoding="utf-8"))
+    change = copy.deepcopy(requests["changes"][4])
+    change["declared_impacts"]["tlfs"].remove("T16")
+    result = assess_change(graph, change)
+    assert not result["passed"]
+    assert result["missing"]["tlfs"] == ["T16"]
