@@ -2,11 +2,11 @@
 
 A reproducible clinical-trial statistics work sample using public CDISC pilot data and public pharmaverse SDTM test data.
 
-The project demonstrates source-to-analysis traceability, analysis populations, safety and questionnaire efficacy derivations, statistical analysis, TLF-style outputs, QC, provenance tracking, and comparison with official CDISC reference ADaM datasets.
+The project demonstrates source-to-analysis traceability, analysis populations, safety and questionnaire efficacy derivations, statistical analysis, TLF-style outputs, QC, provenance tracking, comparison with official CDISC reference ADaM datasets, and a separate R implementation used for cross-language programming QC.
 
-> **Evidence boundary:** this is an independent portfolio project. Portfolio outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS, DSMB or regulatory-submission experience.
+> **Evidence boundary:** this is an independent portfolio project. Portfolio outputs are labelled `*-style` where they are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS, DSMB, regulatory-submission experience, or independent validation by a second programmer.
 
-## Verified v0.3 live run
+## Verified v0.4 live run
 
 The complete workflow has been run in GitHub Actions against downloaded public source data and pinned official CDISC reference files.
 
@@ -27,8 +27,39 @@ The complete workflow has been run in GitHub Actions against downloaded public s
 | Safety subjects | 254 |
 | Subjects with >=1 portfolio-defined TEAE | 217 |
 | Portfolio-defined TEAE events | 1,116 |
-| Required QC checks | **24 / 24 passed** |
-| Unit tests | **10 / 10 passed** |
+| Required Python pipeline QC | **24 / 24 passed** |
+| Python unit tests | **10 / 10 passed** |
+| Required R/Python cross-language checks | **16 / 16 passed** |
+| Maximum R/Python ANCOVA numeric difference | **7.11e-15** |
+
+## Independent R programming QC
+
+Version 0.4 adds `R/independent_qc.R`. The R program starts from the same cached public DM, EX, DS, AE and official QS inputs, but does not call Python derivation functions. It independently rebuilds the selected safety and efficacy results and reads Python outputs only for the final comparison.
+
+The verified GitHub Actions run uses **R 4.6.1** and **jsonlite 2.0.0**. All 16 required cross-language checks pass:
+
+| Independent R check | Verified result |
+|---|---:|
+| Randomised subjects | 254 = Python 254 |
+| Safety subjects | 254 = Python 254 |
+| Completed subjects | 110 = Python 110 |
+| Subjects with TEAE | 217 = Python 217 |
+| TEAE events | 1,116 = Python 1,116 |
+| DS exposure-end fallbacks | 2 = Python 2 |
+| Any-TEAE risk-difference table | exact; max numeric difference 0 |
+| CIBIC selected analysis keys | 705 = Python 705 |
+| CIBIC `QSSEQ` | exact |
+| CIBIC `DTYPE` | exact |
+| CIBIC source-derived `AVAL` | exact |
+| ACTOT source-row keys | 818 = Python 818 |
+| ACTOT `AVAL` / `BASE` / `CHG` | exact |
+| ACTOT baseline / efficacy flags | exact |
+| ANCOVA contrast keys / N / df | exact |
+| ANCOVA estimates / SE / CI / p | max numeric difference **7.11e-15** |
+
+The CI also performs an R syntax parse before package installation and analysis. Any required cross-language discrepancy makes the R QC step fail. `r_session_info.txt`, `r_metrics.json`, the R-derived statistical outputs and the complete check table are retained in the workflow artifact.
+
+This is a separate implementation in a second language, not a claim that a second human programmer independently reviewed the work. The exact derivation rules and acceptance criteria are documented in `docs/independent_programming_qc.md`.
 
 ### Official-reference validation
 
@@ -43,26 +74,31 @@ For CIBIC+, the portfolio derives 705 `ADQSCIBC-style` analysis rows from offici
 
 The ten `AVAL` differences are not hidden or overwritten. For all ten, the portfolio value equals the selected official SDTM QS `QSSTRESN`, while the official reference ADaM value differs from that source row. `outputs/adqscibc_mismatch_source_trace.csv` records subject, analysis visit, source `QSSEQ`, source text/value, derived value and reference value.
 
-This distinction matters for QC: v0.3 requires exact agreement on **which source record was selected** and **how the analysis record was classified**, while reference-value agreement is reported separately when the public source and public reference disagree.
+This distinction matters for QC: exact agreement is required on which source record was selected and how the analysis record was classified, while reference-value agreement is reported separately when the public source and public reference disagree.
 
-The official `ADQSADAS` dataset is also used as a second validation source. It contains 12,463 rows across 15 ADAS-Cog parameters, including 1,040 `ACTOT` records. The selected `ACTOT` analysis structure contains 1,016 `ANL01FL=Y` rows: baseline plus Week 8, Week 16 and Week 24 analysis records for 254 subjects. The portfolio reproduces those selected keys, `QSSEQ` source rows and `DTYPE` classifications at 100%; value differences are retained as diagnostic evidence rather than changed to match the reference.
+The official `ADQSADAS` dataset is used as a second validation source. It contains 12,463 rows across 15 ADAS-Cog parameters, including 1,040 `ACTOT` records. The selected `ACTOT` analysis structure contains 1,016 `ANL01FL=Y` rows: baseline plus Week 8, Week 16 and Week 24 analysis records for 254 subjects. The portfolio reproduces those selected keys, `QSSEQ` source rows and `DTYPE` classifications at 100%; value differences are retained as diagnostic evidence rather than changed to match the reference.
 
 ## Analysis flow
 
 ```text
-Safety workflow
-DM + EX + DS ──> ADSL-style ───────────────┐
-AE ─────────────────> ADAE-style ──────────┼──> safety TLFs + TEAE comparisons
-                                            └──> QC + provenance
+Public source data
 
-Official efficacy workflow
-CDISC QS Dataset-JSON (121,749 rows)
-  ├── CIBIC ──> analysis windows + LOCF ──> ADQSCIBC-style
-  │                                      └─> official ADQSCIBC comparison
-  └── ACTOT / ADAS-Cog items
-         ├── baseline + change from baseline
-         ├── Week 24 ANCOVA + LOCF sensitivity
-         └── selected-row reconstruction ──> official ADQSADAS comparison
+DM + EX + DS ───────────────> Python ADSL-style ──┐
+AE ─────────────────────────> Python ADAE-style ──┼─> safety TLFs + TEAE analyses
+                                                    │
+Official QS ── CIBIC ───────> Python ADQSCIBC-style│
+            └─ ACTOT ───────> baseline/change ─────┼─> Week 24 ANCOVA + LOCF
+                                                    │
+                                                    └─> Python QC + reference validation
+
+Same raw DM / EX / DS / AE / QS
+            └────────────────> independent R reconstruction
+                                  ├─ populations / TEAE / risk differences
+                                  ├─ CIBIC selected records
+                                  ├─ ACTOT baseline/change
+                                  └─ Week 24 + LOCF ANCOVA
+                                             │
+                                             └─> final R/Python comparison
 ```
 
 ## Efficacy analysis
@@ -84,9 +120,11 @@ Placebo is the reference arm. The live run includes 116 subjects with an observe
 | LOCF sensitivity | Xanomeline Low Dose vs Placebo | -1.218 | [-2.830, 0.394] | 0.1378 |
 | LOCF sensitivity | Xanomeline High Dose vs Placebo | -1.191 | [-2.921, 0.538] | 0.1760 |
 
+The R implementation reproduces all four contrasts, their sample sizes and residual degrees of freedom exactly; the largest numeric difference across estimates, standard errors, confidence limits, p-values and baseline reference values is `7.11e-15`.
+
 These are independent portfolio analyses. They are not presented as the original trial's confirmatory efficacy results.
 
-## Safety result retained from v0.2
+## Safety analysis
 
 The portfolio safety definition uses at least one observed EX record for the safety population and a TEAE window from treatment start through 30 days after treatment end. Two safety subjects require a documented DS disposition-date fallback for treatment end; this remains visible through `TRTEDTSRC=DS_DISPOSITION_FALLBACK`.
 
@@ -97,7 +135,7 @@ Exploratory subject-level any-TEAE comparisons are:
 | Xanomeline Low Dose vs Placebo | 0.8750 | 0.7558 | +0.1192 | [0.0068, 0.2315] | 0.053041 |
 | Xanomeline High Dose vs Placebo | 0.9444 | 0.7558 | +0.1886 | [0.0835, 0.2937] | 0.001726 |
 
-No multiplicity correction is applied to the exploratory comparisons.
+The independent R implementation reproduces every value in this table exactly at the reported precision. No multiplicity correction is applied to these exploratory comparisons.
 
 ## Key outputs
 
@@ -121,13 +159,19 @@ outputs/
   table8_actot_descriptive.csv
   table9_actot_lsmeans.csv
   table10_actot_ancova_contrasts.csv
+  r_independent_qc.csv
+  r_metrics.json
+  r_session_info.txt
+  r_independent_qc_summary.md
+  r_teae_risk_difference.csv
+  r_actot_ancova_contrasts.csv
   qc_report.csv
   metrics.json
   manifest.json
   analysis_run_note.md
 ```
 
-`manifest.json` records pinned source URLs and SHA256 hashes. Reference diagnostic outputs are created before the strict live analysis, so a failed analysis still leaves enough evidence to locate the discrepancy.
+`manifest.json` records pinned source URLs and SHA256 hashes. Reference diagnostic outputs are created before the main analysis, so a failed analysis still leaves enough evidence to locate the discrepancy.
 
 ## Reproduce
 
@@ -136,9 +180,11 @@ python -m pip install -r requirements.txt
 pytest -q
 python scripts/profile_official_references.py
 python scripts/run_all.py
+Rscript -e 'install.packages("jsonlite")'
+Rscript R/independent_qc.R
 ```
 
-The unit tests do not require network access. The two analysis scripts download public inputs on first use and cache them in `cache/`.
+The Python unit tests do not require network access. The analysis scripts download public inputs on first use and cache them in `cache/`. The R QC program then uses those cached raw inputs.
 
 ## Repository structure
 
@@ -150,6 +196,9 @@ docs/
   data_provenance.md
   analysis_dataset_spec.md
   qc_plan.md
+  independent_programming_qc.md
+R/
+  independent_qc.R
 src/cdisc_portfolio/
   io.py
   derive.py
@@ -168,4 +217,4 @@ tests/
 .github/workflows/run.yml
 ```
 
-See `docs/sap.md` for analysis rules, `docs/analysis_dataset_spec.md` for source-to-derived-variable mapping, and `docs/qc_plan.md` for required and informational QC checks.
+See `docs/sap.md` for analysis rules, `docs/analysis_dataset_spec.md` for source-to-derived-variable mapping, `docs/qc_plan.md` for required and informational QC checks, and `docs/independent_programming_qc.md` for the cross-language validation design.
