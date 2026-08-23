@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
 from cdisc_portfolio.metadata_lineage import write_metadata_outputs
 
+
 if __name__ == "__main__":
-    root = Path(__file__).resolve().parents[1]
-    metrics = write_metadata_outputs(root)
+    metrics = write_metadata_outputs(ROOT)
     print(
         f"metadata lineage: datasets={metrics['datasets']}; "
         f"variables={metrics['variables_with_exact_coverage']}/{metrics['actual_variables']}; "
