@@ -6,8 +6,8 @@
   "independent_analysis_dataset": "outputs/mmrm_cross_package_analysis_dataset.csv",
   "row_validation": {
     "key_columns": ["STUDYID", "USUBJID", "AVISIT"],
-    "exact_columns": ["TRT01A", "QSSEQ"],
-    "numeric_columns": ["AVAL", "BASE", "CHG"],
+    "exact_columns": ["TRT01A"],
+    "numeric_columns": ["QSSEQ", "AVAL", "BASE", "CHG"],
     "numeric_abs_tolerance": 1e-12
   },
   "target": {
