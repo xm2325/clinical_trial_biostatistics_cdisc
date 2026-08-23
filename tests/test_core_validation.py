@@ -1,0 +1,117 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from cdisc_portfolio.core_validation import triage_core_report, write_core_outputs
+
+
+def _cfg() -> dict:
+    return {
+        "version": "0.19.0",
+        "core": {
+            "repository": "cdisc-org/cdisc-rules-engine",
+            "commit": "test-commit",
+            "standard": "adamig",
+            "version": "1-3",
+            "allowed_statuses": ["SUCCESS", "ISSUE REPORTED", "SKIPPED", "EXECUTION ERROR"],
+            "blocking_statuses": ["EXECUTION ERROR"],
+            "require_executed_rule": True,
+            "conformance_claim": "NOT_ASSESSED",
+        },
+    }
+
+
+def _report(statuses: list[str]) -> dict:
+    return {
+        "Conformance_Details": {"Standard": "adamig", "Version": "V1-3"},
+        "Rules_Report": [
+            {
+                "core_id": f"CORE-{index:06d}",
+                "cdisc_rule_id": f"ADAM-{index}",
+                "fda_rule_id": "",
+                "message": f"rule {index}",
+                "status": status,
+            }
+            for index, status in enumerate(statuses, start=1)
+        ],
+        "Issue_Summary": [
+            {"dataset": "ADSL", "core_id": "CORE-000002", "message": "example", "issues": 3}
+        ] if "ISSUE REPORTED" in statuses else [],
+    }
+
+
+def test_issue_reported_and_skipped_are_triaged_not_treated_as_engine_failure() -> None:
+    metrics, checks = triage_core_report(
+        _report(["SUCCESS", "ISSUE REPORTED", "SKIPPED"]), _cfg(), cli_exit_code=0
+    )
+    assert metrics["all_passed"] is True
+    assert metrics["rules_total"] == 3
+    assert metrics["rules_executed"] == 2
+    assert metrics["success_rules"] == 1
+    assert metrics["issue_reported_rules"] == 1
+    assert metrics["skipped_rules"] == 1
+    assert metrics["execution_error_rules"] == 0
+    assert metrics["issue_observations"] == 3
+    assert all(row["passed"] for row in checks)
+
+
+def test_execution_error_is_blocking() -> None:
+    metrics, checks = triage_core_report(
+        _report(["SUCCESS", "EXECUTION ERROR"]), _cfg(), cli_exit_code=0
+    )
+    assert metrics["all_passed"] is False
+    assert metrics["execution_error_rules"] == 1
+    assert any(row["check"] == "no CORE execution errors" and not row["passed"] for row in checks)
+
+
+def test_all_skipped_is_blocking() -> None:
+    metrics, _ = triage_core_report(_report(["SKIPPED", "SKIPPED"]), _cfg(), cli_exit_code=0)
+    assert metrics["all_passed"] is False
+    assert metrics["rules_executed"] == 0
+
+
+def test_unknown_status_is_blocking() -> None:
+    metrics, _ = triage_core_report(_report(["SUCCESS", "MYSTERY"]), _cfg(), cli_exit_code=0)
+    assert metrics["all_passed"] is False
+    assert metrics["unknown_statuses"] == ["MYSTERY"]
+
+
+def test_nonzero_cli_exit_is_blocking() -> None:
+    metrics, _ = triage_core_report(_report(["SUCCESS"]), _cfg(), cli_exit_code=2)
+    assert metrics["all_passed"] is False
+    assert metrics["cli_exit_code"] == 2
+
+
+def test_write_outputs_retains_raw_report_and_machine_evidence(tmp_path: Path) -> None:
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "spec" / "standards_validation_v0_19.json").write_text(
+        json.dumps(_cfg()), encoding="utf-8"
+    )
+    report_path = tmp_path / "core_report.json"
+    report_path.write_text(
+        json.dumps(_report(["SUCCESS", "ISSUE REPORTED", "SKIPPED"])), encoding="utf-8"
+    )
+    metrics = write_core_outputs(tmp_path, report_path, cli_exit_code=0)
+    assert metrics["all_passed"] is True
+    assert len(metrics["official_report_sha256"]) == 64
+    assert (tmp_path / "outputs" / "core_official_report.json").is_file()
+    assert (tmp_path / "outputs" / "core_rules_report.csv").is_file()
+    assert (tmp_path / "outputs" / "core_issue_summary.csv").is_file()
+    assert (tmp_path / "outputs" / "core_validation_qc.csv").is_file()
+    assert (tmp_path / "outputs" / "core_validation_metrics.json").is_file()
+    assert (tmp_path / "outputs" / "core_validation_summary.md").is_file()
+
+
+def test_write_outputs_raises_after_writing_failed_qc(tmp_path: Path) -> None:
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "spec" / "standards_validation_v0_19.json").write_text(
+        json.dumps(_cfg()), encoding="utf-8"
+    )
+    report_path = tmp_path / "core_report.json"
+    report_path.write_text(json.dumps(_report(["EXECUTION ERROR"])), encoding="utf-8")
+    with pytest.raises(ValueError, match="CORE triage gate failed"):
+        write_core_outputs(tmp_path, report_path, cli_exit_code=0)
+    assert (tmp_path / "outputs" / "core_validation_qc.csv").is_file()
