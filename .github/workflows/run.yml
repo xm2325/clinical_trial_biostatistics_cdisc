@@ -37,15 +37,20 @@ jobs:
         run: |
           Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/mmrm_cross_package_qc.R")); cat("mmrm_cross_package_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_sensitivity.R")); cat("rbmi_sensitivity.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_mcse_qc.R")); cat("rbmi_mcse_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_reference_based.R")); cat("rbmi_reference_based.R syntax OK\n")'
       - name: Install R analysis dependencies
-        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi"))'
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi", "nlme"))'
       - name: Independent R reconstruction and cross-language QC
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
         run: Rscript R/mmrm_analysis.R
+      - name: Independent nlme MMRM reconstruction
+        run: Rscript R/mmrm_cross_package_qc.R
+      - name: MMRM cross-package validation gate
+        run: python scripts/run_mmrm_cross_validation.py
       - name: ACTOT primary multiplicity decision gate
         run: python scripts/run_multiplicity.py
       - name: ACTOT estimand and missing-data review gate
@@ -78,6 +83,9 @@ jobs:
             outputs/mmrm_run_summary.md
             outputs/mmrm_qc.csv
             outputs/mmrm_treatment_contrasts.csv
+            outputs/mmrm_cross_package_validation_summary.md
+            outputs/mmrm_cross_package_validation.csv
+            outputs/mmrm_cross_package_qc.csv
             outputs/multiplicity_summary.md
             outputs/table23_actot_multiplicity.csv
             outputs/multiplicity_qc.csv
