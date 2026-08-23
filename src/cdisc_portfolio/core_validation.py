@@ -31,9 +31,11 @@ def _normalise_status(value: Any) -> str:
 
 
 def _rules_report(report: dict[str, Any]) -> list[dict[str, Any]]:
-    rows = report.get("Rules_Report")
-    if not isinstance(rows, list) or not rows:
-        raise ValueError("CORE JSON report is missing a non-empty Rules_Report")
+    if "Rules_Report" not in report:
+        raise ValueError("CORE JSON report is missing Rules_Report")
+    rows = report["Rules_Report"]
+    if not isinstance(rows, list):
+        raise ValueError("CORE Rules_Report must be a list")
     if not all(isinstance(row, dict) for row in rows):
         raise ValueError("CORE Rules_Report must be a list of objects")
     return rows
@@ -134,6 +136,7 @@ def triage_core_report(
         "analysis_version": VERSION,
         "core_repository": core_cfg.get("repository"),
         "core_commit": core_cfg.get("commit"),
+        "cache_commit": core_cfg.get("cache_commit"),
         "standard": expected_standard,
         "version": expected_version,
         "cli_exit_code": int(cli_exit_code),
@@ -174,6 +177,7 @@ def write_core_outputs(
     metrics["official_report_sha256"] = _sha256(raw_target)
 
     rules = _rules_report(report)
+    rule_columns = ["core_id", "cdisc_rule_id", "fda_rule_id", "message", "status"]
     rule_rows = []
     for row in rules:
         rule_rows.append(
@@ -185,7 +189,7 @@ def write_core_outputs(
                 "status": _normalise_status(row.get("status")),
             }
         )
-    pd.DataFrame(rule_rows).to_csv(outputs / "core_rules_report.csv", index=False)
+    pd.DataFrame(rule_rows, columns=rule_columns).to_csv(outputs / "core_rules_report.csv", index=False)
     pd.DataFrame(_issue_summary(report)).to_csv(outputs / "core_issue_summary.csv", index=False)
     pd.DataFrame(checks).to_csv(outputs / "core_validation_qc.csv", index=False)
     (outputs / "core_validation_metrics.json").write_text(
@@ -195,6 +199,7 @@ def write_core_outputs(
         "# CDISC CORE executable validation triage",
         "",
         f"- Pinned CORE commit: `{metrics['core_commit']}`.",
+        f"- Pinned official cache commit: `{metrics['cache_commit']}`.",
         f"- Requested standard: `{metrics['standard']} {metrics['version']}`.",
         f"- Rules in report: {metrics['rules_total']}.",
         f"- Executed rules: {metrics['rules_executed']}.",
