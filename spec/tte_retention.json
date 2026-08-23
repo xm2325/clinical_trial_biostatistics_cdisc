@@ -20,7 +20,8 @@
     "condition_variable": "DCSFL",
     "condition_value": "Y",
     "CNSR": 0,
-    "description_source": "EOSDECOD"
+    "description_source": "EOSDECOD",
+    "description_fallback_source": "EOSTERM"
   },
   "censor_rule": {
     "condition_variable": "COMPLFL",
