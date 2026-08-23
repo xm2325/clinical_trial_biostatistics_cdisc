@@ -63,6 +63,24 @@ if (nrow(d) == 0) stop("Independent MMRM reconstruction has zero rows")
 if (anyDuplicated(paste(d$USUBJID, d$VISITN, sep = "|"))) stop("Independent MMRM subject-visit keys are not unique")
 if (max(abs(d$CHG - (d$AVAL - d$BASE)), na.rm = TRUE) > 1e-12) stop("Independent MMRM CHG does not equal AVAL-BASE")
 
+analysis_rows <- data.frame(
+  STUDYID = norm_chr(d$STUDYID),
+  USUBJID = norm_chr(d$USUBJID),
+  TRT01A = norm_chr(d$TRT01A),
+  AVISIT = norm_chr(d$AVISIT),
+  AVAL = d$AVAL,
+  BASE = d$BASE,
+  CHG = d$CHG,
+  QSSEQ = d$QSSEQ,
+  stringsAsFactors = FALSE
+)
+write.csv(
+  analysis_rows,
+  file.path(out_dir, "mmrm_cross_package_analysis_dataset.csv"),
+  row.names = FALSE,
+  na = ""
+)
+
 # nlme::gls with corSymm + visit-specific residual variances is a separate
 # implementation of an unstructured marginal covariance MMRM. The primary
 # production-style portfolio model remains mmrm::mmrm with Satterthwaite df.
@@ -117,7 +135,7 @@ model_metrics <- list(
   analysis_version = "0.16.0",
   implementation = "nlme::gls",
   covariance = "unstructured via corSymm + varIdent",
-  inference_scope = "point estimate and model-based SE validation only",
+  inference_scope = "analysis-row identity plus point estimate and model-based SE validation only",
   observed_records = nrow(d),
   subjects = length(unique(d$USUBJID)),
   baseline_mean = baseline_mean,
@@ -131,4 +149,5 @@ jsonlite::write_json(model_metrics, file.path(out_dir, "mmrm_cross_package_metri
 writeLines(capture.output(summary(fit)), file.path(out_dir, "mmrm_cross_package_model_summary.txt"))
 
 cat("Independent nlme MMRM reconstruction complete:\n")
+cat("Independent analysis rows:", nrow(analysis_rows), "\n")
 print(contrasts)
