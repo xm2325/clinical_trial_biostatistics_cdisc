@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.17.0 — 2026-08-23
+
+- Add an exploratory ADTTE-style `TTDISC` analysis from first treatment date (`TRTSDT`) to study discontinuation/protocol-completion date (`EOSDT`).
+- Correct a material analysis-definition issue discovered during review: **12/254** randomized subjects have `TRT01P != TRT01A`, so the survival comparison now uses planned randomized assignment (`ANLTRT=TRT01P`) while retaining `TRT01A` as actual-treatment context.
+- Add `TRTDIFFL`, `ANLTRTSRC`, `CNSRSRC` and `EVNTSRC` so planned/actual treatment differences and event/censor provenance remain visible in the ADTTE-style dataset.
+- Make event, censor, date and description derivations specification-driven through `spec/tte_retention.json` rather than hard-coded source-column names.
+- Verify randomized arm sizes Placebo=86, Low Dose=84 and High Dose=84, with 144 discontinuation events and 110 protocol-completion censors.
+- Pass **16/16** blocking ADTTE-style derivation checks and record SHA256 identities for the TTE spec, ADSL-style source and ADTTE-style output.
+- Add T24 Kaplan–Meier retention at days 56/112/168/182 and T25 exploratory active-versus-placebo log-rank/Cox diagnostics using R `survival`.
+- Verify Day-182 retention **67.44% / 29.76% / 33.25%** for Placebo / Low / High; exploratory HRs are **3.0852** and **2.9246**.
+- Report `cox.zph` diagnostics without turning PH significance into an artificial CI acceptance constraint; validated p-values are 0.8310 and 0.7577 with 0/2 diagnostic signals.
+- Pass **14/14** blocking R survival checks.
+- Extend executable traceability from T01–T23 to **T01–T25** at registry version `0.17.0`; pass 25/25 outputs, contracts, analysis-data links and QC-evidence links.
+- Add CR-011 and a layered v0.17 TTE dependency extension; validate **11** change requests, **77** propagated component links and **267/267** required impact relationships/resources with zero missing, extra or unresolved resources.
+- Keep T24/T25 exploratory and explicitly outside the ACTOT Week 24 Bonferroni confirmatory family.
+
+## 0.16.0 — 2026-08-23
+
+- Add distinct-package primary MMRM re-programming using `nlme::gls` with `corSymm + varIdent` while retaining `mmrm::mmrm` as the primary model.
+- Independently reconstruct the observed ACTOT subject-visit analysis rows rather than reusing the primary MMRM analysis dataset.
+- Validate **451/451** primary/independent rows and **189/189** subjects with identical key sets, zero exact-field mismatches and zero numeric mismatch rows.
+- Compare Week 24 point estimates, model-based SEs and treatment-effect signs against pre-specified 0.0005 absolute tolerances; pass **18/18** required checks.
+- Observe maximum estimate difference **1.30015e-05** and maximum SE difference **2.63230e-06**.
+- Deliberately exclude df/p-value agreement because the primary implementation uses Satterthwaite inference and the `nlme` reconstruction does not reproduce that denominator-df method.
+- Add provenance SHA256 fingerprints for validation spec, contrast sources and both analysis datasets.
+- Add CR-010 and a layered cross-package validation dependency extension; validate 10 change requests, 73 propagated links and **254/254** required impact relationships/resources.
+- Add branch/event CI concurrency with `cancel-in-progress: true` so superseded long-running MI workflows are cancelled.
+
+## 0.15.0 — 2026-08-23
+
+- Add a controlled Week 24 primary multiplicity decision layer for Low Dose vs Placebo and High Dose vs Placebo MMRM hypotheses.
+- Lock family-wise alpha 0.05 and Bonferroni local alpha 0.025 across two primary hypotheses.
+- Verify raw p-values 0.169334 and 0.421970, adjusted p-values 0.338669 and 0.843940, and no family-wise rejection for either hypothesis.
+- Add T23 as the executable multiplicity output and pass **12/12** multiplicity QC checks.
+- Add CR-009 so multiplicity-rule changes propagate through the controlled spec, primary MMRM evidence and T23 without pulling sensitivity analyses into the confirmatory family.
+
+## 0.14.0 — 2026-08-22
+
+- Add reference-based `rbmi` sensitivity analyses for MAR, Jump to Reference (JR), Copy Reference (CR) and Copy Increments in Reference (CIR) using placebo as the reference distribution.
+- Anchor treatment-discontinuation timing to `EOSDT` and add independent guards against invalid use of observations after the affected scheduled visit.
+- Add T22 reference-based MI with ICE audit, draw diagnostics, Rubin pooling and Monte Carlo precision QC.
+- Run 200 imputations per pairwise model; pass **27/27** required reference-based checks with maximum `MCSE(estimate) / pooled SE` **0.053811** against a 0.075 threshold.
+- Extend change control and traceability while keeping the reference-based analyses explicitly sensitivity analyses rather than primary confirmatory inference.
+
 ## 0.13.0 — 2026-08-22
 
 - Add controlled subject-level multiple-imputation sensitivity for Week 24 ACTOT using pairwise Xanomeline Low Dose versus Placebo and High Dose versus Placebo analyses.
