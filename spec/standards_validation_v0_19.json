@@ -34,6 +34,7 @@
     "require_executed_rule": true,
     "required_cache_files": [
       "rules.pkl",
+      "rules_dictionary.pkl",
       "standards_details.pkl",
       "standards_models.pkl",
       "variables_metadata.pkl"
