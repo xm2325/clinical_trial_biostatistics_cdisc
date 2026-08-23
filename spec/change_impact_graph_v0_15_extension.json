@@ -1,0 +1,33 @@
+{
+  "base_version": "0.14.0",
+  "version": "0.15.0",
+  "components": {
+    "primary_multiplicity_assumption": {
+      "description": "Primary family-wise Type I error control for the two Week 24 active-versus-placebo ACTOT hypotheses.",
+      "downstream": ["primary_multiplicity_calculation"],
+      "impacts": {
+        "documents": ["docs/multiplicity_control.md", "docs/sap_v0_15_multiplicity_addendum.md", "docs/tlf_shells_v0_15_addendum.md"],
+        "specs": ["spec/multiplicity.json", "spec/protocol_design.json"]
+      }
+    },
+    "primary_multiplicity_calculation": {
+      "description": "Selection of the two primary Week 24 unstructured MMRM contrasts and Bonferroni-adjusted family-wise decisions.",
+      "downstream": ["primary_multiplicity_tlf"],
+      "impacts": {
+        "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/multiplicity_qc.csv"]
+      }
+    },
+    "primary_multiplicity_tlf": {
+      "description": "Primary Week 24 family-wise multiplicity decision output.",
+      "downstream": [],
+      "impacts": {"tlfs": ["T23"]}
+    }
+  },
+  "downstream_additions": {
+    "protocol_design_assumptions": ["primary_multiplicity_assumption"],
+    "mmrm_primary_contrast_focus": ["primary_multiplicity_calculation"],
+    "mmrm_primary_covariance": ["primary_multiplicity_calculation"],
+    "mmrm_estimand_alignment": ["primary_multiplicity_calculation"]
+  }
+}
