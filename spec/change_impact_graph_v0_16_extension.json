@@ -1,0 +1,37 @@
+{
+  "base_version": "0.15.0",
+  "version": "0.16.0",
+  "components": {
+    "mmrm_cross_package_validation_rule": {
+      "description": "Scope, package separation and numerical tolerances for cross-package validation of the primary Week 24 ACTOT MMRM contrasts.",
+      "downstream": ["mmrm_cross_package_reconstruction"],
+      "impacts": {
+        "documents": ["docs/mmrm_cross_package_validation.md", "docs/qc_plan.md"],
+        "specs": ["spec/mmrm_cross_package_validation.json"]
+      }
+    },
+    "mmrm_cross_package_reconstruction": {
+      "description": "Independent reconstruction of the observed-data ACTOT MMRM using nlme::gls with corSymm plus varIdent and independently constructed Week 24 contrasts.",
+      "downstream": ["mmrm_cross_package_validation_gate"],
+      "impacts": {
+        "analysis_datasets": ["outputs/adqs_actot_style.csv"],
+        "qc": ["outputs/mmrm_cross_package_contrasts.csv", "outputs/mmrm_cross_package_metrics.json"]
+      }
+    },
+    "mmrm_cross_package_validation_gate": {
+      "description": "Executable comparison of primary mmrm and independent nlme Week 24 contrast estimates and model-based standard errors against pre-specified tolerances.",
+      "downstream": [],
+      "impacts": {
+        "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+        "qc": ["outputs/mmrm_cross_package_validation.csv", "outputs/mmrm_cross_package_qc.csv", "outputs/mmrm_cross_package_validation_metrics.json"]
+      }
+    }
+  },
+  "downstream_additions": {
+    "actot_primary_visit": ["mmrm_cross_package_validation_rule"],
+    "mmrm_primary_covariance": ["mmrm_cross_package_validation_rule"],
+    "mmrm_primary_contrast_focus": ["mmrm_cross_package_validation_gate"],
+    "mmrm_model_fit": ["mmrm_cross_package_validation_gate"],
+    "mmrm_estimand_alignment": ["mmrm_cross_package_reconstruction"]
+  }
+}
