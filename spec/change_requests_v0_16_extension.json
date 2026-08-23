@@ -3,19 +3,19 @@
   "version": "0.16.0",
   "declared_impact_additions": {
     "CR-003": {
-      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_treatment_contrasts.csv"],
+      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_analysis_dataset.csv", "outputs/mmrm_cross_package_analysis_dataset.csv", "outputs/mmrm_treatment_contrasts.csv"],
       "qc": ["outputs/mmrm_cross_package_contrasts.csv", "outputs/mmrm_cross_package_metrics.json", "outputs/mmrm_cross_package_validation.csv", "outputs/mmrm_cross_package_qc.csv", "outputs/mmrm_cross_package_validation_metrics.json"],
       "documents": ["docs/mmrm_cross_package_validation.md", "docs/qc_plan.md"],
       "specs": ["spec/mmrm_cross_package_validation.json"]
     },
     "CR-004": {
-      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_treatment_contrasts.csv"],
+      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_analysis_dataset.csv", "outputs/mmrm_cross_package_analysis_dataset.csv", "outputs/mmrm_treatment_contrasts.csv"],
       "qc": ["outputs/mmrm_cross_package_contrasts.csv", "outputs/mmrm_cross_package_metrics.json", "outputs/mmrm_cross_package_validation.csv", "outputs/mmrm_cross_package_qc.csv", "outputs/mmrm_cross_package_validation_metrics.json"],
       "documents": ["docs/mmrm_cross_package_validation.md", "docs/qc_plan.md"],
       "specs": ["spec/mmrm_cross_package_validation.json"]
     },
     "CR-005": {
-      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_treatment_contrasts.csv"],
+      "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_analysis_dataset.csv", "outputs/mmrm_cross_package_analysis_dataset.csv", "outputs/mmrm_treatment_contrasts.csv"],
       "qc": ["outputs/mmrm_cross_package_contrasts.csv", "outputs/mmrm_cross_package_metrics.json", "outputs/mmrm_cross_package_validation.csv", "outputs/mmrm_cross_package_qc.csv", "outputs/mmrm_cross_package_validation_metrics.json"]
     }
   },
@@ -23,11 +23,11 @@
     {
       "change_id": "CR-010",
       "title": "Primary MMRM cross-package validation rule change",
-      "description": "Illustrative change to the independent package, validation scope, controlled Week 24 hypotheses or numerical agreement tolerances used for primary MMRM cross-package QC.",
+      "description": "Illustrative change to the independent package, analysis-row identity rule, validation scope, controlled Week 24 hypotheses or numerical agreement tolerances used for primary MMRM cross-package QC.",
       "rationale": "Tests whether changing the validation rule forces review of its specification and documentation, independent reconstruction inputs/outputs and executable comparison evidence without incorrectly changing the clinical estimand or confirmatory TLF family.",
       "changed_components": ["mmrm_cross_package_validation_rule"],
       "declared_impacts": {
-        "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_treatment_contrasts.csv"],
+        "analysis_datasets": ["outputs/adqs_actot_style.csv", "outputs/mmrm_analysis_dataset.csv", "outputs/mmrm_cross_package_analysis_dataset.csv", "outputs/mmrm_treatment_contrasts.csv"],
         "tlfs": [],
         "qc": ["outputs/mmrm_cross_package_contrasts.csv", "outputs/mmrm_cross_package_metrics.json", "outputs/mmrm_cross_package_validation.csv", "outputs/mmrm_cross_package_qc.csv", "outputs/mmrm_cross_package_validation_metrics.json"],
         "documents": ["docs/mmrm_cross_package_validation.md", "docs/qc_plan.md"],
