@@ -3,7 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from cdisc_portfolio.core_validation import triage_core_report, write_core_outputs
+from cdisc_portfolio.core_validation import (
+    NOT_AVAILABLE,
+    triage_core_report,
+    write_core_outputs,
+    write_core_unavailable_outputs,
+)
 
 
 def _cfg() -> dict:
@@ -13,6 +18,9 @@ def _cfg() -> dict:
             "repository": "cdisc-org/cdisc-rules-engine",
             "commit": "test-commit",
             "cache_commit": "test-cache-commit",
+            "open_rules_repository": "cdisc-org/cdisc-open-rules",
+            "open_rules_commit": "test-open-rules-commit",
+            "expected_ruleset_state": NOT_AVAILABLE,
             "standard": "adamig",
             "version": "1-3",
             "allowed_statuses": ["SUCCESS", "ISSUE REPORTED", "SKIPPED", "EXECUTION ERROR"],
@@ -47,6 +55,8 @@ def test_issue_reported_and_skipped_are_triaged_not_treated_as_engine_failure() 
         _report(["SUCCESS", "ISSUE REPORTED", "SKIPPED"]), _cfg(), cli_exit_code=0
     )
     assert metrics["all_passed"] is True
+    assert metrics["executable_validation_performed"] is True
+    assert metrics["execution_status"] == "EXECUTED"
     assert metrics["rules_total"] == 3
     assert metrics["rules_executed"] == 2
     assert metrics["success_rules"] == 1
@@ -111,6 +121,46 @@ def test_write_outputs_retains_raw_report_and_machine_evidence(tmp_path: Path) -
     assert (tmp_path / "outputs" / "core_validation_qc.csv").is_file()
     assert (tmp_path / "outputs" / "core_validation_metrics.json").is_file()
     assert (tmp_path / "outputs" / "core_validation_summary.md").is_file()
+
+
+def test_unavailable_state_writes_evidence_without_fabricating_official_report(tmp_path: Path) -> None:
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "spec" / "standards_validation_v0_19.json").write_text(
+        json.dumps(_cfg()), encoding="utf-8"
+    )
+    manifest = {
+        "all_passed": True,
+        "ruleset_state": NOT_AVAILABLE,
+        "rule_count": 0,
+        "unpublished_adamig_rule_count": 24,
+        "published_adamig_reference_count": 0,
+    }
+    manifest_path = tmp_path / "outputs" / "core_cache_manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    metrics = write_core_unavailable_outputs(tmp_path, manifest_path)
+    assert metrics["all_passed"] is True
+    assert metrics["executable_validation_performed"] is False
+    assert metrics["execution_status"] == NOT_AVAILABLE
+    assert metrics["rules_executed"] == 0
+    assert not (tmp_path / "outputs" / "core_official_report.json").exists()
+    assert (tmp_path / "outputs" / "core_validation_metrics.json").is_file()
+    assert "Zero rules" in (tmp_path / "outputs" / "core_validation_summary.md").read_text(encoding="utf-8")
+
+
+def test_unavailable_state_rejects_inconsistent_nonzero_rule_count(tmp_path: Path) -> None:
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "spec" / "standards_validation_v0_19.json").write_text(
+        json.dumps(_cfg()), encoding="utf-8"
+    )
+    manifest_path = tmp_path / "outputs" / "core_cache_manifest.json"
+    manifest_path.write_text(
+        json.dumps({"all_passed": True, "ruleset_state": NOT_AVAILABLE, "rule_count": 2}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unavailable-state evidence gate failed"):
+        write_core_unavailable_outputs(tmp_path, manifest_path)
 
 
 def test_zero_rule_report_writes_failure_evidence_before_raising(tmp_path: Path) -> None:
