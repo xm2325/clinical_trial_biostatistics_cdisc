@@ -29,6 +29,19 @@ Degrees of freedom and p-values are not cross-validated in this layer. The prima
 
 Multiplicity decisions continue to use the controlled primary `mmrm` p-values and the separate v0.15 Bonferroni decision layer.
 
+## Live public-data agreement
+
+The first complete live implementation run used **451 observed post-baseline ACTOT records from 189 subjects**. All **12/12** required cross-package checks passed without changing the pre-specified tolerances.
+
+| Week 24 contrast | Primary `mmrm` estimate | Independent `nlme` estimate | Estimate abs diff | Primary SE | Independent SE | SE abs diff |
+|---|---:|---:|---:|---:|---:|---:|
+| Low Dose vs Placebo | -1.6131494994 | -1.6131364979 | 0.0000130015 | 1.1677899331 | 1.1677873008 | 0.0000026323 |
+| High Dose vs Placebo | -0.9271379405 | -0.9271340803 | 0.0000038602 | 1.1511769515 | 1.1511759590 | 0.0000009925 |
+
+Maximum absolute estimate difference: **1.3002e-05**. Maximum absolute SE difference: **2.6323e-06**. Both are far below the locked **0.0005** thresholds, and both treatment-effect signs agree.
+
+These values are generated from the CI artifact; they are not hard-coded into the validation gate.
+
 ## Executable evidence
 
 The CI sequence is:
@@ -49,8 +62,6 @@ scripts/run_mmrm_cross_validation.py
 ```
 
 `spec/mmrm_cross_package_validation.json` locks the visit, hypothesis set, package-specific covariance labels, numerical tolerances and the deliberate exclusion of df/p-value comparison.
-
-The first live v0.16 branch run passed the independent `nlme` reconstruction and the blocking cross-package validation gate without changing the pre-specified tolerances. Exact numerical differences are emitted in the run artifact and are not hard-coded into the validation logic.
 
 ## Change control
 
