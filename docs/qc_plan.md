@@ -1,6 +1,6 @@
-# QC plan — portfolio version 0.15
+# QC plan — portfolio version 0.16
 
-The workflow uses separate blocking QC layers for derivation, public-reference checks, R/Python replication, repeated-measures modelling, primary multiplicity control, estimand/missing-data review, deterministic sensitivity, subject-level MI, reference-based MI, reviewer checks, statistical change impact and final TLF traceability. A required failure exits non-zero.
+The workflow uses separate blocking QC layers for derivation, public-reference checks, R/Python replication, repeated-measures modelling, cross-package MMRM validation, primary multiplicity control, estimand/missing-data review, deterministic sensitivity, subject-level MI, reference-based MI, reviewer checks, statistical change impact and final TLF traceability. A required failure exits non-zero.
 
 ## QC stack
 
@@ -11,15 +11,33 @@ The current live workflow checks:
 3. protocol-design and randomisation/initial-kit QC;
 4. separate R reconstruction and R/Python comparison;
 5. ACTOT MMRM data/model/inference QC;
-6. **v0.15 primary multiplicity QC**;
-7. estimand and missing-data review;
-8. v0.12 deterministic fixed-delta sensitivity QC;
-9. v0.13 subject-level MI model/pooling/delta QC;
-10. independent v0.13 MI Monte Carlo precision QC;
-11. v0.14 reference-based MI ICE/model/pooling/MCSE QC;
-12. analysis-dataset/TLF reviewer;
-13. v0.15 versioned statistical change-control impact gate;
-14. versioned **T01–T23** structural traceability.
+6. **v0.16 primary MMRM cross-package validation**;
+7. v0.15 primary multiplicity QC;
+8. estimand and missing-data review;
+9. v0.12 deterministic fixed-delta sensitivity QC;
+10. v0.13 subject-level MI model/pooling/delta QC;
+11. independent v0.13 MI Monte Carlo precision QC;
+12. v0.14 reference-based MI ICE/model/pooling/MCSE QC;
+13. analysis-dataset/TLF reviewer;
+14. v0.16 versioned statistical change-control impact gate;
+15. versioned **T01–T23** structural traceability.
+
+## v0.16 MMRM cross-package validation
+
+`R/mmrm_cross_package_qc.R` independently reconstructs the observed ACTOT longitudinal rows from `outputs/adqs_actot_style.csv` and fits the same fixed-effects mean model with `nlme::gls`, using `corSymm + varIdent` to represent an unstructured marginal covariance.
+
+The independent Week 24 Low Dose vs Placebo and High Dose vs Placebo contrast vectors are built directly from the fitted design matrix. `python scripts/run_mmrm_cross_validation.py` then compares these with the primary `mmrm::mmrm` Week 24 contrasts.
+
+The controlled gate requires:
+
+- exactly the two specified Week 24 active-versus-placebo hypotheses in both implementations;
+- finite point estimates and model-based SEs;
+- absolute estimate difference <= **0.0005** for each contrast;
+- absolute SE difference <= **0.0005** for each contrast;
+- treatment-effect sign agreement;
+- no df or p-value comparison, because the primary program uses Satterthwaite inference and the independent `nlme` reconstruction is not intended to reproduce that package-specific denominator-df method.
+
+The initial live v0.16 branch run passed both the independent `nlme` fit and the blocking comparison without changing these pre-specified tolerances. Exact differences are emitted in `outputs/mmrm_cross_package_validation.csv` and the metrics artifact.
 
 ## Primary multiplicity QC
 
@@ -72,27 +90,27 @@ T23 requires, in the same live run:
 
 Its output contract requires the family/hypothesis identifiers, contrast, visit/covariance, primary MMRM estimate/inference, raw p-value, adjustment method, family alpha, comparison count, local alpha, adjusted p-value and family-wise reject flag. Minimum rows: 2.
 
+The v0.16 cross-package validation is additional model-QC evidence and does not alter T23's controlled multiplicity input or decision rule.
+
 ## Change-control QC
 
-The v0.14 base graph/request files remain byte-preserved and declare `0.14.0`. v0.15 adds controlled extension specifications declaring base version 0.14.0 and logical version 0.15.0.
+The v0.14 base graph/request files remain byte-preserved. v0.15 adds the multiplicity extension; v0.16 adds a second controlled extension for cross-package MMRM validation.
 
-The merged live assessment covers:
+The v0.16 graph adds:
 
-- **9** simulated change requests;
-- **62** propagated component links;
-- **217/217** required impact relationships declared;
-- **217/217** required resources resolved;
-- zero missing required declarations;
-- zero extra declarations;
-- zero unresolved required resources.
+- the validation rule and pre-specified tolerance layer;
+- independent `nlme` reconstruction dependencies;
+- the executable cross-package comparison gate;
+- propagation from primary visit, MMRM covariance, primary contrast focus, model fit and estimand alignment;
+- CR-010 for changes to independent package, validation scope, controlled hypotheses or tolerance.
 
-CR-003, CR-004 and CR-005 propagate to T23 through visit, covariance and estimand-alignment dependencies. CR-009 directly controls the primary multiplicity assumptions. Negative controls require failure when T23 is omitted from CR-009 or when an extension declares the wrong base version.
+The exact v0.16 relationship/resource counts are generated by the live change-impact gate and are not hard-coded here before final validation.
 
 ## Traceability version QC
 
-`spec/analysis_traceability.csv` contains `registry_version`. Every TLF row must declare one identical non-empty version. The controlled current value is `0.15.0`.
+`spec/analysis_traceability.csv` contains `registry_version`. Every TLF row must declare one identical non-empty version. v0.16 retains the controlled **T01–T23** output set while advancing the registry version to `0.16.0` because the blocking QC/governance environment changed.
 
-The final v0.15 live result passes:
+The final structural gate still requires:
 
 - outputs found: **23/23**;
 - output contracts: **23/23**;
@@ -104,4 +122,4 @@ The final v0.15 live result passes:
 
 ## Evidence boundary
 
-These checks are portfolio QC. Same-author R/Python replication is not independent second-programmer validation. Successful multiplicity and missing-data QC does not make the portfolio procedure sponsor-approved or regulatory-confirmatory.
+These checks are portfolio QC. Same-author R/Python replication and the v0.16 distinct-package MMRM reconstruction are not formal independent second-programmer validation. Successful cross-package, multiplicity and missing-data QC does not make the portfolio procedure sponsor-approved or regulatory-confirmatory.
