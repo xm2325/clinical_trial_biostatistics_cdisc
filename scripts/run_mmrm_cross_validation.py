@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
 from cdisc_portfolio.mmrm_validation import validate_mmrm_cross_package
 
 
-ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
 SPEC_PATH = ROOT / "spec" / "mmrm_cross_package_validation.json"
 
