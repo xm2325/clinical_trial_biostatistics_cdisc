@@ -26,6 +26,8 @@ def _spec():
         "population": {
             "randomised_flag": "RANDFL",
             "required_value": "Y",
+            "analysis_treatment_variable": "TRT01P",
+            "actual_treatment_context_variable": "TRT01A",
             "treatment_arms": ARMS,
         },
         "event_rule": {
@@ -110,7 +112,7 @@ def _adsl():
 def test_retention_adtte_derives_event_censor_and_duration():
     result = derive_retention_adtte(_adsl(), _spec())
     assert result.metrics["all_required_passed"] is True
-    assert result.metrics["required_checks"] == 14
+    assert result.metrics["required_checks"] == 16
     assert result.metrics["subjects"] == 3
     assert result.metrics["events"] == 2
     assert result.metrics["censored"] == 1
@@ -125,8 +127,25 @@ def test_retention_adtte_derives_event_censor_and_duration():
     assert out.loc["02", "AVAL"] == 30
     assert out.loc["03", "AVAL"] == 60
     assert out.loc["02", "PARAMCD"] == "TTDISC"
+    assert out.loc["02", "ANLTRT"] == "Xanomeline Low Dose"
+    assert out.loc["02", "ANLTRTSRC"] == "ADSL.TRT01P"
+    assert out.loc["02", "TRTDIFFL"] == "N"
     assert out.loc["02", "STARTSRC"] == "ADSL.TRTSDT"
     assert out.loc["02", "ADTSRC"] == "ADSL.EOSDT"
+
+
+def test_retention_adtte_preserves_randomized_arm_when_actual_treatment_differs():
+    adsl = _adsl()
+    adsl.loc[2, "TRT01A"] = "Xanomeline Low Dose"
+    result = derive_retention_adtte(adsl, _spec())
+    assert result.metrics["all_required_passed"] is True
+    assert result.metrics["planned_actual_mismatch_subjects"] == 1
+    out = result.dataset.set_index("USUBJID")
+    assert out.loc["03", "TRT01P"] == "Xanomeline High Dose"
+    assert out.loc["03", "TRT01A"] == "Xanomeline Low Dose"
+    assert out.loc["03", "ANLTRT"] == "Xanomeline High Dose"
+    assert out.loc["03", "TRTDIFFL"] == "Y"
+    assert result.metrics["arm_counts"]["Xanomeline High Dose"]["subjects"] == 1
 
 
 def test_retention_adtte_follows_specified_status_and_description_columns():
@@ -184,6 +203,13 @@ def test_retention_adtte_rejects_wrong_censor_codes():
     spec = copy.deepcopy(_spec())
     spec["censor_rule"]["CNSR"] = 0
     with pytest.raises(ValueError, match="CNSR=0 for events and CNSR=1"):
+        derive_retention_adtte(_adsl(), spec)
+
+
+def test_retention_adtte_rejects_actual_treatment_as_analysis_assignment():
+    spec = copy.deepcopy(_spec())
+    spec["population"]["analysis_treatment_variable"] = "TRT01A"
+    with pytest.raises(ValueError, match="distinguish planned analysis treatment"):
         derive_retention_adtte(_adsl(), spec)
 
 
