@@ -113,5 +113,15 @@
     "output_file": "outputs/table23_actot_multiplicity.csv",
     "required_columns": ["family_id", "hypothesis_id", "contrast", "endpoint", "visit", "covariance", "estimate", "SE", "df", "raw_p_value", "adjustment_method", "family_alpha", "comparison_count", "local_alpha", "adjusted_p_value", "reject_familywise"],
     "min_rows": 2
+  },
+  "T24": {
+    "output_file": "outputs/table24_retention_km.csv",
+    "required_columns": ["TRT01A", "time_days", "n_risk", "retention_probability", "standard_error", "ci95_lower", "ci95_upper"],
+    "min_rows": 12
+  },
+  "T25": {
+    "output_file": "outputs/table25_retention_pairwise.csv",
+    "required_columns": ["comparison", "active_arm", "reference_arm", "hazard_ratio", "ci95_lower", "ci95_upper", "cox_p_value", "logrank_chisq", "logrank_p_value", "ph_test_p_value", "ph_diagnostic", "interpretation"],
+    "min_rows": 2
   }
 }
