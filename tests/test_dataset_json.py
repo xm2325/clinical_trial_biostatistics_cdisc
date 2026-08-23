@@ -99,10 +99,22 @@ def test_end_to_end_exchange_uses_official_schema_path(tmp_path: Path) -> None:
     assert metrics["records"] == 2
     assert metrics["null_values_preserved"] == 2
     assert metrics["official_schema_errors"] == 0
+    assert metrics["core_transport_type_vocab"] == ["Char", "Num"]
+    assert metrics["core_transport_type_vocab_ok"] is True
     assert (tmp_path / "outputs" / "dataset_json" / "adsl.json").is_file()
-    assert (tmp_path / "outputs" / "core_input" / "ADSL.csv").is_file()
+    core_csv = tmp_path / "outputs" / "core_input" / "ADSL.csv"
+    assert core_csv.is_file()
     variables = pd.read_csv(tmp_path / "outputs" / "core_input" / "_variables.csv")
     assert set(variables.columns) == {"dataset", "variable", "label", "type", "length"}
+    types = dict(zip(variables["variable"], variables["type"]))
+    assert types["STUDYID"] == "Char"
+    assert types["AGE"] == "Num"
+    assert types["AVAL"] == "Num"
+    assert types["TRTSDT"] == "Num"
+    transported = pd.read_csv(core_csv)
+    assert pd.api.types.is_numeric_dtype(transported["TRTSDT"])
+    assert transported.loc[0, "TRTSDT"] == (pd.Timestamp("2026-01-01") - pd.Timestamp("1960-01-01")).days
+    assert pd.isna(transported.loc[1, "TRTSDT"])
 
 
 def test_conformance_overclaim_is_blocked(tmp_path: Path) -> None:
