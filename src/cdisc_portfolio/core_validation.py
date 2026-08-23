@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 
 VERSION = "0.19.0"
+NOT_AVAILABLE = "NOT_AVAILABLE_IN_PINNED_OFFICIAL_CACHE"
 DEFAULT_ALLOWED_STATUSES = {
     "SUCCESS",
     "ISSUE REPORTED",
@@ -139,6 +140,8 @@ def triage_core_report(
         "cache_commit": core_cfg.get("cache_commit"),
         "standard": expected_standard,
         "version": expected_version,
+        "executable_validation_performed": True,
+        "execution_status": "EXECUTED",
         "cli_exit_code": int(cli_exit_code),
         "rules_total": len(rules),
         "rules_executed": executed_rules,
@@ -154,6 +157,100 @@ def triage_core_report(
         "all_passed": all_passed,
     }
     return metrics, checks
+
+
+def _write_validation_frames(outputs: Path, checks: list[dict[str, Any]]) -> None:
+    rule_columns = ["core_id", "cdisc_rule_id", "fda_rule_id", "message", "status"]
+    pd.DataFrame([], columns=rule_columns).to_csv(outputs / "core_rules_report.csv", index=False)
+    pd.DataFrame([]).to_csv(outputs / "core_issue_summary.csv", index=False)
+    pd.DataFrame(checks).to_csv(outputs / "core_validation_qc.csv", index=False)
+
+
+def write_core_unavailable_outputs(root: Path, cache_manifest_path: Path) -> dict[str, Any]:
+    """Record a controlled no-execution state when the pinned official ADaMIG ruleset is empty."""
+    root = Path(root)
+    cache_manifest_path = Path(cache_manifest_path)
+    if not cache_manifest_path.is_file():
+        raise ValueError(f"CORE cache manifest not found: {cache_manifest_path}")
+    cfg = json.loads((root / "spec" / "standards_validation_v0_19.json").read_text(encoding="utf-8"))
+    core_cfg = cfg.get("core", {})
+    if core_cfg.get("conformance_claim") != "NOT_ASSESSED":
+        raise ValueError("CORE conformance claim must remain NOT_ASSESSED")
+    manifest = json.loads(cache_manifest_path.read_text(encoding="utf-8"))
+    expected = str(core_cfg.get("expected_ruleset_state") or "")
+    actual = str(manifest.get("ruleset_state") or "")
+    checks = [
+        {
+            "check": "CORE cache evidence gate passed",
+            "passed": bool(manifest.get("all_passed")),
+            "detail": f"cache_gate={manifest.get('all_passed')}",
+        },
+        {
+            "check": "requested official ADaMIG ruleset is explicitly unavailable",
+            "passed": actual == NOT_AVAILABLE and expected == NOT_AVAILABLE,
+            "detail": f"actual={actual}; expected={expected}",
+        },
+        {
+            "check": "zero CORE rules are not represented as executable validation",
+            "passed": int(manifest.get("rule_count") or 0) == 0,
+            "detail": f"requested_rule_count={int(manifest.get('rule_count') or 0)}",
+        },
+        {
+            "check": "formal conformance claim remains disabled",
+            "passed": core_cfg.get("conformance_claim") == "NOT_ASSESSED",
+            "detail": "no executable ADaMIG validation claim",
+        },
+    ]
+    all_passed = all(bool(row["passed"]) for row in checks)
+    metrics = {
+        "analysis_version": VERSION,
+        "core_repository": core_cfg.get("repository"),
+        "core_commit": core_cfg.get("commit"),
+        "cache_commit": core_cfg.get("cache_commit"),
+        "open_rules_repository": core_cfg.get("open_rules_repository"),
+        "open_rules_commit": core_cfg.get("open_rules_commit"),
+        "standard": core_cfg.get("standard"),
+        "version": core_cfg.get("version"),
+        "executable_validation_performed": False,
+        "execution_status": NOT_AVAILABLE,
+        "rules_total": 0,
+        "rules_executed": 0,
+        "success_rules": 0,
+        "issue_reported_rules": 0,
+        "skipped_rules": 0,
+        "execution_error_rules": 0,
+        "issue_summary_rows": 0,
+        "issue_observations": 0,
+        "unpublished_adamig_rule_count": int(manifest.get("unpublished_adamig_rule_count") or 0),
+        "published_adamig_reference_count": int(manifest.get("published_adamig_reference_count") or 0),
+        "conformance_claim": "NOT_ASSESSED",
+        "all_passed": all_passed,
+    }
+    outputs = root / "outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    _write_validation_frames(outputs, checks)
+    (outputs / "core_validation_metrics.json").write_text(
+        json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    summary = [
+        "# CDISC CORE ADaMIG executable-validation availability",
+        "",
+        f"- Pinned CORE commit: `{metrics['core_commit']}`.",
+        f"- Pinned official cache commit: `{metrics['cache_commit']}`.",
+        f"- Requested standard: `{metrics['standard']} {metrics['version']}`.",
+        f"- Execution status: `{metrics['execution_status']}`.",
+        "- Executable validation performed: false.",
+        "- Rules executed: 0.",
+        f"- Pinned unpublished ADaMIG rule files observed: {metrics['unpublished_adamig_rule_count']}.",
+        f"- Evidence gate: {'PASS' if metrics['all_passed'] else 'FAIL'}.",
+        "",
+        "The pinned official CORE cache exposes no executable rules for the requested ADaMIG 1.3 ruleset, so the project deliberately does not run or claim an ADaMIG CORE validation result. Zero rules is recorded as an availability limitation, not as zero issues or conformance success.",
+        "Dataset-JSON official-schema validation remains a separate executable standards gate. Formal ADaM conformance and regulatory-submission readiness remain NOT_ASSESSED.",
+    ]
+    (outputs / "core_validation_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
+    if not all_passed:
+        raise ValueError("CDISC CORE unavailable-state evidence gate failed")
+    return metrics
 
 
 def write_core_outputs(
