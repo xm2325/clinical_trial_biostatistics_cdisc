@@ -1,0 +1,24 @@
+{
+  "version": "0.16.0",
+  "primary_source": "outputs/mmrm_treatment_contrasts.csv",
+  "independent_source": "outputs/mmrm_cross_package_contrasts.csv",
+  "target": {
+    "endpoint": "ACTOT change from baseline",
+    "visit": "Week 24",
+    "primary_covariance": "Unstructured",
+    "independent_covariance": "Unstructured (corSymm + varIdent)",
+    "hypotheses": [
+      "Xanomeline Low Dose vs Placebo",
+      "Xanomeline High Dose vs Placebo"
+    ]
+  },
+  "validation": {
+    "estimate_abs_tolerance": 0.0005,
+    "se_abs_tolerance": 0.0005,
+    "require_sign_agreement": true,
+    "compare_degrees_of_freedom": false,
+    "compare_p_values": false
+  },
+  "rationale": "Cross-package validation targets quantities that should agree under mathematically equivalent REML unstructured marginal models. Degrees of freedom and p-values are deliberately excluded because the primary mmrm analysis uses Satterthwaite inference whereas the nlme reconstruction is used only for point-estimate and model-based-SE validation.",
+  "evidence_boundary": "Independent re-programming exercise by the portfolio author using a distinct R package and independent contrast construction. This is not formal independent second-programmer validation, sponsor validation, or regulatory production QC."
+}
