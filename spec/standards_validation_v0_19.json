@@ -19,6 +19,16 @@
     "standard": "adamig",
     "version": "1-3",
     "input_format": "csv",
+    "allowed_statuses": [
+      "SUCCESS",
+      "ISSUE REPORTED",
+      "SKIPPED",
+      "EXECUTION ERROR"
+    ],
+    "blocking_statuses": [
+      "EXECUTION ERROR"
+    ],
+    "require_executed_rule": true,
     "conformance_claim": "NOT_ASSESSED"
   },
   "evidence_boundary": "Official exchange-schema and CORE-rule execution are portfolio validation evidence only; neither zero issues nor successful execution is treated as formal ADaM, Define-XML, Dataset-JSON regulatory-submission, or sponsor/CRO conformance certification."
