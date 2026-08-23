@@ -11,6 +11,8 @@ import pandas as pd
 from jsonschema import Draft201909Validator
 
 VERSION = "0.19.0"
+CORE_TYPE_VOCAB = {"Char", "Num", "Boolean"}
+SAS_EPOCH = pd.Timestamp("1960-01-01")
 
 
 def _sha256(path: Path) -> str:
@@ -132,6 +134,44 @@ def _validate_official_schema(payload: dict[str, Any], schema: dict[str, Any]) -
     return result
 
 
+def _build_core_transport(dataset: dict[str, Any], frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
+    meta_by_name = {v["name"]: v for v in dataset["variables"]}
+    transported = frame.copy()
+    variable_rows: list[dict[str, Any]] = []
+    for name in frame.columns:
+        meta = meta_by_name[name]
+        logical_type = meta["data_type"]
+        if logical_type == "date":
+            parsed = pd.to_datetime(frame[name], errors="coerce")
+            bad = frame[name].notna() & parsed.isna()
+            if bool(bad.any()):
+                raise ValueError(f"{dataset['alias']}.{name} has non-ISO date values that cannot be transported to CORE")
+            transported[name] = ((parsed - SAS_EPOCH) / pd.Timedelta(days=1)).astype("Int64")
+            core_type = "Num"
+            length = ""
+        elif logical_type == "numeric":
+            numeric = pd.to_numeric(frame[name], errors="coerce")
+            bad = frame[name].notna() & numeric.isna()
+            if bool(bad.any()):
+                raise ValueError(f"{dataset['alias']}.{name} has non-numeric values but metadata declares numeric")
+            transported[name] = numeric
+            core_type = "Num"
+            length = ""
+        else:
+            core_type = "Char"
+            length = _string_length(frame[name])
+        variable_rows.append(
+            {
+                "dataset": dataset["alias"],
+                "variable": name,
+                "label": meta["label"],
+                "type": core_type,
+                "length": length,
+            }
+        )
+    return transported, variable_rows
+
+
 def write_exchange_outputs(root: Path) -> dict[str, Any]:
     root = Path(root)
     cfg = json.loads((root / "spec" / "standards_validation_v0_19.json").read_text(encoding="utf-8"))
@@ -184,21 +224,19 @@ def write_exchange_outputs(root: Path) -> dict[str, Any]:
         for error in schema_errors[:100]:
             validation_rows.append({"dataset": dataset["alias"], "check": "official schema error", "passed": False, "detail": error})
 
+        core_frame, core_variables = _build_core_transport(dataset, frame)
         core_target = core_dir / f"{dataset['alias']}.csv"
-        shutil.copyfile(source, core_target)
+        core_frame.to_csv(core_target, index=False)
         dataset_rows.append({"Filename": dataset["alias"], "Dataset Name": dataset["alias"], "Label": dataset["label"]})
-        for column in parsed["columns"]:
-            ctype = column["dataType"]
-            if ctype == "date":
-                core_type = "integer"
-                length = ""
-            elif ctype in {"integer", "double"}:
-                core_type = ctype
-                length = ""
-            else:
-                core_type = "string"
-                length = column.get("length", "")
-            variable_rows.append({"dataset": dataset["alias"], "variable": column["name"], "label": column["label"], "type": core_type, "length": length})
+        variable_rows.extend(core_variables)
+        validation_rows.append(
+            {
+                "dataset": dataset["alias"],
+                "check": "CORE CSV transport uses recognised declared types",
+                "passed": all(row["type"] in CORE_TYPE_VOCAB for row in core_variables),
+                "detail": f"types={sorted({row['type'] for row in core_variables})}",
+            }
+        )
 
         total_records += len(frame)
         total_variables += len(frame.columns)
@@ -206,12 +244,14 @@ def write_exchange_outputs(root: Path) -> dict[str, Any]:
         total_schema_errors += len(schema_errors)
 
     pd.DataFrame(dataset_rows).to_csv(core_dir / "_datasets.csv", index=False)
-    pd.DataFrame(variable_rows).to_csv(core_dir / "_variables.csv", index=False)
+    variables_frame = pd.DataFrame(variable_rows)
+    variables_frame.to_csv(core_dir / "_variables.csv", index=False)
     validation = pd.DataFrame(validation_rows)
     validation.to_csv(root / "outputs" / "dataset_json_validation.csv", index=False)
 
     required = validation[validation["check"] != "official schema error"]
-    all_passed = bool(required["passed"].all() and total_schema_errors == 0)
+    transport_vocab_ok = set(variables_frame["type"].dropna().astype(str)) <= CORE_TYPE_VOCAB
+    all_passed = bool(required["passed"].all() and total_schema_errors == 0 and transport_vocab_ok)
     metrics = {
         "analysis_version": VERSION,
         "dataset_json_version": cfg["dataset_json"]["version"],
@@ -224,6 +264,8 @@ def write_exchange_outputs(root: Path) -> dict[str, Any]:
         "official_schema_errors": total_schema_errors,
         "core_transport_datasets": len(dataset_rows),
         "core_transport_variables": len(variable_rows),
+        "core_transport_type_vocab": sorted(set(variables_frame["type"].dropna().astype(str))),
+        "core_transport_type_vocab_ok": transport_vocab_ok,
         "conformance_claim": "NOT_ASSESSED",
         "dataset_json_sha256": {p.name: _sha256(p) for p in sorted(out_dir.glob("*.json"))},
         "all_passed": all_passed,
@@ -238,8 +280,10 @@ def write_exchange_outputs(root: Path) -> dict[str, Any]:
         f"- Missing values preserved as JSON null: {metrics['null_values_preserved']}.",
         f"- Official Dataset-JSON schema errors: {metrics['official_schema_errors']}.",
         f"- CORE CSV transport metadata: {metrics['core_transport_datasets']} datasets / {metrics['core_transport_variables']} variables.",
+        f"- CORE declared type vocabulary: {metrics['core_transport_type_vocab']}.",
         f"- Overall gate: {'PASS' if all_passed else 'FAIL'}.",
         "",
+        "Date values remain ISO-8601 in Dataset-JSON and are converted to SAS-epoch numeric days only in the CORE CSV transport. CORE metadata uses its recognised Num/Char vocabulary rather than relying on fallback string typing.",
         "This validates a portfolio exchange representation and prepares a reproducible CORE transport layer. It does not establish formal ADaM or regulatory-submission conformance.",
     ]
     (root / "outputs" / "dataset_json_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
