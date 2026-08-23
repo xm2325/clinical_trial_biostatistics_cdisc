@@ -1,232 +1,227 @@
 # Clinical Trial Biostatistics & CDISC Portfolio
 
-A reproducible clinical-trial biostatistics work sample built from public CDISC pilot data and public pharmaverse SDTM test data.
+A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, missing-data sensitivity, survival analysis, executable QC, statistical change control and machine-readable analysis metadata.
 
-The repository demonstrates source-to-analysis derivation, safety and efficacy analysis, ADaM-style BDS/TTE programming, public-reference validation, separate R/Python programming QC, longitudinal MMRM, distinct-package MMRM re-programming, estimand and missing-data review, multiple-imputation sensitivity analysis, Monte Carlo precision QC, protocol-design calculations, randomisation exercises, multiplicity control, Kaplan–Meier/Cox survival analysis, executable TLF contracts, structural traceability and statistical change-impact assessment.
+> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, or formal Define-XML conformance.
 
-> **Evidence boundary:** this is independent public-data portfolio work. `*-style` datasets are not claimed to be submission-ready ADaM. The repository does not claim sponsor/CRO production, SAS production, DSMB work, regulatory submission experience, formal ADaM conformance, IRT/IWRS production, sponsor-approved estimand/SAP/multiplicity decisions, validated production programming or formal independent second-programmer validation.
+## Current milestone: v0.18 — analysis metadata and lineage
 
-## Current milestone: v0.17
+v0.18 closes a statistical-programming gap that was not addressed by the earlier modelling stages: **variable-level analysis metadata, source/derivation lineage and deterministic metadata export**.
 
-The controlled analysis chain is:
+The controlled evidence now covers four generated analysis datasets:
+
+- `outputs/adsl_style.csv`;
+- `outputs/adae_style.csv`;
+- `outputs/adqs_actot_style.csv`;
+- `outputs/adtte_retention_style.csv`.
+
+The validated live workflow verifies:
+
+- **4** analysis-dataset metadata definitions;
+- **85/85 variables (100%)** with exact metadata-to-generated-column coverage;
+- **110** declared source references;
+- **39/39** cross-analysis-dataset lineage references resolved;
+- **52 derived** and **33 predecessor** variables;
+- labels, data types, roles, origin type, source references, derivation text and key status for every covered variable;
+- a reparsable Define-XML-inspired XML export containing **4 DatasetDef** and **85 ItemDef-style variable definitions**;
+- XML dataset/variable counts exactly matching the validated metadata catalog;
+- Define-XML reference package **2.1.11** with `conformance=NOT_ASSESSED` locked in both configuration and XML;
+- **146 Python unit tests** passed in the first complete v0.18 live validation, including negative controls for missing/stale metadata, unresolved lineage, blank derivations and attempted conformance overclaiming.
+
+The generated XML is deliberately called `define_xml_like_metadata.xml`: it is evidence that the project can model and validate analysis metadata, **not** a claim that the file is an ODM/Define-XML submission package or has passed official schema/conformance validation.
+
+## Controlled evidence chain
 
 ```text
 public CDISC / pharmaverse test data
-  -> source-to-analysis derivation and R/Python QC
+  -> source-to-analysis derivation + Python/R QC
+  -> ADSL-/ADAE-/ADQS-/ADTTE-style analysis datasets
+  -> v0.18 exact variable-level metadata + source/derivation lineage
+  -> deterministic Define-XML-inspired metadata export + reparse QC
+
   -> primary observed-data ACTOT MMRM (mmrm)
-  -> independently reconstructed ACTOT rows + nlme MMRM validation
+  -> independent ACTOT row reconstruction + nlme cross-package validation
   -> Week 24 Bonferroni family-wise decision layer
   -> estimand + missingness review
-  -> deterministic fixed-delta sensitivity
+  -> fixed-delta diagnostics
   -> subject-level MAR/delta MI + MCSE QC
-  -> reference-based MI (MAR / JR / CR / CIR) + MCSE QC
+  -> reference-based MAR/JR/CR/CIR MI + MCSE QC
   -> randomized-arm ADTTE-style TTDISC derivation
   -> Kaplan–Meier + exploratory log-rank/Cox retention analysis
+
   -> analysis-dataset/TLF reviewer
-  -> versioned statistical change-impact assessment
-  -> executable T01–T25 structural traceability
+  -> v0.18 layered statistical change-impact assessment
+  -> T01–T25 executable structural traceability
 ```
 
-The validated v0.17 live run verifies:
+Metadata evidence is intentionally separate from the TLF registry. v0.18 does **not** invent a `T26`; the existing output registry remains **T01–T25 at registry version 0.17.0** because no statistical TLF was added.
 
-- **254** randomized subjects in the retention analysis;
-- planned randomized arm sizes **86 / 84 / 84** for Placebo / Low Dose / High Dose;
-- **12** subjects with planned-versus-actual treatment differences, retained as explicit audit evidence rather than reassigned;
-- **144** study-discontinuation events and **110** protocol-completion censors;
-- **16/16** blocking ADTTE-style derivation checks passed;
-- **14/14** blocking R survival-analysis checks passed;
-- Day-182 KM retention **67.44% / 29.76% / 33.25%** for Placebo / Low / High;
-- exploratory discontinuation HR **3.0852** for Low vs Placebo and **2.9246** for High vs Placebo;
-- `cox.zph` p-values **0.8310** and **0.7577**, with zero PH diagnostic signals at alpha 0.05;
-- **25/25** TLF outputs, contracts, analysis-data links and QC-evidence links passed;
-- **11** simulated change requests across **77** propagated component links;
-- **267/267** graph-required impact relationships declared and resolved;
-- zero missing, extra or unresolved required change-control resources.
+## v0.18 metadata and lineage gate
 
-The new T24/T25 retention outputs are **exploratory and separate from the ACTOT confirmatory multiplicity family**.
+`src/cdisc_portfolio/metadata_lineage.py` builds and validates the controlled metadata catalog. `scripts/run_metadata_lineage.py` runs after the public derivation and ADTTE derivation so it checks the actual generated CSV schemas rather than fixtures alone.
 
-## Public CDISC evidence
+Blocking rules require:
 
-The workflow downloads pinned public CDISC efficacy inputs in CI. Key inputs include:
+- every generated column has exactly one metadata definition;
+- no stale extra metadata variables are permitted;
+- dataset key definitions agree exactly with variable key flags;
+- every variable has a non-empty label and at least one source reference;
+- every derived variable has explicit derivation text;
+- `DOMAIN.VARIABLE` lineage syntax is valid;
+- references to upstream analysis datasets resolve to real variables in the same controlled catalog;
+- unknown source domains fail;
+- the XML export reparses successfully;
+- XML dataset/variable counts equal the validated catalog counts;
+- configuration must remain `conformance=NOT_ASSESSED`.
+
+Machine-readable evidence is generated as:
+
+```text
+outputs/adam_variable_metadata.json
+outputs/metadata_lineage_validation.csv
+outputs/metadata_lineage_metrics.json
+outputs/metadata_lineage_summary.md
+outputs/define_xml_like_metadata.xml
+```
+
+The first complete live artifact produced XML SHA256:
+
+```text
+32e378b57d85e548ac2513de0d2ec7cef678873615648e480a6d413587cc4b39
+```
+
+See `docs/adam_metadata_lineage.md` for the detailed design and evidence boundary.
+
+## Public CDISC/reference evidence
+
+The CI workflow downloads pinned public efficacy inputs. Key references include:
 
 - official `QS` Dataset-JSON: **121,749 rows**;
 - official `ADQSCIBC` reference: **730 rows**;
 - official `ADQSADAS` reference: **12,463 rows**, 254 subjects and 15 parameters.
 
-The portfolio reconstructs **705/705** selected CIBIC analysis keys with exact selected `QSSEQ`/`DTYPE`. `AVAL` agreement is 695/705; the ten source/reference differences remain visible and trace to the selected public QS source row.
+The portfolio reconstructs **705/705** selected CIBIC analysis keys with exact selected `QSSEQ`/`DTYPE`; `AVAL` agreement is 695/705, and all ten differences remain visible with source-row traceability. For selected ACTOT (`ANL01FL=Y`), **1,016/1,016** analysis keys have exact selected `QSSEQ`/`DTYPE` agreement.
 
-For selected ACTOT (`ANL01FL=Y`), **1,016/1,016** selected analysis keys have exact selected `QSSEQ`/`DTYPE` agreement.
+## Primary ACTOT MMRM and distinct-package validation
 
-## Primary ACTOT MMRM
-
-The ACTOT analysis uses actual-treatment context from the existing analysis derivation. This is intentionally distinct from the v0.17 randomized-arm retention analysis below.
-
-The longitudinal model uses observed Week 8, Week 16 and Week 24 ACTOT change from baseline:
+The primary longitudinal model uses observed Week 8, Week 16 and Week 24 ACTOT change from baseline:
 
 ```text
 CHG ~ treatment * visit + BASE * visit
 ```
 
-Primary fit: `mmrm::mmrm`, REML, unstructured within-subject covariance and Satterthwaite degrees of freedom. Heterogeneous AR(1) is retained as a covariance sensitivity analysis.
+Primary fit: `mmrm::mmrm`, REML, unstructured covariance, Satterthwaite degrees of freedom. The same-author validation program independently reconstructs the ACTOT analysis rows and refits the fixed-effects model with `nlme::gls` plus `corSymm + varIdent`.
 
-| Week 24 contrast | Estimate | SE | 95% CI | Raw p-value |
+Validated cross-package evidence:
+
+- **451/451** primary/independent rows;
+- **189/189** subjects;
+- zero missing/extra keys;
+- zero exact-field or numeric row mismatches;
+- **18/18** blocking validation checks passed;
+- max Week 24 estimate absolute difference **1.30015e-05**;
+- max model-based SE absolute difference **2.63230e-06**;
+- locked estimate/SE tolerances **0.0005**.
+
+Week 24 primary contrasts remain:
+
+| Contrast | Estimate | SE | 95% CI | Raw p |
 |---|---:|---:|---:|---:|
 | Low Dose vs Placebo | -1.6131 | 1.1678 | [-3.9216, 0.6953] | 0.1693 |
 | High Dose vs Placebo | -0.9271 | 1.1512 | [-3.2032, 1.3489] | 0.4220 |
 
-These are portfolio analyses, not source-trial confirmatory results.
+Degrees of freedom and p-values are not compared across packages because the independent `nlme` reconstruction is used to validate population, point estimates and model-based SEs rather than reproduce package-specific Satterthwaite inference.
 
-## v0.16 cross-package MMRM validation
+## Multiplicity and missing-data sensitivity
 
-`R/mmrm_cross_package_qc.R` independently rebuilds the observed Week 8/16/24 ACTOT rows from `outputs/adqs_actot_style.csv` rather than reading the primary MMRM analysis dataset. It then fits the same fixed-effects mean model using `nlme::gls` with `corSymm + varIdent` as a separate unstructured marginal-covariance implementation.
+The controlled Week 24 ACTOT family contains two active-versus-placebo hypotheses. Family-wise alpha is **0.05**; Bonferroni local alpha is **0.025**. Raw p-values 0.169334 and 0.421970 become adjusted p-values 0.338669 and 0.843940, so **0/2** hypotheses are rejected.
 
-The blocking gate validates **451/451** analysis rows and **189/189** subjects, with zero missing/extra keys, zero exact-field mismatches and zero numeric mismatch rows. It passes **18/18** checks. Maximum Week 24 estimate difference is **1.30015e-05** and maximum model-based SE difference is **2.63230e-06**, both well below locked **0.0005** tolerances.
+Sensitivity evidence includes:
 
-Degrees of freedom and p-values are deliberately not compared because the primary `mmrm` program uses Satterthwaite inference while the `nlme` reconstruction is intended to validate population, point estimates and model-based SEs.
-
-This is distinct-package re-programming by the same portfolio author, not formal independent second-programmer validation.
-
-## v0.15 multiplicity control
-
-The controlled family contains exactly two Week 24 primary unstructured-MMRM hypotheses. Family-wise alpha is 0.05; Bonferroni gives local alpha 0.025.
-
-| Hypothesis | Raw p-value | Bonferroni adjusted p-value | Family-wise reject |
-|---|---:|---:|---|
-| H_LOW | 0.169334 | 0.338669 | No |
-| H_HIGH | 0.421970 | 0.843940 | No |
-
-Sensitivity analyses, alternative covariance structures, ANCOVA, MI analyses and the v0.17 retention endpoint are excluded from this primary family.
-
-## Estimand and missing-data sensitivity
-
-`spec/estimands.json` defines portfolio estimand `EST-ACTOT-W24-TP`, with treatment discontinuation handled using a treatment-policy strategy. MAR is a working estimator assumption rather than an estimand attribute.
-
-The efficacy analysis has 116 observed and 138 missing Week 24 ACTOT outcomes. Its actual-treatment arm counts remain Placebo=86, Low Dose=96 and High Dose=72; these are **not** the randomized TTDISC arm denominators.
-
-Sensitivity layers include:
-
-- T18/T19 deterministic fixed-delta and directional tipping diagnostics;
-- T20/T21 subject-level approximate-Bayesian `rbmi` MAR/delta MI with **200 imputations** and independent MCSE QC;
-- T22 reference-based MAR/JR/CR/CIR MI with discontinuation timing audit and MCSE QC.
+- deterministic fixed-delta and directional tipping diagnostics (T18/T19);
+- subject-level approximate-Bayesian `rbmi` MAR/delta MI with **200 imputations** and independent MCSE QC (T20/T21);
+- reference-based MAR/JR/CR/CIR MI with discontinuation timing audit and MCSE QC (T22).
 
 The reference-based layer passes **27/27** required checks; maximum `MCSE(estimate) / pooled SE` is **5.381%** against a 7.5% threshold.
 
-## v0.17 ADTTE-style randomized retention analysis
+## Randomized-arm ADTTE/survival evidence
 
-### Analysis assignment and audit trail
-
-`spec/tte_retention.json` locks the endpoint and analysis rules. One `TTDISC` row is derived per randomized subject:
-
-```text
-STARTDT = TRTSDT
-ADT     = EOSDT
-AVAL    = ADT - STARTDT + 1
-DCSFL=Y   -> event, CNSR=0
-COMPLFL=Y -> protocol-completion censor, CNSR=1
-```
-
-The survival comparison uses **planned randomized assignment**:
+v0.17 identified a material assignment issue in the public data: **12/254 randomized subjects have `TRT01P != TRT01A`**. The exploratory retention comparison therefore uses planned randomized assignment:
 
 ```text
 ANLTRT = TRT01P
 ```
 
-`TRT01A` remains in the ADTTE-style dataset as actual-treatment context. `TRTDIFFL`, `ANLTRTSRC`, `CNSRSRC` and `EVNTSRC` preserve treatment and event/censor provenance.
+`TRT01A` remains context and `TRTDIFFL` audits the mismatch.
 
-This distinction matters in the public data: **12/254** randomized subjects have `TRT01P != TRT01A`; all 12 were planned High Dose and recorded as actual Low Dose. Reclassifying them by actual treatment would change arm denominators from randomized **86/84/84** to actual **86/96/72** and materially change the retention estimates. v0.17 therefore keeps the randomized comparison on `TRT01P` and audits the mismatch instead of hiding it.
+Validated TTDISC evidence:
 
-Derivation results:
+- randomized arms: Placebo **86**, Low Dose **84**, High Dose **84**;
+- study-discontinuation events **144**; completion censors **110**;
+- **16/16** ADTTE-style derivation checks passed;
+- **14/14** R survival checks passed;
+- Day-182 KM retention: **67.44% / 29.76% / 33.25%** for Placebo / Low / High;
+- Low vs Placebo discontinuation HR **3.0852**;
+- High vs Placebo discontinuation HR **2.9246**;
+- `cox.zph` p-values **0.8310 / 0.7577**, giving **0/2** PH diagnostic signals at alpha 0.05.
 
-| Randomized arm | Subjects | Discontinuations | Completion censors |
-|---|---:|---:|---:|
-| Placebo | 86 | 28 | 58 |
-| Xanomeline Low Dose | 84 | 59 | 25 |
-| Xanomeline High Dose | 84 | 57 | 27 |
+HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family.
 
-The derivation gate passes **16/16** required checks and records SHA256 identities for the TTE specification, ADSL-style source and ADTTE-style output.
+## v0.18 statistical change control
 
-### Kaplan–Meier retention — T24
-
-`R/tte_retention_analysis.R` uses `survival::survfit` with log-log confidence intervals.
-
-| Day | Placebo | Low Dose | High Dose |
-|---:|---:|---:|---:|
-| 56 | 88.37% | 70.24% | 67.86% |
-| 112 | 81.40% | 47.62% | 41.67% |
-| 168 | 68.60% | 30.95% | 38.10% |
-| 182 | **67.44%** | **29.76%** | **33.25%** |
-
-The KM median is not reached for Placebo. Median TTDISC is **105 days** for Low Dose (95% CI 69–119) and **80 days** for High Dose (95% CI 64–146).
-
-### Pairwise survival diagnostics — T25
-
-| Comparison | Cox HR | 95% CI | Cox p | Log-rank p | `cox.zph` p |
-|---|---:|---:|---:|---:|---:|
-| Low Dose vs Placebo | **3.0852** | 1.9606–4.8548 | 0.000001 | 3.11e-07 | 0.8310 |
-| High Dose vs Placebo | **2.9246** | 1.8557–4.6092 | 0.000004 | 1.31e-06 | 0.7577 |
-
-HR > 1 denotes a higher **study-discontinuation hazard**, not worse efficacy. Cox models use Efron ties. `cox.zph` is a diagnostic rather than an acceptance criterion; the validated run has **0/2** PH signals at alpha 0.05.
-
-No multiplicity adjustment is applied because T25 is explicitly exploratory.
-
-## Statistical change control
-
-The byte-preserved v0.14 base remains layered with versioned extensions:
+The change-control graph remains layered rather than rewriting previously validated specifications:
 
 ```text
 v0.15 -> multiplicity
 v0.16 -> cross-package MMRM validation
-v0.17 -> randomized-retention TTE definition / derivation / survival / T24–T25
+v0.17 -> randomized-retention TTE / T24–T25
+v0.18 -> analysis metadata definition / lineage QC / Define-XML-inspired export
 ```
 
-The merged v0.17 graph contains **11 simulated changes (CR-001–CR-011)**. CR-011 covers changes to the retention population, analysis assignment, dates, event/censor rules, KM timepoints and exploratory survival specification.
+The validated v0.18 assessment covers:
 
-The validated assessment has:
+- **12** simulated change requests (`CR-001`–`CR-012`);
+- **80** propagated component links;
+- **279/279** graph-required impact relationships declared;
+- **279/279** required resources resolved;
+- **0** missing required declarations;
+- **0** extra declared resources;
+- **0** unresolved required resources.
 
-- **77** propagated component links;
-- **267/267** required impact relationships declared;
-- **267/267** required resources resolved;
-- zero missing, extra or unresolved required resources.
+`CR-012` propagates through exactly three metadata components and requires **12** review relationships. It has **0 impacted TLFs** and does not propagate into MMRM, multiplicity or survival families.
 
-CR-011 requires 13 downstream relationships and impacts only T24/T25; it does not propagate into the ACTOT confirmatory family.
+This remains portfolio change-control simulation, not a sponsor-approved protocol/SAP change process.
 
 ## Executable TLF traceability
 
-`spec/analysis_traceability.csv` and `spec/output_contracts.json` register **T01–T25** at version `0.17.0`.
-
-The live structural gate passes:
+The statistical output registry remains **T01–T25 at version 0.17.0**. The same v0.18 live run still passes:
 
 - outputs found: **25/25**;
 - output contracts: **25/25**;
-- analysis-data links: **25/25**;
+- analysis-dataset links: **25/25**;
 - QC-evidence links: **25/25**;
-- complete TLF validation: **25/25**.
+- complete validated TLFs: **25/25**.
 
-T24 requires the ADTTE derivation and survival QC evidence. T25 additionally exposes planned randomized assignment in the output itself. T23 remains tied to primary `mmrm` inference and multiplicity QC only.
-
-## CI execution control
-
-GitHub Actions uses branch/event-level concurrency with `cancel-in-progress: true`, so superseded upgrade commits do not consume a full MI/reference-based-MI run.
+Keeping the registry version unchanged is deliberate: v0.18 adds metadata governance, not another statistical table/listing/figure.
 
 ## Key files
 
 ```text
-R/mmrm_analysis.R                                  primary ACTOT MMRM
-R/mmrm_cross_package_qc.R                          independent rows + nlme MMRM
-R/tte_retention_analysis.R                         v0.17 KM/log-rank/Cox retention analysis
-R/rbmi_sensitivity.R                               subject-level MI
-R/rbmi_reference_based.R                           MAR/JR/CR/CIR sensitivity
-src/cdisc_portfolio/tte.py                         spec-driven ADTTE-style derivation/QC
-src/cdisc_portfolio/mmrm_validation.py             cross-package MMRM gate
-src/cdisc_portfolio/change_control_v017.py         layered v0.17 change-control merger
-spec/tte_retention.json                             randomized-retention TTE specification
-spec/analysis_traceability.csv                     versioned T01–T25 registry
-spec/output_contracts.json                         executable TLF contracts
-spec/change_impact_graph_v0_17_extension.json      v0.17 dependency extension
-spec/change_requests_v0_17_extension.json          CR-011
-docs/tte_retention_analysis.md                     v0.17 method and evidence boundary
-docs/sap_v0_17_tte_addendum.md                     controlled portfolio SAP addendum
-docs/tlf_shells_v0_17_addendum.md                  T24/T25 shells
+src/cdisc_portfolio/metadata_lineage.py             v0.18 variable metadata + lineage + XML export
+scripts/run_metadata_lineage.py                      v0.18 blocking metadata gate
+spec/adam_metadata_config.json                       Define-XML reference + evidence boundary
+src/cdisc_portfolio/change_control_v018.py           layered v0.18 change-control merger
+spec/change_impact_graph_v0_18_extension.json        metadata dependency extension
+spec/change_requests_v0_18_extension.json            CR-012
+
+docs/adam_metadata_lineage.md                        metadata/lineage design and boundary
+R/mmrm_analysis.R                                    primary ACTOT MMRM
+R/mmrm_cross_package_qc.R                            independent rows + nlme MMRM
+R/tte_retention_analysis.R                           KM/log-rank/Cox retention analysis
+R/rbmi_reference_based.R                             MAR/JR/CR/CIR sensitivity
+src/cdisc_portfolio/tte.py                           ADTTE-style derivation/QC
+spec/analysis_traceability.csv                       T01–T25 registry
+spec/output_contracts.json                           executable TLF contracts
 ```
 
 ## Reproduce
@@ -237,6 +232,7 @@ pytest -q
 python scripts/profile_official_references.py
 python scripts/run_all.py
 python scripts/run_tte_retention.py
+python scripts/run_metadata_lineage.py
 python scripts/run_protocol_design.py
 python scripts/run_randomisation.py
 
@@ -256,4 +252,4 @@ python scripts/run_change_impact.py
 python scripts/validate_traceability.py
 ```
 
-Generated evidence is written under `outputs/`; CI uploads the complete output directory so statistical and governance evidence can be inspected from the same run.
+Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, lineage and governance evidence can be inspected from the same run.
