@@ -112,12 +112,12 @@ def test_traceability_rejects_mixed_registry_versions(tmp_path):
         validate_traceability(tmp_path)
 
 
-def test_repository_registry_is_v016_with_23_controlled_tlfs():
+def test_repository_registry_is_v017_with_25_controlled_tlfs():
     registry = pd.read_csv(ROOT / "spec" / "analysis_traceability.csv", dtype=str).fillna("")
     contracts = json.loads((ROOT / "spec" / "output_contracts.json").read_text(encoding="utf-8"))
 
-    assert set(registry["registry_version"]) == {"0.16.0"}
-    assert registry["tlf_id"].tolist() == [f"T{i:02d}" for i in range(1, 24)]
+    assert set(registry["registry_version"]) == {"0.17.0"}
+    assert registry["tlf_id"].tolist() == [f"T{i:02d}" for i in range(1, 26)]
     assert set(registry["tlf_id"]) == set(contracts)
 
 
@@ -129,3 +129,20 @@ def test_repository_t12_requires_cross_package_qc_but_t23_does_not_overclaim_it(
     assert "outputs/mmrm_cross_package_qc.csv" in t12["qc_evidence"].split("|")
     assert "outputs/mmrm_cross_package_qc.csv" not in t23["qc_evidence"].split("|")
     assert "outputs/multiplicity_qc.csv" in t23["qc_evidence"].split("|")
+    assert "outputs/tte_retention_survival_qc.csv" not in t23["qc_evidence"].split("|")
+
+
+def test_repository_t24_t25_use_adtte_and_dedicated_tte_qc():
+    registry = pd.read_csv(ROOT / "spec" / "analysis_traceability.csv", dtype=str).fillna("")
+    contracts = json.loads((ROOT / "spec" / "output_contracts.json").read_text(encoding="utf-8"))
+
+    for tlf_id in ("T24", "T25"):
+        row = registry.loc[registry["tlf_id"] == tlf_id].iloc[0]
+        assert row["analysis_dataset"] == "outputs/adtte_retention_style.csv"
+        qc = set(row["qc_evidence"].split("|"))
+        assert "outputs/adtte_retention_qc.csv" in qc
+        assert "outputs/tte_retention_survival_qc.csv" in qc
+        assert contracts[tlf_id]["output_file"] == row["output_file"]
+
+    assert contracts["T24"]["min_rows"] == 12
+    assert contracts["T25"]["min_rows"] == 2
