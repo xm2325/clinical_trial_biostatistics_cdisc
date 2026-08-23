@@ -1,0 +1,37 @@
+{
+  "base_version": "0.16.0",
+  "version": "0.17.0",
+  "components": {
+    "tte_retention_definition": {
+      "description": "Exploratory time-to-study-discontinuation endpoint definition including randomised population, origin date, event/censor date, event rule and censoring rule.",
+      "downstream": ["tte_retention_derivation"],
+      "impacts": {
+        "documents": ["docs/tte_retention_analysis.md", "docs/sap_v0_17_tte_addendum.md", "docs/tlf_shells_v0_17_addendum.md", "docs/qc_plan.md"],
+        "specs": ["spec/tte_retention.json"]
+      }
+    },
+    "tte_retention_derivation": {
+      "description": "ADTTE-style derivation of one TTDISC record per randomised subject with STARTDT, ADT, AVAL, CNSR and event description traceability.",
+      "downstream": ["tte_retention_survival_analysis"],
+      "impacts": {
+        "analysis_datasets": ["outputs/adsl_style.csv", "outputs/adtte_retention_style.csv"],
+        "qc": ["outputs/adtte_retention_qc.csv", "outputs/adtte_retention_metrics.json"]
+      }
+    },
+    "tte_retention_survival_analysis": {
+      "description": "Kaplan-Meier retention estimation plus exploratory active-versus-placebo log-rank and Cox summaries with proportional-hazards diagnostics.",
+      "downstream": ["tte_retention_tlfs"],
+      "impacts": {
+        "qc": ["outputs/tte_retention_survival_qc.csv", "outputs/tte_retention_survival_metrics.json"]
+      }
+    },
+    "tte_retention_tlfs": {
+      "description": "Exploratory retention Kaplan-Meier table and pairwise survival diagnostic table.",
+      "downstream": [],
+      "impacts": {
+        "tlfs": ["T24", "T25"]
+      }
+    }
+  },
+  "downstream_additions": {}
+}

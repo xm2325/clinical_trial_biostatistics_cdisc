@@ -1,145 +1,158 @@
-# QC plan — portfolio version 0.16
+# QC plan — portfolio version 0.17
 
-The workflow uses separate blocking QC layers for derivation, public-reference checks, R/Python replication, repeated-measures modelling, cross-package MMRM validation, primary multiplicity control, estimand/missing-data review, deterministic sensitivity, subject-level MI, reference-based MI, reviewer checks, statistical change impact and final TLF traceability. A required failure exits non-zero.
+The workflow uses separate blocking QC layers for derivation, public-reference checks, R/Python replication, repeated-measures modelling, cross-package MMRM validation, primary multiplicity control, estimand/missing-data review, deterministic sensitivity, subject-level MI, reference-based MI, ADTTE-style retention derivation, survival analysis, reviewer checks, statistical change impact and final TLF traceability. A required failure exits non-zero.
 
 ## QC stack
 
 The current live workflow checks:
 
-1. Python unit tests and derivation QC;
+1. Python unit tests and source-to-analysis derivation QC;
 2. official CDISC efficacy-reference structure/source trace;
-3. protocol-design and randomisation/initial-kit QC;
-4. separate R reconstruction and R/Python comparison;
-5. ACTOT MMRM data/model/inference QC;
-6. **v0.16 primary MMRM cross-package validation**;
-7. v0.15 primary multiplicity QC;
-8. estimand and missing-data review;
-9. v0.12 deterministic fixed-delta sensitivity QC;
-10. v0.13 subject-level MI model/pooling/delta QC;
-11. independent v0.13 MI Monte Carlo precision QC;
-12. v0.14 reference-based MI ICE/model/pooling/MCSE QC;
-13. analysis-dataset/TLF reviewer;
-14. v0.16 versioned statistical change-control impact gate;
-15. versioned **T01–T23** structural traceability.
+3. **v0.17 ADTTE-style randomized-retention derivation QC**;
+4. protocol-design and randomisation/initial-kit QC;
+5. separate R reconstruction and R/Python comparison;
+6. ACTOT MMRM data/model/inference QC;
+7. v0.16 primary MMRM cross-package validation;
+8. **v0.17 randomized-arm Kaplan–Meier/log-rank/Cox retention QC**;
+9. v0.15 primary multiplicity QC;
+10. estimand and missing-data review;
+11. v0.12 deterministic fixed-delta sensitivity QC;
+12. v0.13 subject-level MI model/pooling/delta QC;
+13. independent v0.13 MI Monte Carlo precision QC;
+14. v0.14 reference-based MI ICE/model/pooling/MCSE QC;
+15. analysis-dataset/TLF reviewer;
+16. **v0.17 versioned statistical change-control impact gate**;
+17. versioned **T01–T25** structural traceability.
 
 The workflow also uses branch/event concurrency with `cancel-in-progress: true`, so superseded upgrade commits no longer consume a full long-running MI pipeline.
 
+## v0.17 ADTTE-style retention derivation
+
+`python scripts/run_tte_retention.py` reads the generated ADSL-style dataset and `spec/tte_retention.json` and derives one `TTDISC` row per randomized subject.
+
+The analysis assignment is explicitly locked to planned randomized treatment:
+
+```text
+ANLTRT = TRT01P
+```
+
+Actual treatment (`TRT01A`) is retained as context. `TRTDIFFL` records planned-versus-actual treatment differences. This distinction is blocking because the live public data contain **12/254** randomized subjects with `TRT01P != TRT01A`; all 12 are planned High Dose subjects recorded as actual Low Dose.
+
+The 16 blocking derivation checks require:
+
+- non-empty randomized population;
+- all three planned treatment arms;
+- one row per subject;
+- `ANLTRT` follows the configured planned randomized assignment variable;
+- `TRTDIFFL` exactly reproduces planned/actual differences;
+- complete treatment origin/end dates;
+- mutually exclusive and exhaustive discontinuation/completion status;
+- positive analysis duration;
+- exact `AVAL = ADT - STARTDT + 1`;
+- `CNSR` restricted to 0/1;
+- discontinuation events map to `CNSR=0`;
+- protocol completion maps to `CNSR=1`;
+- non-empty event/censor descriptions;
+- event source trace follows the specification;
+- censor source trace follows the specification.
+
+The validated live result is:
+
+- subjects: **254**;
+- events: **144**;
+- censors: **110**;
+- planned arm counts: Placebo **86**, Low Dose **84**, High Dose **84**;
+- planned/actual mismatch subjects: **12**;
+- required derivation QC: **16/16 PASS**.
+
+The metrics artifact records SHA256 fingerprints for the exact TTE specification, ADSL-style source and ADTTE-style output.
+
+## v0.17 survival-analysis QC
+
+`R/tte_retention_analysis.R` independently verifies that the ADTTE-style dataset retains the randomized assignment contract before fitting survival models. All KM/log-rank/Cox analyses use `ANLTRT`, not `TRT01A`.
+
+T24 reports Kaplan–Meier retention at days 56, 112, 168 and 182. T25 reports Low Dose vs Placebo and High Dose vs Placebo exploratory log-rank/Cox summaries. Cox models use Efron ties; `cox.zph` is reported as a proportional-hazards diagnostic.
+
+The 14 blocking survival checks cover:
+
+- three randomized arms and unique subject rows;
+- `ANLTRT == TRT01P`;
+- exact `TRTDIFFL` audit flag;
+- positive finite TTE values and valid censor codes;
+- presence of both events and censored observations;
+- complete KM arm × timepoint rows;
+- bounded finite KM probabilities/confidence limits;
+- non-increasing KM survival;
+- exactly two active-vs-placebo comparisons;
+- finite positive Cox HR/confidence intervals;
+- valid Cox/log-rank p-values;
+- available valid `cox.zph` diagnostic p-values.
+
+The validated run passes **14/14** checks. Day-182 KM retention is **67.44% / 29.76% / 33.25%** for Placebo / Low / High. Exploratory HRs are **3.0852** and **2.9246**; `cox.zph` p-values are **0.8310** and **0.7577**, so the run has **0/2** PH diagnostic signals at alpha 0.05.
+
+A PH diagnostic signal would not itself fail the pipeline; it would limit interpretation of the Cox HR. The endpoint remains exploratory and is not part of the ACTOT multiplicity family.
+
 ## v0.16 MMRM cross-package validation
 
-`R/mmrm_cross_package_qc.R` independently reconstructs the observed ACTOT longitudinal rows from `outputs/adqs_actot_style.csv` instead of reading the primary MMRM analysis dataset. It writes `outputs/mmrm_cross_package_analysis_dataset.csv`, then fits the same fixed-effects mean model with `nlme::gls`, using `corSymm + varIdent` to represent an unstructured marginal covariance.
+`R/mmrm_cross_package_qc.R` independently reconstructs the observed ACTOT longitudinal rows from `outputs/adqs_actot_style.csv` instead of reading the primary MMRM analysis dataset. It fits the same fixed-effects mean model with `nlme::gls`, using `corSymm + varIdent` for a general unstructured marginal covariance.
 
-The blocking gate first checks analysis-population identity:
+The validated gate has **451/451** rows, **189/189** subjects, zero missing/extra keys, zero exact-field mismatches and zero numeric mismatch rows. It passes **18/18** required checks. Maximum estimate absolute difference is **1.30015e-05** and maximum SE absolute difference is **2.63230e-06**, against locked **0.0005** tolerances.
 
-- unique `STUDYID × USUBJID × AVISIT` keys in both implementations;
-- identical key sets;
-- exact treatment assignment;
-- finite `QSSEQ`, `AVAL`, `BASE` and `CHG` values;
-- numeric row agreement within **1e-12**.
-
-The validated run has **451/451 rows**, **189/189 subjects**, zero missing/extra keys, zero exact-field mismatches and zero numeric mismatch rows.
-
-The independent Week 24 Low Dose vs Placebo and High Dose vs Placebo contrast vectors are built directly from the `nlme` fitted design matrix. The model-comparison part then requires:
-
-- exactly the two specified Week 24 active-versus-placebo hypotheses in both implementations;
-- finite point estimates and model-based SEs;
-- absolute estimate difference <= **0.0005** for each contrast;
-- absolute SE difference <= **0.0005** for each contrast;
-- treatment-effect sign agreement;
-- no df or p-value comparison, because the primary program uses Satterthwaite inference and the independent `nlme` reconstruction is not intended to reproduce that package-specific denominator-df method.
-
-The validated v0.16 gate passes **18/18** required checks. Maximum estimate absolute difference is **1.30015e-05** and maximum SE absolute difference is **2.63230e-06**. The metrics artifact also records SHA256 fingerprints for the validation specification, both contrast sources and both analysis datasets.
+Degrees of freedom and p-values are deliberately not compared because the primary `mmrm` model uses Satterthwaite inference.
 
 ## Primary multiplicity QC
 
 `python scripts/run_multiplicity.py` reads the primary MMRM contrasts and `spec/multiplicity.json`, then cross-checks the family against `spec/protocol_design.json`.
 
-The 12 required checks enforce:
+The 12 required checks enforce the two Week 24 primary active-versus-placebo hypotheses, family alpha 0.05, Bonferroni local alpha 0.025, exact hypothesis mapping, finite valid inference fields, adjusted-p formula and reject-flag consistency.
 
-- Bonferroni is the controlled method;
-- family alpha matches the planning specification;
-- comparison count matches planning;
-- exactly the two controlled hypotheses are selected;
-- only Week 24 primary `Unstructured` MMRM rows enter the family;
-- hypothesis/contrast mappings are exact and unique;
-- estimates, SEs, df and raw p-values are finite;
-- raw p-values are in [0, 1];
-- local alpha equals 0.05 / 2 = 0.025;
-- adjusted p-values equal `min(2 * raw_p, 1)`;
-- reject flags agree with the raw local-alpha rule;
-- reject flags agree with the adjusted-p family-alpha rule.
+The validated result passes **12/12** checks. H_LOW raw p=0.169334 gives adjusted p=0.338669; H_HIGH raw p=0.421970 gives adjusted p=0.843940. Neither hypothesis is rejected family-wise.
 
-The live result passes **12/12** required checks. H_LOW raw p=0.169334 gives adjusted p=0.338669; H_HIGH raw p=0.421970 gives adjusted p=0.843940. Neither hypothesis is rejected family-wise.
-
-Sensitivity analyses are deliberately excluded from the primary family.
+T24/T25 are explicitly excluded from this family.
 
 ## Reference-based MI QC
 
-The v0.14 reference-based layer remains blocking. Its two separate timing guards require:
-
-```text
-observed scheduled ACTOT with ADT > EOSDT == 0
-```
-
-and
-
-```text
-observed ACTOT on/after the first affected scheduled visit == 0
-```
-
-The validated reference-based analysis passes **27/27** required checks, uses 200 imputations for each pairwise model and requires `MCSE(estimate) / pooled SE <= 0.075`. The maximum observed ratio is **0.053811**.
-
-## T12 and T23 traceability evidence
-
-T12 now links the cross-package validation directly into controlled traceability. Its primary output remains `outputs/mmrm_treatment_contrasts.csv`, while required QC evidence includes both `outputs/mmrm_qc.csv` and `outputs/mmrm_cross_package_qc.csv`.
-
-T23 continues to require, in the same live run:
-
-- `outputs/mmrm_analysis_dataset.csv`;
-- `outputs/mmrm_treatment_contrasts.csv`;
-- `outputs/table23_actot_multiplicity.csv`;
-- `outputs/mmrm_qc.csv`;
-- `outputs/multiplicity_qc.csv`.
-
-The v0.16 cross-package layer is deliberately not attached to T23 as multiplicity evidence because it does not reproduce Satterthwaite degrees of freedom or p-values. T23 therefore continues to use the controlled primary `mmrm` inference plus the multiplicity QC layer.
+The v0.14 reference-based layer remains blocking. Its timing guards prevent invalid use of observations after recorded discontinuation / affected visits. The validated analysis passes **27/27** required checks, uses 200 imputations per pairwise model and requires `MCSE(estimate) / pooled SE <= 0.075`; maximum observed ratio is **0.053811**.
 
 ## Change-control QC
 
-The v0.14 base graph/request files remain byte-preserved. v0.15 adds the multiplicity extension; v0.16 adds a second controlled extension for cross-package MMRM validation.
+The v0.14 base graph/request files remain byte-preserved. v0.15 adds multiplicity, v0.16 adds cross-package MMRM validation, and v0.17 adds a separate retention-TTE chain:
 
-The v0.16 graph adds:
+```text
+tte_retention_definition
+  -> tte_retention_derivation
+  -> tte_retention_survival_analysis
+  -> tte_retention_tlfs (T24/T25)
+```
 
-- the validation rule, analysis-row identity rule and pre-specified numerical tolerances;
-- independent `nlme` analysis-row reconstruction dependencies;
-- the executable cross-package comparison gate;
-- propagation from primary visit, MMRM covariance, primary contrast focus, model fit and estimand alignment;
-- CR-010 for changes to independent package, row-identity rule, validation scope, controlled hypotheses or tolerance.
+CR-011 simulates a change to the retention population, randomized analysis assignment, origin/end dates, event/censor rules, KM timepoints or exploratory survival specification.
 
 The validated merged assessment covers:
 
-- **10** simulated change requests;
-- **73** propagated component links;
-- **254/254** required impact relationships declared;
-- **254/254** required resources resolved;
+- **11** simulated change requests;
+- **77** propagated component links;
+- **267/267** required impact relationships declared;
+- **267/267** required resources resolved;
 - zero missing required declarations;
 - zero extra declared resources;
 - zero unresolved required resources.
 
-CR-010 itself propagates through three validation components and requires 12 downstream impact relationships without inventing a new TLF.
+CR-011 itself requires **13** downstream impact relationships and affects T24/T25 only; it does not propagate into the ACTOT confirmatory family.
 
 ## Traceability version QC
 
-`spec/analysis_traceability.csv` contains `registry_version`. Every TLF row must declare one identical non-empty version. v0.16 retains the controlled **T01–T23** output set while advancing the registry version to `0.16.0` because the blocking QC/governance environment changed.
+`spec/analysis_traceability.csv` contains one common `registry_version`. v0.17 advances the controlled registry to **T01–T25 / 0.17.0**.
 
 The validated structural gate passes:
 
-- outputs found: **23/23**;
-- output contracts: **23/23**;
-- analysis-data links: **23/23**;
-- QC-evidence links: **23/23**;
-- complete structural traceability: **23/23**.
+- outputs found: **25/25**;
+- output contracts: **25/25**;
+- analysis-data links: **25/25**;
+- QC-evidence links: **25/25**;
+- complete structural traceability: **25/25**.
 
-`traceability_metrics.json` derives `analysis_version` from the registry instead of using a hard-coded constant.
+T24/T25 require both ADTTE-style derivation evidence and survival QC. T23 continues to use the controlled primary `mmrm` inference plus multiplicity QC and does not absorb the exploratory retention endpoint.
 
 ## Evidence boundary
 
-These checks are portfolio QC. Same-author R/Python replication and the v0.16 distinct-package MMRM reconstruction are not formal independent second-programmer validation. Successful cross-package, multiplicity and missing-data QC does not make the portfolio procedure sponsor-approved or regulatory-confirmatory.
+These checks are portfolio QC. The v0.17 ADTTE-style dataset is not claimed to be formal submission-ready ADaM, and T24/T25 are not sponsor-approved efficacy or confirmatory endpoints. Same-author cross-package/programming checks are not formal independent second-programmer validation.

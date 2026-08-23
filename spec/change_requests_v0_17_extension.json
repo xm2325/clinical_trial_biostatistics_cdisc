@@ -1,0 +1,21 @@
+{
+  "base_version": "0.16.0",
+  "version": "0.17.0",
+  "declared_impact_additions": {},
+  "changes": [
+    {
+      "change_id": "CR-011",
+      "title": "Exploratory study-retention time-to-event definition change",
+      "description": "Illustrative change to the TTDISC population, origin date, event/censor date, discontinuation event rule, censoring rule, Kaplan-Meier timepoints or exploratory pairwise survival-analysis specification.",
+      "rationale": "Tests whether a retention endpoint or survival-analysis change forces review of the controlled specification and documentation, ADTTE-style derivation, derivation/survival QC and both exploratory retention TLFs without propagating into the separate ACTOT confirmatory multiplicity family.",
+      "changed_components": ["tte_retention_definition"],
+      "declared_impacts": {
+        "analysis_datasets": ["outputs/adsl_style.csv", "outputs/adtte_retention_style.csv"],
+        "tlfs": ["T24", "T25"],
+        "qc": ["outputs/adtte_retention_qc.csv", "outputs/adtte_retention_metrics.json", "outputs/tte_retention_survival_qc.csv", "outputs/tte_retention_survival_metrics.json"],
+        "documents": ["docs/tte_retention_analysis.md", "docs/sap_v0_17_tte_addendum.md", "docs/tlf_shells_v0_17_addendum.md", "docs/qc_plan.md"],
+        "specs": ["spec/tte_retention.json"]
+      }
+    }
+  ]
+}
