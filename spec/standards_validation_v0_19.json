@@ -1,0 +1,25 @@
+{
+  "version": "0.19.0",
+  "dataset_json": {
+    "standard": "Dataset-JSON",
+    "version": "1.1.0",
+    "official_repository": "cdisc-org/DataExchange-DatasetJson",
+    "official_commit": "a379f49a3f43c2aaed63bdeca761bdb7140df2c3",
+    "schema_relative_path": ".external/dataset-json/schema/dataset.schema.json",
+    "creation_datetime": "2026-08-23T00:00:00Z",
+    "originator": "Independent public-data portfolio",
+    "source_system": {
+      "name": "clinical_trial_biostatistics_cdisc",
+      "version": "0.19.0"
+    }
+  },
+  "core": {
+    "repository": "cdisc-org/cdisc-rules-engine",
+    "commit": "4270ccac9304bd0ed9627470fc9d9d922ea52939",
+    "standard": "adamig",
+    "version": "1-3",
+    "input_format": "csv",
+    "conformance_claim": "NOT_ASSESSED"
+  },
+  "evidence_boundary": "Official exchange-schema and CORE-rule execution are portfolio validation evidence only; neither zero issues nor successful execution is treated as formal ADaM, Define-XML, Dataset-JSON regulatory-submission, or sponsor/CRO conformance certification."
+}

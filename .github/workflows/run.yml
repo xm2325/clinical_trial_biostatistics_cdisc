@@ -32,6 +32,15 @@ jobs:
         run: python scripts/run_tte_retention.py
       - name: ADaM-style variable metadata and lineage gate
         run: python scripts/run_metadata_lineage.py
+      - name: Checkout pinned official Dataset-JSON 1.1 specification
+        uses: actions/checkout@v4
+        with:
+          repository: cdisc-org/DataExchange-DatasetJson
+          ref: a379f49a3f43c2aaed63bdeca761bdb7140df2c3
+          path: .external/dataset-json
+          persist-credentials: false
+      - name: Dataset-JSON 1.1 exchange and official-schema gate
+        run: python scripts/run_dataset_json.py
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
       - name: Randomisation and kit schedule QC
@@ -90,6 +99,8 @@ jobs:
             outputs/adtte_retention_qc.csv
             outputs/metadata_lineage_summary.md
             outputs/metadata_lineage_validation.csv
+            outputs/dataset_json_summary.md
+            outputs/dataset_json_validation.csv
             outputs/define_xml_like_metadata.xml
             outputs/tte_retention_survival_summary.md
             outputs/tte_retention_survival_qc.csv
