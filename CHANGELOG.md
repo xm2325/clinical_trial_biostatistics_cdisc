@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.18.0 — 2026-08-23
+
+- Add controlled ADaM-style variable metadata and source/derivation lineage for four generated analysis datasets: ADSL-, ADAE-, ADQS- and ADTTE-style outputs.
+- Validate **85/85 generated variables (100%)** with exact metadata coverage, including labels, data types, roles, predecessor/derived origin, source references, derivation text and key status.
+- Validate **110** declared source references and resolve **39/39** cross-analysis-dataset lineage references; classify **52 derived** and **33 predecessor** variables.
+- Add a deterministic Define-XML-inspired metadata export with **4 dataset definitions / 85 variable definitions** and reparse/count reconciliation in CI.
+- Reference CDISC Define-XML **2.1.11** while locking `conformance=NOT_ASSESSED`; negative controls reject attempts to claim formal conformance.
+- Add negative-control tests for missing/stale metadata, unresolved upstream lineage, blank derivations and conformance overclaiming; first complete v0.18 live validation passes **146 Python tests**.
+- Add `CR-012` and a three-component metadata governance chain: metadata definition -> lineage validation -> Define-XML-inspired export.
+- Validate **12 change requests**, **80 propagated component links** and **279/279 required impact relationships/resources** with zero missing, extra or unresolved resources.
+- Keep `CR-012` separate from inferential analysis families with **12 required impacts / 0 impacted TLFs**.
+- Retain the statistical output registry at **T01–T25 / version 0.17.0** because v0.18 adds metadata governance rather than a new TLF; the v0.18 live run still passes 25/25 output, contract, analysis-data and QC-evidence links.
+- Preserve the explicit portfolio boundary: metadata/XML evidence is not formal ADaM conformance, submission-ready Define-XML, regulatory validation or sponsor/CRO production experience.
+
 ## 0.17.0 — 2026-08-23
 
 - Add an exploratory ADTTE-style `TTDISC` analysis from first treatment date (`TRTSDT`) to study discontinuation/protocol-completion date (`EOSDT`).
@@ -20,7 +34,7 @@
 
 - Add distinct-package primary MMRM re-programming using `nlme::gls` with `corSymm + varIdent` while retaining `mmrm::mmrm` as the primary model.
 - Independently reconstruct the observed ACTOT subject-visit analysis rows rather than reusing the primary MMRM analysis dataset.
-- Validate **451/451** primary/independent rows and **189/189** subjects with identical key sets, zero exact-field mismatches and zero numeric mismatch rows.
+- Validate **451/451** primary/independent rows and **189/189** subjects with identical key sets, zero missing/extra keys, zero exact-field mismatches and zero numeric mismatch rows.
 - Compare Week 24 point estimates, model-based SEs and treatment-effect signs against pre-specified 0.0005 absolute tolerances; pass **18/18** required checks.
 - Observe maximum estimate difference **1.30015e-05** and maximum SE difference **2.63230e-06**.
 - Deliberately exclude df/p-value agreement because the primary implementation uses Satterthwaite inference and the `nlme` reconstruction does not reproduce that denominator-df method.
