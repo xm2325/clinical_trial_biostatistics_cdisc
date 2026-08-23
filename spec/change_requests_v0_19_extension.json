@@ -1,0 +1,52 @@
+{
+  "base_version": "0.18.0",
+  "version": "0.19.0",
+  "declared_impact_additions": {},
+  "changes": [
+    {
+      "change_id": "CR-013",
+      "title": "Official CDISC standards-engine or rule-availability change",
+      "description": "Illustrative change to the pinned Dataset-JSON schema, CORE engine/cache/open-rule source, expected ADaMIG rule-availability state, exchange transport rules or executable-validation evidence boundary.",
+      "rationale": "Tests whether a standards-tooling change forces review of official version pins, all four exchanged analysis datasets, Dataset-JSON schema/round-trip evidence, CORE cache/rule-discovery evidence and the mutually exclusive executed-versus-NOT_AVAILABLE validation state without propagating into statistical TLFs or treating zero rules as zero issues.",
+      "changed_components": [
+        "standards_validation_configuration"
+      ],
+      "declared_impacts": {
+        "analysis_datasets": [
+          "outputs/adsl_style.csv",
+          "outputs/adae_style.csv",
+          "outputs/adqs_actot_style.csv",
+          "outputs/adtte_retention_style.csv"
+        ],
+        "tlfs": [],
+        "qc": [
+          "outputs/dataset_json_validation.csv",
+          "outputs/dataset_json_metrics.json",
+          "outputs/dataset_json_summary.md",
+          "outputs/dataset_json/adsl.json",
+          "outputs/dataset_json/adae.json",
+          "outputs/dataset_json/adqs.json",
+          "outputs/dataset_json/adtte.json",
+          "outputs/core_input/_datasets.csv",
+          "outputs/core_input/_variables.csv",
+          "outputs/core_list_rules.txt",
+          "outputs/core_list_all_rules.txt",
+          "outputs/core_cache_manifest.json",
+          "outputs/core_cache_summary.md",
+          "outputs/core_validation_metrics.json",
+          "outputs/core_validation_qc.csv",
+          "outputs/core_validation_summary.md",
+          "outputs/core_rules_report.csv",
+          "outputs/core_issue_summary.csv"
+        ],
+        "documents": [
+          "docs/cdisc_standards_validation.md",
+          "docs/qc_plan.md"
+        ],
+        "specs": [
+          "spec/standards_validation_v0_19.json"
+        ]
+      }
+    }
+  ]
+}
