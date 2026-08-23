@@ -45,11 +45,21 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     randomised_flag = str(population.get("randomised_flag", "")).strip()
     randomised_value = str(population.get("required_value", "")).strip()
     arms = [str(x) for x in population.get("treatment_arms", [])]
+    event_var = str(event_rule.get("condition_variable", "")).strip()
+    event_value = str(event_rule.get("condition_value", "")).strip().upper()
+    censor_var = str(censor_rule.get("condition_variable", "")).strip()
+    censor_value = str(censor_rule.get("condition_value", "")).strip().upper()
+    event_desc_var = str(event_rule.get("description_source", "")).strip()
+    event_desc_fallback_var = str(event_rule.get("description_fallback_source", "")).strip()
 
     if not param or paramcd != "TTDISC":
         raise ValueError("Retention TTE parameter must define PARAM and PARAMCD=TTDISC")
     if not origin_var or not end_var or not randomised_flag or not randomised_value:
         raise ValueError("Retention TTE population/date specification is incomplete")
+    if not event_var or not event_value or not censor_var or not censor_value:
+        raise ValueError("Retention TTE event/censor condition specification is incomplete")
+    if not event_desc_var or not event_desc_fallback_var:
+        raise ValueError("Retention TTE event description specification is incomplete")
     if len(arms) != 3 or len(set(arms)) != 3:
         raise ValueError("Retention TTE specification must define three unique treatment arms")
     if int(event_rule.get("CNSR", -1)) != 0 or int(censor_rule.get("CNSR", -1)) != 1:
@@ -64,12 +74,12 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         randomised_flag,
         origin_var,
         end_var,
-        "DCSFL",
-        "COMPLFL",
-        "EOSDECOD",
-        "EOSTERM",
+        event_var,
+        censor_var,
+        event_desc_var,
+        event_desc_fallback_var,
     ]
-    _require_columns(adsl, required_columns)
+    _require_columns(adsl, list(dict.fromkeys(required_columns)))
 
     d = adsl[
         (adsl[randomised_flag].astype(str).str.strip() == randomised_value)
@@ -77,18 +87,20 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     ].copy()
     d["STARTDT_PARSED"] = pd.to_datetime(d[origin_var], errors="coerce")
     d["ADT_PARSED"] = pd.to_datetime(d[end_var], errors="coerce")
-    d["DCSFL_N"] = d["DCSFL"].fillna("").astype(str).str.strip().str.upper()
-    d["COMPLFL_N"] = d["COMPLFL"].fillna("").astype(str).str.strip().str.upper()
+    event_status = d[event_var].fillna("").astype(str).str.strip().str.upper()
+    censor_status = d[censor_var].fillna("").astype(str).str.strip().str.upper()
 
-    event = d["DCSFL_N"].eq(str(event_rule.get("condition_value", "Y")).upper())
-    censored = d["COMPLFL_N"].eq(str(censor_rule.get("condition_value", "Y")).upper())
+    event = event_status.eq(event_value)
+    censored = censor_status.eq(censor_value)
     partition_ok = event ^ censored
 
     elapsed = (d["ADT_PARSED"] - d["STARTDT_PARSED"]).dt.days + 1
-    event_desc = d["EOSDECOD"].fillna("").astype(str).str.strip()
-    fallback = d["EOSTERM"].fillna("").astype(str).str.strip()
+    event_desc = d[event_desc_var].fillna("").astype(str).str.strip()
+    fallback = d[event_desc_fallback_var].fillna("").astype(str).str.strip()
     event_desc = event_desc.where(event_desc.ne(""), fallback)
-    censor_desc = str(censor_rule.get("EVNTDESC", "STUDY COMPLETED"))
+    censor_desc = str(censor_rule.get("EVNTDESC", "STUDY COMPLETED")).strip()
+    if not censor_desc:
+        raise ValueError("Retention TTE censor EVNTDESC must be non-empty")
 
     out = pd.DataFrame(
         {
@@ -110,6 +122,8 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
             "SRCVAR": end_var,
             "STARTSRC": f"ADSL.{origin_var}",
             "ADTSRC": f"ADSL.{end_var}",
+            "CNSRSRC": np.where(event, f"ADSL.{event_var}", f"ADSL.{censor_var}"),
+            "EVNTSRC": np.where(event, f"ADSL.{event_desc_var}", "SPEC.CENSOR_RULE"),
         }
     )
 
@@ -130,6 +144,14 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     )
     event_map_ok = bool((out.loc[event.to_numpy(), "CNSR"] == 0).all())
     censor_map_ok = bool((out.loc[censored.to_numpy(), "CNSR"] == 1).all())
+    event_source_ok = bool(
+        (out.loc[event.to_numpy(), "CNSRSRC"] == f"ADSL.{event_var}").all()
+        and (out.loc[event.to_numpy(), "EVNTSRC"] == f"ADSL.{event_desc_var}").all()
+    )
+    censor_source_ok = bool(
+        (out.loc[censored.to_numpy(), "CNSRSRC"] == f"ADSL.{censor_var}").all()
+        and (out.loc[censored.to_numpy(), "EVNTSRC"] == "SPEC.CENSOR_RULE").all()
+    )
 
     arm_order = {arm: index for index, arm in enumerate(arms)}
     out["_arm_order"] = out["TRT01A"].map(arm_order)
@@ -198,14 +220,14 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         _qc_row(
             "Discontinued subjects map to CNSR=0",
             event_map_ok,
-            f"events={int(event.sum())}",
+            f"events={int(event.sum())}; source={event_var}={event_value}",
         )
     )
     qc_rows.append(
         _qc_row(
             "Completed subjects map to CNSR=1",
             censor_map_ok,
-            f"censored={int(censored.sum())}",
+            f"censored={int(censored.sum())}; source={censor_var}={censor_value}",
         )
     )
     qc_rows.append(
@@ -213,6 +235,20 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
             "Event and censor descriptions are populated",
             bool(out["EVNTDESC"].fillna("").astype(str).str.strip().ne("").all()),
             f"blank={int(out['EVNTDESC'].fillna('').astype(str).str.strip().eq('').sum())}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Event source trace follows specification",
+            event_source_ok,
+            f"status={event_var}; description={event_desc_var}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Censor source trace follows specification",
+            censor_source_ok,
+            f"status={censor_var}; description=SPEC.CENSOR_RULE",
         )
     )
 
@@ -240,6 +276,10 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         "censored": int((out["CNSR"] == 1).sum()),
         "min_aval_days": int(pd.to_numeric(out["AVAL"]).min()),
         "max_aval_days": int(pd.to_numeric(out["AVAL"]).max()),
+        "event_condition": f"{event_var}={event_value}",
+        "censor_condition": f"{censor_var}={censor_value}",
+        "event_description_source": event_desc_var,
+        "event_description_fallback_source": event_desc_fallback_var,
         "arm_counts": arm_counts,
         "event_reasons": event_reasons,
         "required_checks": int(len(required)),
