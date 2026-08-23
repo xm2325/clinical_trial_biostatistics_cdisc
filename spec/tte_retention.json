@@ -10,6 +10,8 @@
   "population": {
     "randomised_flag": "RANDFL",
     "required_value": "Y",
+    "analysis_treatment_variable": "TRT01P",
+    "actual_treatment_context_variable": "TRT01A",
     "treatment_arms": [
       "Placebo",
       "Xanomeline Low Dose",
@@ -39,9 +41,11 @@
   },
   "traceability": {
     "source_dataset": "outputs/adsl_style.csv",
+    "analysis_treatment_source": "ADSL.TRT01P",
+    "actual_treatment_context_source": "ADSL.TRT01A",
     "event_date_source": "ADSL.EOSDT",
     "origin_date_source": "ADSL.TRTSDT",
     "event_status_source": "ADSL.DCSFL/COMPLFL"
   },
-  "evidence_boundary": "Exploratory public-data time-to-study-discontinuation analysis for portfolio evidence. This is an ADTTE-style BDS exercise, not a sponsor-approved endpoint, formal ADaM-conformant submission dataset, efficacy analysis, or regulatory claim."
+  "evidence_boundary": "Exploratory public-data time-to-study-discontinuation analysis for portfolio evidence. Randomised comparisons use planned treatment assignment while retaining actual-treatment context. This is an ADTTE-style BDS exercise, not a sponsor-approved endpoint, formal ADaM-conformant submission dataset, efficacy analysis, or regulatory claim."
 }
