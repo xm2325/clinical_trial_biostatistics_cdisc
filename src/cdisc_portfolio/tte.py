@@ -113,6 +113,24 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         }
     )
 
+    # Evaluate row-wise source/derivation identities before presentation sorting so
+    # the QC is invariant to treatment-arm or subject ordering.
+    derived_from_output = (
+        pd.to_datetime(out["ADT"], errors="coerce")
+        - pd.to_datetime(out["STARTDT"], errors="coerce")
+    ).dt.days + 1
+    aval_formula_ok = bool(
+        np.allclose(
+            pd.to_numeric(out["AVAL"], errors="coerce").to_numpy(dtype=float),
+            pd.to_numeric(derived_from_output, errors="coerce").to_numpy(dtype=float),
+            rtol=0.0,
+            atol=0.0,
+            equal_nan=False,
+        )
+    )
+    event_map_ok = bool((out.loc[event.to_numpy(), "CNSR"] == 0).all())
+    censor_map_ok = bool((out.loc[censored.to_numpy(), "CNSR"] == 1).all())
+
     arm_order = {arm: index for index, arm in enumerate(arms)}
     out["_arm_order"] = out["TRT01A"].map(arm_order)
     out = out.sort_values(["_arm_order", "USUBJID"]).drop(columns="_arm_order").reset_index(drop=True)
@@ -165,7 +183,7 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     qc_rows.append(
         _qc_row(
             "ADTTE AVAL equals ADT-STARTDT+1",
-            bool(np.array_equal(out["AVAL"].to_numpy(), elapsed.loc[d.index].to_numpy())),
+            aval_formula_ok,
             f"rows={len(out)}",
         )
     )
@@ -179,14 +197,14 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     qc_rows.append(
         _qc_row(
             "Discontinued subjects map to CNSR=0",
-            bool((out.loc[event.to_numpy(), "CNSR"] == 0).all()),
+            event_map_ok,
             f"events={int(event.sum())}",
         )
     )
     qc_rows.append(
         _qc_row(
             "Completed subjects map to CNSR=1",
-            bool((out.loc[censored.to_numpy(), "CNSR"] == 1).all()),
+            censor_map_ok,
             f"censored={int(censored.sum())}",
         )
     )
