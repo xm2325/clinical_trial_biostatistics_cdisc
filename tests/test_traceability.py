@@ -110,3 +110,22 @@ def test_traceability_rejects_mixed_registry_versions(tmp_path):
     (tmp_path / "spec" / "output_contracts.json").write_text(json.dumps(contracts), encoding="utf-8")
     with pytest.raises(ValueError, match="one non-empty registry_version"):
         validate_traceability(tmp_path)
+
+
+def test_repository_registry_is_v016_with_23_controlled_tlfs():
+    registry = pd.read_csv(ROOT / "spec" / "analysis_traceability.csv", dtype=str).fillna("")
+    contracts = json.loads((ROOT / "spec" / "output_contracts.json").read_text(encoding="utf-8"))
+
+    assert set(registry["registry_version"]) == {"0.16.0"}
+    assert registry["tlf_id"].tolist() == [f"T{i:02d}" for i in range(1, 24)]
+    assert set(registry["tlf_id"]) == set(contracts)
+
+
+def test_repository_t12_requires_cross_package_qc_but_t23_does_not_overclaim_it():
+    registry = pd.read_csv(ROOT / "spec" / "analysis_traceability.csv", dtype=str).fillna("")
+    t12 = registry.loc[registry["tlf_id"] == "T12"].iloc[0]
+    t23 = registry.loc[registry["tlf_id"] == "T23"].iloc[0]
+
+    assert "outputs/mmrm_cross_package_qc.csv" in t12["qc_evidence"].split("|")
+    assert "outputs/mmrm_cross_package_qc.csv" not in t23["qc_evidence"].split("|")
+    assert "outputs/multiplicity_qc.csv" in t23["qc_evidence"].split("|")
