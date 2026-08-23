@@ -28,6 +28,8 @@ jobs:
         run: python scripts/profile_official_references.py
       - name: Run public CDISC workflow
         run: python scripts/run_all.py
+      - name: ADTTE-style retention derivation gate
+        run: python scripts/run_tte_retention.py
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
       - name: Randomisation and kit schedule QC
@@ -42,11 +44,12 @@ jobs:
           Rscript -e 'invisible(parse(file="R/independent_qc.R")); cat("independent_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_analysis.R")); cat("mmrm_analysis.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/mmrm_cross_package_qc.R")); cat("mmrm_cross_package_qc.R syntax OK\n")'
+          Rscript -e 'invisible(parse(file="R/tte_retention_analysis.R")); cat("tte_retention_analysis.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_sensitivity.R")); cat("rbmi_sensitivity.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_mcse_qc.R")); cat("rbmi_mcse_qc.R syntax OK\n")'
           Rscript -e 'invisible(parse(file="R/rbmi_reference_based.R")); cat("rbmi_reference_based.R syntax OK\n")'
       - name: Install R analysis dependencies
-        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi", "nlme"))'
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans", "rbmi", "nlme", "survival"))'
       - name: Independent R reconstruction and cross-language QC
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
@@ -55,6 +58,8 @@ jobs:
         run: Rscript R/mmrm_cross_package_qc.R
       - name: MMRM cross-package validation gate
         run: python scripts/run_mmrm_cross_validation.py
+      - name: Exploratory time-to-discontinuation survival gate
+        run: Rscript R/tte_retention_analysis.R
       - name: ACTOT primary multiplicity decision gate
         run: python scripts/run_multiplicity.py
       - name: ACTOT estimand and missing-data review gate
@@ -79,6 +84,12 @@ jobs:
         run: |
           files=(
             outputs/analysis_run_note.md
+            outputs/adtte_retention_summary.md
+            outputs/adtte_retention_qc.csv
+            outputs/tte_retention_survival_summary.md
+            outputs/tte_retention_survival_qc.csv
+            outputs/table24_retention_km.csv
+            outputs/table25_retention_pairwise.csv
             outputs/protocol_design_summary.md
             outputs/protocol_design_qc.csv
             outputs/randomisation_summary.md
