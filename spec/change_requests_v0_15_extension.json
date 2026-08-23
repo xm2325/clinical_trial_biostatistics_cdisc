@@ -1,0 +1,39 @@
+{
+  "base_version": "0.14.0",
+  "version": "0.15.0",
+  "declared_impact_additions": {
+    "CR-003": {
+      "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+      "tlfs": ["T23"],
+      "qc": ["outputs/multiplicity_qc.csv"],
+      "documents": ["docs/multiplicity_control.md", "docs/sap_v0_15_multiplicity_addendum.md", "docs/tlf_shells_v0_15_addendum.md"],
+      "specs": ["spec/multiplicity.json"]
+    },
+    "CR-004": {
+      "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+      "tlfs": ["T23"],
+      "qc": ["outputs/multiplicity_qc.csv"]
+    },
+    "CR-005": {
+      "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+      "tlfs": ["T23"],
+      "qc": ["outputs/multiplicity_qc.csv"]
+    }
+  },
+  "changes": [
+    {
+      "change_id": "CR-009",
+      "title": "Primary ACTOT multiplicity rule change",
+      "description": "Illustrative change to the family-wise alpha, number of controlled Week 24 active-versus-placebo hypotheses or Bonferroni decision method.",
+      "rationale": "Tests whether a confirmatory-decision rule change forces review of the multiplicity specification, planning assumptions, primary MMRM input, dedicated QC and T23.",
+      "changed_components": ["primary_multiplicity_assumption"],
+      "declared_impacts": {
+        "analysis_datasets": ["outputs/mmrm_treatment_contrasts.csv"],
+        "tlfs": ["T23"],
+        "qc": ["outputs/mmrm_qc.csv", "outputs/multiplicity_qc.csv"],
+        "documents": ["docs/multiplicity_control.md", "docs/sap_v0_15_multiplicity_addendum.md", "docs/tlf_shells_v0_15_addendum.md"],
+        "specs": ["spec/multiplicity.json", "spec/protocol_design.json"]
+      }
+    }
+  ]
+}
