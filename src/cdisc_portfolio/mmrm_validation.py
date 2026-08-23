@@ -29,9 +29,15 @@ def _require_columns(frame: pd.DataFrame, columns: list[str], label: str) -> Non
         raise ValueError(f"{label} missing required columns: {', '.join(missing)}")
 
 
+def _normalise_text(series: pd.Series) -> pd.Series:
+    return series.fillna("").astype(str).str.strip()
+
+
 def validate_mmrm_cross_package(
     primary: pd.DataFrame,
     independent: pd.DataFrame,
+    primary_analysis: pd.DataFrame,
+    independent_analysis: pd.DataFrame,
     spec: dict[str, Any],
 ) -> ValidationResult:
     if spec.get("version") != "0.16.0":
@@ -39,6 +45,7 @@ def validate_mmrm_cross_package(
 
     target = spec.get("target", {})
     validation = spec.get("validation", {})
+    row_validation = spec.get("row_validation", {})
     visit = target.get("visit")
     primary_covariance = target.get("primary_covariance")
     independent_covariance = target.get("independent_covariance")
@@ -61,8 +68,127 @@ def validate_mmrm_cross_package(
     if bool(validation.get("compare_p_values", False)):
         raise ValueError("v0.16 cross-package validation must not compare p-values")
 
+    key_columns = list(row_validation.get("key_columns", []))
+    exact_columns = list(row_validation.get("exact_columns", []))
+    numeric_columns = list(row_validation.get("numeric_columns", []))
+    row_tol = float(row_validation.get("numeric_abs_tolerance", np.nan))
+    if not key_columns or not exact_columns or not numeric_columns:
+        raise ValueError("row_validation requires non-empty key, exact and numeric column lists")
+    if len(set(key_columns + exact_columns + numeric_columns)) != len(
+        key_columns + exact_columns + numeric_columns
+    ):
+        raise ValueError("row_validation columns must be unique across key/exact/numeric groups")
+    if not np.isfinite(row_tol) or row_tol < 0:
+        raise ValueError("numeric_abs_tolerance must be finite and >= 0")
+
     _require_columns(primary, ["contrast", "AVISIT", "estimate", "SE", "covariance"], "primary source")
     _require_columns(independent, ["contrast", "AVISIT", "estimate", "SE", "covariance", "method"], "independent source")
+    analysis_columns = key_columns + exact_columns + numeric_columns
+    _require_columns(primary_analysis, analysis_columns, "primary analysis dataset")
+    _require_columns(independent_analysis, analysis_columns, "independent analysis dataset")
+
+    pa = primary_analysis[analysis_columns].copy()
+    ia = independent_analysis[analysis_columns].copy()
+    for column in key_columns + exact_columns:
+        pa[column] = _normalise_text(pa[column])
+        ia[column] = _normalise_text(ia[column])
+    for column in numeric_columns:
+        pa[column] = pd.to_numeric(pa[column], errors="coerce")
+        ia[column] = pd.to_numeric(ia[column], errors="coerce")
+
+    qc_rows: list[dict[str, Any]] = []
+    primary_dup = int(pa.duplicated(key_columns, keep=False).sum())
+    independent_dup = int(ia.duplicated(key_columns, keep=False).sum())
+    qc_rows.append(
+        _qc_row(
+            "Primary MMRM analysis keys are unique",
+            primary_dup == 0,
+            f"rows={len(pa)}; duplicate_rows={primary_dup}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Independent MMRM analysis keys are unique",
+            independent_dup == 0,
+            f"rows={len(ia)}; duplicate_rows={independent_dup}",
+        )
+    )
+
+    primary_keys = set(map(tuple, pa[key_columns].to_numpy(dtype=object)))
+    independent_keys = set(map(tuple, ia[key_columns].to_numpy(dtype=object)))
+    missing_from_independent = primary_keys - independent_keys
+    extra_in_independent = independent_keys - primary_keys
+    keys_match = primary_dup == 0 and independent_dup == 0 and not missing_from_independent and not extra_in_independent
+    qc_rows.append(
+        _qc_row(
+            "Primary and independent MMRM analysis key sets match",
+            keys_match,
+            f"primary_keys={len(primary_keys)}; independent_keys={len(independent_keys)}; "
+            f"missing={len(missing_from_independent)}; extra={len(extra_in_independent)}",
+        )
+    )
+
+    row_merge = pd.DataFrame()
+    exact_mismatch_rows = None
+    numeric_finite = False
+    max_row_numeric_diff = None
+    numeric_mismatch_rows = None
+    if keys_match:
+        row_merge = pa.merge(
+            ia,
+            on=key_columns,
+            how="inner",
+            suffixes=("_primary", "_independent"),
+            validate="one_to_one",
+        )
+        exact_flags = []
+        for column in exact_columns:
+            exact_flags.append(
+                row_merge[f"{column}_primary"].astype(str)
+                != row_merge[f"{column}_independent"].astype(str)
+            )
+        exact_mismatch = np.column_stack(exact_flags).any(axis=1)
+        exact_mismatch_rows = int(exact_mismatch.sum())
+
+        primary_numeric = row_merge[
+            [f"{column}_primary" for column in numeric_columns]
+        ].to_numpy(dtype=float)
+        independent_numeric = row_merge[
+            [f"{column}_independent" for column in numeric_columns]
+        ].to_numpy(dtype=float)
+        numeric_finite = bool(
+            np.isfinite(primary_numeric).all() and np.isfinite(independent_numeric).all()
+        )
+        if numeric_finite:
+            numeric_diff = np.abs(primary_numeric - independent_numeric)
+            max_row_numeric_diff = float(numeric_diff.max()) if numeric_diff.size else 0.0
+            numeric_mismatch_rows = int((numeric_diff > row_tol).any(axis=1).sum())
+
+    qc_rows.append(
+        _qc_row(
+            "Primary and independent MMRM exact row fields match",
+            exact_mismatch_rows == 0,
+            "comparison unavailable" if exact_mismatch_rows is None else f"mismatch_rows={exact_mismatch_rows}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Primary and independent MMRM numeric row fields are finite",
+            numeric_finite,
+            f"columns={','.join(numeric_columns)}" if keys_match else "comparison unavailable",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Primary and independent MMRM numeric row fields match within tolerance",
+            numeric_mismatch_rows == 0,
+            (
+                "comparison unavailable"
+                if numeric_mismatch_rows is None
+                else f"mismatch_rows={numeric_mismatch_rows}; max_abs_difference={max_row_numeric_diff:.12g}; tolerance={row_tol:.12g}"
+            ),
+        )
+    )
 
     p = primary[
         (primary["AVISIT"].astype(str) == visit)
@@ -80,7 +206,6 @@ def validate_mmrm_cross_package(
     i["estimate"] = pd.to_numeric(i["estimate"], errors="coerce")
     i["SE"] = pd.to_numeric(i["SE"], errors="coerce")
 
-    qc_rows: list[dict[str, Any]] = []
     qc_rows.append(_qc_row("Primary target has exactly two controlled contrasts", len(p) == 2, f"rows={len(p)}"))
     qc_rows.append(_qc_row("Independent target has exactly two controlled contrasts", len(i) == 2, f"rows={len(i)}"))
     qc_rows.append(
@@ -187,6 +312,15 @@ def validate_mmrm_cross_package(
         "analysis_version": "0.16.0",
         "visit": visit,
         "hypotheses": hypotheses,
+        "analysis_row_numeric_abs_tolerance": row_tol,
+        "primary_analysis_records": int(len(pa)),
+        "independent_analysis_records": int(len(ia)),
+        "primary_analysis_subjects": int(pa["USUBJID"].nunique()) if "USUBJID" in pa.columns else None,
+        "independent_analysis_subjects": int(ia["USUBJID"].nunique()) if "USUBJID" in ia.columns else None,
+        "analysis_key_sets_match": bool(keys_match),
+        "analysis_exact_mismatch_rows": exact_mismatch_rows,
+        "analysis_numeric_mismatch_rows": numeric_mismatch_rows,
+        "max_analysis_numeric_abs_difference": max_row_numeric_diff,
         "estimate_abs_tolerance": estimate_tol,
         "se_abs_tolerance": se_tol,
         "compare_degrees_of_freedom": False,
