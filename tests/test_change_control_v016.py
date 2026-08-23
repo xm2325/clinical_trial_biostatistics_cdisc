@@ -53,6 +53,8 @@ def test_v016_visit_covariance_and_estimand_changes_propagate_to_validation_qc()
         assert "outputs/mmrm_cross_package_validation.csv" in result["required"]["qc"]
         assert "outputs/mmrm_cross_package_qc.csv" in result["required"]["qc"]
         assert "outputs/mmrm_cross_package_validation_metrics.json" in result["required"]["qc"]
+        assert "outputs/mmrm_cross_package_analysis_dataset.csv" in result["required"]["analysis_datasets"]
+        assert "outputs/mmrm_analysis_dataset.csv" in result["required"]["analysis_datasets"]
         assert "outputs/mmrm_treatment_contrasts.csv" in result["required"]["analysis_datasets"]
 
     visit = assess_change(graph, _change_by_id(requests, "CR-003"))
@@ -70,6 +72,8 @@ def test_v016_cr010_requires_validation_spec_docs_inputs_and_qc_but_no_tlf():
     assert result["required"]["tlfs"] == []
     assert result["required"]["analysis_datasets"] == [
         "outputs/adqs_actot_style.csv",
+        "outputs/mmrm_analysis_dataset.csv",
+        "outputs/mmrm_cross_package_analysis_dataset.csv",
         "outputs/mmrm_treatment_contrasts.csv",
     ]
     assert "outputs/mmrm_cross_package_contrasts.csv" in result["required"]["qc"]
@@ -87,6 +91,19 @@ def test_v016_negative_control_detects_omitted_cross_package_qc():
     result = assess_change(graph, change)
     assert not result["passed"]
     assert result["missing"]["qc"] == ["outputs/mmrm_cross_package_qc.csv"]
+
+
+def test_v016_negative_control_detects_omitted_independent_analysis_dataset():
+    graph, requests, _, _ = load_versioned_change_control(ROOT)
+    change = copy.deepcopy(_change_by_id(requests, "CR-010"))
+    change["declared_impacts"]["analysis_datasets"].remove(
+        "outputs/mmrm_cross_package_analysis_dataset.csv"
+    )
+    result = assess_change(graph, change)
+    assert not result["passed"]
+    assert result["missing"]["analysis_datasets"] == [
+        "outputs/mmrm_cross_package_analysis_dataset.csv"
+    ]
 
 
 def test_v016_extensions_reject_wrong_prior_base_version():
