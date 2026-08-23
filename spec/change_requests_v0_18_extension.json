@@ -1,0 +1,32 @@
+{
+  "base_version": "0.17.0",
+  "version": "0.18.0",
+  "declared_impact_additions": {},
+  "changes": [
+    {
+      "change_id": "CR-012",
+      "title": "Analysis metadata or lineage definition change",
+      "description": "Illustrative change to the v0.18 analysis-dataset metadata scope, variable labels/types/roles, origin/derivation rules, source-reference lineage, Define-XML reference package or deterministic XML-export rule.",
+      "rationale": "Tests whether a metadata-definition change forces review of the controlled metadata specification/documentation, all described analysis datasets, executable lineage QC and Define-XML-inspired export without inventing a TLF or altering efficacy/safety inferential families.",
+      "changed_components": ["adam_metadata_definition"],
+      "declared_impacts": {
+        "analysis_datasets": [
+          "outputs/adsl_style.csv",
+          "outputs/adae_style.csv",
+          "outputs/adqs_actot_style.csv",
+          "outputs/adtte_retention_style.csv"
+        ],
+        "tlfs": [],
+        "qc": [
+          "outputs/adam_variable_metadata.json",
+          "outputs/metadata_lineage_validation.csv",
+          "outputs/metadata_lineage_metrics.json",
+          "outputs/define_xml_like_metadata.xml",
+          "outputs/metadata_lineage_summary.md"
+        ],
+        "documents": ["docs/adam_metadata_lineage.md", "docs/qc_plan.md"],
+        "specs": ["spec/adam_metadata_config.json"]
+      }
+    }
+  ]
+}

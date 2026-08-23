@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from cdisc_portfolio.change_control_v017 import run_change_impact_assessment
+from cdisc_portfolio.change_control_v018 import run_change_impact_assessment
 
 
 def main() -> None:
@@ -35,8 +35,7 @@ def main() -> None:
         writer.writerows(rows)
 
     (output_dir / "change_impact_metrics.json").write_text(
-        json.dumps(metrics, indent=2) + "\n",
-        encoding="utf-8",
+        json.dumps(metrics, indent=2) + "\n", encoding="utf-8"
     )
     (output_dir / "change_impact_summary.md").write_text(summary, encoding="utf-8")
 
