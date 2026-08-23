@@ -30,6 +30,8 @@ jobs:
         run: python scripts/run_all.py
       - name: ADTTE-style retention derivation gate
         run: python scripts/run_tte_retention.py
+      - name: ADaM-style variable metadata and lineage gate
+        run: python scripts/run_metadata_lineage.py
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
       - name: Randomisation and kit schedule QC
@@ -86,6 +88,9 @@ jobs:
             outputs/analysis_run_note.md
             outputs/adtte_retention_summary.md
             outputs/adtte_retention_qc.csv
+            outputs/metadata_lineage_summary.md
+            outputs/metadata_lineage_validation.csv
+            outputs/define_xml_like_metadata.xml
             outputs/tte_retention_survival_summary.md
             outputs/tte_retention_survival_qc.csv
             outputs/table24_retention_km.csv
