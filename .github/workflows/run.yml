@@ -46,6 +46,8 @@ jobs:
         run: Rscript R/independent_qc.R
       - name: ACTOT longitudinal MMRM
         run: Rscript R/mmrm_analysis.R
+      - name: ACTOT primary multiplicity decision gate
+        run: python scripts/run_multiplicity.py
       - name: ACTOT estimand and missing-data review gate
         run: python scripts/run_estimand_review.py
       - name: ACTOT fixed-delta MNAR sensitivity gate
@@ -66,96 +68,41 @@ jobs:
       - name: Show measurable run summary
         if: always()
         run: |
-          test -f outputs/analysis_run_note.md && cat outputs/analysis_run_note.md || true
-          echo "--- Protocol design and sample-size summary ---"
-          test -f outputs/protocol_design_summary.md && cat outputs/protocol_design_summary.md || true
-          echo "--- Protocol design QC ---"
-          test -f outputs/protocol_design_qc.csv && cat outputs/protocol_design_qc.csv || true
-          echo "--- Randomisation and initial-kit schedule ---"
-          test -f outputs/randomisation_summary.md && cat outputs/randomisation_summary.md || true
-          echo "--- Randomisation QC ---"
-          test -f outputs/randomisation_qc.csv && cat outputs/randomisation_qc.csv || true
-          echo "--- Randomisation balance ---"
-          test -f outputs/randomisation_balance.csv && cat outputs/randomisation_balance.csv || true
-          echo "--- ACTOT estimand and missing-data summary ---"
-          test -f outputs/estimand_summary.md && cat outputs/estimand_summary.md || true
-          echo "--- ACTOT missingness by visit ---"
-          test -f outputs/table16_actot_missingness_by_visit.csv && cat outputs/table16_actot_missingness_by_visit.csv || true
-          echo "--- Week 24 missingness by disposition ---"
-          test -f outputs/table17_week24_missingness_by_disposition.csv && cat outputs/table17_week24_missingness_by_disposition.csv || true
-          echo "--- Estimand review checks ---"
-          test -f outputs/estimand_review.csv && cat outputs/estimand_review.csv || true
-          echo "--- ACTOT fixed-delta MNAR sensitivity ---"
-          test -f outputs/mnar_sensitivity_summary.md && cat outputs/mnar_sensitivity_summary.md || true
-          echo "--- Directional tipping points ---"
-          test -f outputs/table19_actot_directional_tipping_points.csv && cat outputs/table19_actot_directional_tipping_points.csv || true
-          echo "--- MNAR sensitivity QC ---"
-          test -f outputs/mnar_sensitivity_qc.csv && cat outputs/mnar_sensitivity_qc.csv || true
-          echo "--- rbmi subject-level MI summary ---"
-          test -f outputs/rbmi_mi_summary.md && cat outputs/rbmi_mi_summary.md || true
-          echo "--- rbmi MAR pairwise results ---"
-          test -f outputs/table20_rbmi_mar_pairwise.csv && cat outputs/table20_rbmi_mar_pairwise.csv || true
-          echo "--- rbmi delta sensitivity results ---"
-          test -f outputs/table21_rbmi_delta_sensitivity.csv && cat outputs/table21_rbmi_delta_sensitivity.csv || true
-          echo "--- rbmi MI QC ---"
-          test -f outputs/rbmi_mi_qc.csv && cat outputs/rbmi_mi_qc.csv || true
-          echo "--- rbmi Monte Carlo precision QC ---"
-          test -f outputs/rbmi_mcse_qc.csv && cat outputs/rbmi_mcse_qc.csv || true
-          test -f outputs/rbmi_mcse_diagnostics.csv && cat outputs/rbmi_mcse_diagnostics.csv || true
-          echo "--- rbmi draw diagnostics ---"
-          test -f outputs/rbmi_draw_diagnostics.csv && cat outputs/rbmi_draw_diagnostics.csv || true
-          echo "--- rbmi reference-based MI summary ---"
-          test -f outputs/rbmi_reference_summary.md && cat outputs/rbmi_reference_summary.md || true
-          echo "--- rbmi reference-based MI results ---"
-          test -f outputs/table22_rbmi_reference_based.csv && cat outputs/table22_rbmi_reference_based.csv || true
-          echo "--- rbmi reference-based ICE counts ---"
-          test -f outputs/rbmi_reference_ice_counts.csv && cat outputs/rbmi_reference_ice_counts.csv || true
-          echo "--- rbmi reference-based MCSE QC ---"
-          test -f outputs/rbmi_reference_mcse_qc.csv && cat outputs/rbmi_reference_mcse_qc.csv || true
-          echo "--- rbmi reference-based QC ---"
-          test -f outputs/rbmi_reference_qc.csv && cat outputs/rbmi_reference_qc.csv || true
-          echo "--- rbmi reference-based vs v0.13 MAR diagnostic ---"
-          test -f outputs/rbmi_reference_vs_v013_mar.csv && cat outputs/rbmi_reference_vs_v013_mar.csv || true
-          echo "--- rbmi vs primary MMRM diagnostic ---"
-          test -f outputs/rbmi_vs_mmrm_week24.csv && cat outputs/rbmi_vs_mmrm_week24.csv || true
-          echo "--- Analysis-dataset and TLF reviewer summary ---"
-          test -f outputs/analysis_dataset_review_summary.md && cat outputs/analysis_dataset_review_summary.md || true
-          echo "--- Analysis-dataset and TLF reviewer checks ---"
-          test -f outputs/analysis_dataset_review.csv && cat outputs/analysis_dataset_review.csv || true
-          echo "--- Statistical change-control summary ---"
-          test -f outputs/change_impact_summary.md && cat outputs/change_impact_summary.md || true
-          echo "--- Statistical change-control detail ---"
-          test -f outputs/change_impact_assessment.csv && cat outputs/change_impact_assessment.csv || true
-          echo "--- Independent R QC summary ---"
-          test -f outputs/r_independent_qc_summary.md && cat outputs/r_independent_qc_summary.md || true
-          echo "--- ACTOT MMRM summary ---"
-          test -f outputs/mmrm_run_summary.md && cat outputs/mmrm_run_summary.md || true
-          echo "--- SAP-to-TLF traceability summary ---"
-          test -f outputs/traceability_summary.md && cat outputs/traceability_summary.md || true
-          echo "--- SAP-to-TLF validation detail ---"
-          test -f outputs/traceability_validation.csv && cat outputs/traceability_validation.csv || true
-          echo "--- MMRM QC ---"
-          test -f outputs/mmrm_qc.csv && cat outputs/mmrm_qc.csv || true
-          echo "--- MMRM model diagnostics ---"
-          test -f outputs/mmrm_model_diagnostics.csv && cat outputs/mmrm_model_diagnostics.csv || true
-          echo "--- MMRM primary contrasts ---"
-          test -f outputs/mmrm_treatment_contrasts.csv && cat outputs/mmrm_treatment_contrasts.csv || true
-          echo "--- MMRM covariance sensitivity ---"
-          test -f outputs/mmrm_covariance_sensitivity.csv && cat outputs/mmrm_covariance_sensitivity.csv || true
-          echo "--- MMRM vs observed Week 24 ANCOVA ---"
-          test -f outputs/mmrm_vs_week24_ancova.csv && cat outputs/mmrm_vs_week24_ancova.csv || true
-          echo "--- Independent R QC checks ---"
-          test -f outputs/r_independent_qc.csv && cat outputs/r_independent_qc.csv || true
-          echo "--- R ACTOT ANCOVA contrasts ---"
-          test -f outputs/r_actot_ancova_contrasts.csv && cat outputs/r_actot_ancova_contrasts.csv || true
-          echo "--- ADQSADAS reference profile ---"
-          test -f outputs/adqsadas_reference_profile.json && cat outputs/adqsadas_reference_profile.json || true
-          echo "--- CIBIC source/reference mismatch trace ---"
-          test -f outputs/adqscibc_mismatch_source_trace.csv && cat outputs/adqscibc_mismatch_source_trace.csv || true
-          echo "--- Python ACTOT ANCOVA contrasts ---"
-          test -f outputs/table10_actot_ancova_contrasts.csv && cat outputs/table10_actot_ancova_contrasts.csv || true
-          echo "--- Python QC ---"
-          test -f outputs/qc_report.csv && cat outputs/qc_report.csv || true
+          files=(
+            outputs/analysis_run_note.md
+            outputs/protocol_design_summary.md
+            outputs/protocol_design_qc.csv
+            outputs/randomisation_summary.md
+            outputs/randomisation_qc.csv
+            outputs/r_independent_qc_summary.md
+            outputs/mmrm_run_summary.md
+            outputs/mmrm_qc.csv
+            outputs/mmrm_treatment_contrasts.csv
+            outputs/multiplicity_summary.md
+            outputs/table23_actot_multiplicity.csv
+            outputs/multiplicity_qc.csv
+            outputs/estimand_summary.md
+            outputs/estimand_review.csv
+            outputs/mnar_sensitivity_summary.md
+            outputs/mnar_sensitivity_qc.csv
+            outputs/rbmi_mi_summary.md
+            outputs/rbmi_mcse_qc.csv
+            outputs/rbmi_reference_summary.md
+            outputs/table22_rbmi_reference_based.csv
+            outputs/rbmi_reference_qc.csv
+            outputs/analysis_dataset_review_summary.md
+            outputs/analysis_dataset_review.csv
+            outputs/change_impact_summary.md
+            outputs/change_impact_assessment.csv
+            outputs/traceability_summary.md
+            outputs/traceability_validation.csv
+          )
+          for f in "${files[@]}"; do
+            if [ -f "$f" ]; then
+              echo "--- $f ---"
+              cat "$f"
+            fi
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
