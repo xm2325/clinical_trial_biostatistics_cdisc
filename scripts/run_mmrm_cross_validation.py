@@ -26,19 +26,36 @@ def main() -> None:
     spec = json.loads(spec_bytes.decode("utf-8"))
     primary_path = ROOT / spec["primary_source"]
     independent_path = ROOT / spec["independent_source"]
-    if not primary_path.exists():
-        raise FileNotFoundError(f"Missing primary MMRM source: {primary_path}")
-    if not independent_path.exists():
-        raise FileNotFoundError(f"Missing independent MMRM source: {independent_path}")
+    primary_analysis_path = ROOT / spec["primary_analysis_dataset"]
+    independent_analysis_path = ROOT / spec["independent_analysis_dataset"]
+    required_paths = {
+        "primary MMRM contrast source": primary_path,
+        "independent MMRM contrast source": independent_path,
+        "primary MMRM analysis dataset": primary_analysis_path,
+        "independent MMRM analysis dataset": independent_analysis_path,
+    }
+    for label, path in required_paths.items():
+        if not path.exists():
+            raise FileNotFoundError(f"Missing {label}: {path}")
 
     primary = pd.read_csv(primary_path)
     independent = pd.read_csv(independent_path)
-    result = validate_mmrm_cross_package(primary, independent, spec)
+    primary_analysis = pd.read_csv(primary_analysis_path)
+    independent_analysis = pd.read_csv(independent_analysis_path)
+    result = validate_mmrm_cross_package(
+        primary,
+        independent,
+        primary_analysis,
+        independent_analysis,
+        spec,
+    )
     result.metrics.update(
         {
             "validation_spec_sha256": hashlib.sha256(spec_bytes).hexdigest(),
             "primary_source_sha256": _sha256(primary_path),
             "independent_source_sha256": _sha256(independent_path),
+            "primary_analysis_dataset_sha256": _sha256(primary_analysis_path),
+            "independent_analysis_dataset_sha256": _sha256(independent_analysis_path),
         }
     )
 
@@ -57,8 +74,14 @@ def main() -> None:
         "",
         "- Primary implementation: `mmrm::mmrm`, REML, unstructured covariance, Satterthwaite inference.",
         "- Independent reconstruction: `nlme::gls`, REML, `corSymm + varIdent` unstructured covariance.",
-        "- Validation scope: Week 24 active-vs-placebo point estimates and model-based standard errors.",
+        "- Validation scope: independent analysis-row identity plus Week 24 active-vs-placebo point estimates and model-based standard errors.",
         "- Degrees of freedom and p-values are not compared because the inferential df methods differ by design.",
+        f"- Primary/independent analysis rows: {result.metrics['primary_analysis_records']}/{result.metrics['independent_analysis_records']}.",
+        f"- Primary/independent analysis subjects: {result.metrics['primary_analysis_subjects']}/{result.metrics['independent_analysis_subjects']}.",
+        f"- Analysis key sets match: {result.metrics['analysis_key_sets_match']}.",
+        f"- Analysis exact-field mismatch rows: {result.metrics['analysis_exact_mismatch_rows']}.",
+        f"- Analysis numeric-field mismatch rows: {result.metrics['analysis_numeric_mismatch_rows']}.",
+        f"- Maximum analysis-row numeric absolute difference: {result.metrics['max_analysis_numeric_abs_difference']}.",
         f"- Estimate absolute tolerance: {result.metrics['estimate_abs_tolerance']:.6g}.",
         f"- SE absolute tolerance: {result.metrics['se_abs_tolerance']:.6g}.",
         f"- Required QC: {result.metrics['required_passed']}/{result.metrics['required_checks']} passed.",
@@ -67,6 +90,8 @@ def main() -> None:
         f"- Validation spec SHA256: `{result.metrics['validation_spec_sha256']}`.",
         f"- Primary contrast source SHA256: `{result.metrics['primary_source_sha256']}`.",
         f"- Independent contrast source SHA256: `{result.metrics['independent_source_sha256']}`.",
+        f"- Primary analysis-dataset SHA256: `{result.metrics['primary_analysis_dataset_sha256']}`.",
+        f"- Independent analysis-dataset SHA256: `{result.metrics['independent_analysis_dataset_sha256']}`.",
         "",
         "## Comparison",
         "",
