@@ -1,0 +1,46 @@
+{
+  "version": "0.17.0",
+  "parameter": {
+    "PARAM": "Time to Study Discontinuation (days)",
+    "PARAMCD": "TTDISC",
+    "origin_variable": "TRTSDT",
+    "event_or_censor_variable": "EOSDT",
+    "duration_formula": "ADT - STARTDT + 1"
+  },
+  "population": {
+    "randomised_flag": "RANDFL",
+    "required_value": "Y",
+    "treatment_arms": [
+      "Placebo",
+      "Xanomeline Low Dose",
+      "Xanomeline High Dose"
+    ]
+  },
+  "event_rule": {
+    "condition_variable": "DCSFL",
+    "condition_value": "Y",
+    "CNSR": 0,
+    "description_source": "EOSDECOD"
+  },
+  "censor_rule": {
+    "condition_variable": "COMPLFL",
+    "condition_value": "Y",
+    "CNSR": 1,
+    "EVNTDESC": "STUDY COMPLETED"
+  },
+  "analysis": {
+    "km_timepoints_days": [56, 112, 168, 182],
+    "cox_ties": "efron",
+    "ph_diagnostic": "cox.zph",
+    "alpha": 0.05,
+    "pairwise_active_vs_placebo": true,
+    "multiplicity_adjustment": "none; exploratory retention analysis"
+  },
+  "traceability": {
+    "source_dataset": "outputs/adsl_style.csv",
+    "event_date_source": "ADSL.EOSDT",
+    "origin_date_source": "ADSL.TRTSDT",
+    "event_status_source": "ADSL.DCSFL/COMPLFL"
+  },
+  "evidence_boundary": "Exploratory public-data time-to-study-discontinuation analysis for portfolio evidence. This is an ADTTE-style BDS exercise, not a sponsor-approved endpoint, formal ADaM-conformant submission dataset, efficacy analysis, or regulatory claim."
+}
