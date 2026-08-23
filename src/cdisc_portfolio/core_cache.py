@@ -142,9 +142,11 @@ def audit_core_cache(
 
     rules_dictionary = cache_dir / "rules_dictionary.pkl"
     rules_data = cache_dir / "rules.pkl"
-    ruleset_keys = _ruleset_keys_from_dictionary(rules_dictionary) if rules_dictionary.is_file() else []
-    dictionary_core_ids = _core_ids_from_pickle(rules_dictionary) if rules_dictionary.is_file() else []
-    rules_data_core_ids = _core_ids_from_pickle(rules_data) if rules_data.is_file() else []
+    rules_dictionary_ready = rules_dictionary.is_file() and rules_dictionary.stat().st_size > 5
+    rules_data_ready = rules_data.is_file() and rules_data.stat().st_size > 5
+    ruleset_keys = _ruleset_keys_from_dictionary(rules_dictionary) if rules_dictionary_ready else []
+    dictionary_core_ids = _core_ids_from_pickle(rules_dictionary) if rules_dictionary_ready else []
+    rules_data_core_ids = _core_ids_from_pickle(rules_data) if rules_data_ready else []
     requested_ruleset = f"{core_cfg.get('standard')}/{core_cfg.get('version')}"
     requested_ruleset_present = requested_ruleset in ruleset_keys
     related_rulesets = [
