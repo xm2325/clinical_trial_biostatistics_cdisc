@@ -170,9 +170,9 @@ names(arm_counts) <- expected_arms
 median_metrics <- lapply(seq_len(nrow(median_rows)), function(i) {
   list(
     arm = median_rows$TRT01A[i],
-    median_days = if (is.finite(median_rows$median_days[i])) median_rows$median_days[i] else NULL,
-    lower = if (is.finite(median_rows$median_ci95_lower[i])) median_rows$median_ci95_lower[i] else NULL,
-    upper = if (is.finite(median_rows$median_ci95_upper[i])) median_rows$median_ci95_upper[i] else NULL
+    median_days = if (is.finite(median_rows$median_days[i])) median_rows$median_days[i] else NA_real_,
+    lower = if (is.finite(median_rows$median_ci95_lower[i])) median_rows$median_ci95_lower[i] else NA_real_,
+    upper = if (is.finite(median_rows$median_ci95_upper[i])) median_rows$median_ci95_upper[i] else NA_real_
   )
 })
 
