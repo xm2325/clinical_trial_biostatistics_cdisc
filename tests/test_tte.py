@@ -33,6 +33,7 @@ def _spec():
             "condition_value": "Y",
             "CNSR": 0,
             "description_source": "EOSDECOD",
+            "description_fallback_source": "EOSTERM",
         },
         "censor_rule": {
             "condition_variable": "COMPLFL",
@@ -109,19 +110,47 @@ def _adsl():
 def test_retention_adtte_derives_event_censor_and_duration():
     result = derive_retention_adtte(_adsl(), _spec())
     assert result.metrics["all_required_passed"] is True
+    assert result.metrics["required_checks"] == 14
     assert result.metrics["subjects"] == 3
     assert result.metrics["events"] == 2
     assert result.metrics["censored"] == 1
     out = result.dataset.set_index("USUBJID")
     assert out.loc["01", "CNSR"] == 1
     assert out.loc["01", "EVNTDESC"] == "STUDY COMPLETED"
+    assert out.loc["01", "CNSRSRC"] == "ADSL.COMPLFL"
     assert out.loc["02", "CNSR"] == 0
     assert out.loc["02", "EVNTDESC"] == "ADVERSE EVENT"
+    assert out.loc["02", "CNSRSRC"] == "ADSL.DCSFL"
+    assert out.loc["02", "EVNTSRC"] == "ADSL.EOSDECOD"
     assert out.loc["02", "AVAL"] == 30
     assert out.loc["03", "AVAL"] == 60
     assert out.loc["02", "PARAMCD"] == "TTDISC"
     assert out.loc["02", "STARTSRC"] == "ADSL.TRTSDT"
     assert out.loc["02", "ADTSRC"] == "ADSL.EOSDT"
+
+
+def test_retention_adtte_follows_specified_status_and_description_columns():
+    adsl = _adsl().rename(
+        columns={
+            "DCSFL": "DISCFLAG",
+            "COMPLFL": "DONEFLAG",
+            "EOSDECOD": "DISCREASON",
+            "EOSTERM": "DISCREASON_FALLBACK",
+        }
+    )
+    spec = copy.deepcopy(_spec())
+    spec["event_rule"]["condition_variable"] = "DISCFLAG"
+    spec["event_rule"]["description_source"] = "DISCREASON"
+    spec["event_rule"]["description_fallback_source"] = "DISCREASON_FALLBACK"
+    spec["censor_rule"]["condition_variable"] = "DONEFLAG"
+
+    result = derive_retention_adtte(adsl, spec)
+    assert result.metrics["all_required_passed"] is True
+    out = result.dataset.set_index("USUBJID")
+    assert out.loc["02", "CNSR"] == 0
+    assert out.loc["02", "CNSRSRC"] == "ADSL.DISCFLAG"
+    assert out.loc["02", "EVNTSRC"] == "ADSL.DISCREASON"
+    assert out.loc["01", "CNSRSRC"] == "ADSL.DONEFLAG"
 
 
 def test_retention_adtte_fails_partition_when_discontinued_and_completed():
