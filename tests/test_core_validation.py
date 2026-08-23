@@ -12,6 +12,7 @@ def _cfg() -> dict:
         "core": {
             "repository": "cdisc-org/cdisc-rules-engine",
             "commit": "test-commit",
+            "cache_commit": "test-cache-commit",
             "standard": "adamig",
             "version": "1-3",
             "allowed_statuses": ["SUCCESS", "ISSUE REPORTED", "SKIPPED", "EXECUTION ERROR"],
@@ -71,6 +72,14 @@ def test_all_skipped_is_blocking() -> None:
     assert metrics["rules_executed"] == 0
 
 
+def test_empty_rules_report_is_blocking_but_parseable() -> None:
+    metrics, checks = triage_core_report(_report([]), _cfg(), cli_exit_code=0)
+    assert metrics["all_passed"] is False
+    assert metrics["rules_total"] == 0
+    assert metrics["rules_executed"] == 0
+    assert any(row["check"] == "CORE Rules_Report is non-empty" and not row["passed"] for row in checks)
+
+
 def test_unknown_status_is_blocking() -> None:
     metrics, _ = triage_core_report(_report(["SUCCESS", "MYSTERY"]), _cfg(), cli_exit_code=0)
     assert metrics["all_passed"] is False
@@ -102,6 +111,22 @@ def test_write_outputs_retains_raw_report_and_machine_evidence(tmp_path: Path) -
     assert (tmp_path / "outputs" / "core_validation_qc.csv").is_file()
     assert (tmp_path / "outputs" / "core_validation_metrics.json").is_file()
     assert (tmp_path / "outputs" / "core_validation_summary.md").is_file()
+
+
+def test_zero_rule_report_writes_failure_evidence_before_raising(tmp_path: Path) -> None:
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "outputs").mkdir()
+    (tmp_path / "spec" / "standards_validation_v0_19.json").write_text(
+        json.dumps(_cfg()), encoding="utf-8"
+    )
+    report_path = tmp_path / "core_report.json"
+    report_path.write_text(json.dumps(_report([])), encoding="utf-8")
+    with pytest.raises(ValueError, match="CORE triage gate failed"):
+        write_core_outputs(tmp_path, report_path, cli_exit_code=0)
+    metrics = json.loads((tmp_path / "outputs" / "core_validation_metrics.json").read_text(encoding="utf-8"))
+    assert metrics["rules_total"] == 0
+    assert metrics["all_passed"] is False
+    assert (tmp_path / "outputs" / "core_rules_report.csv").is_file()
 
 
 def test_write_outputs_raises_after_writing_failed_qc(tmp_path: Path) -> None:
