@@ -1,127 +1,27 @@
 {
-  "T01": {
-    "output_file": "outputs/table1_demographics.csv",
-    "required_columns": ["TRT01A", "Statistic", "Value"],
-    "min_rows": 1
-  },
-  "T02": {
-    "output_file": "outputs/table2_disposition.csv",
-    "required_columns": ["TRT01A", "Statistic", "Value"],
-    "min_rows": 1
-  },
-  "T03": {
-    "output_file": "outputs/table3_exposure.csv",
-    "required_columns": ["TRT01A", "Statistic", "Value"],
-    "min_rows": 1
-  },
-  "T04": {
-    "output_file": "outputs/table4_teae_overview.csv",
-    "required_columns": ["TRT01A", "Statistic", "Value"],
-    "min_rows": 1
-  },
-  "T05": {
-    "output_file": "outputs/table5_teae_soc_pt.csv",
-    "required_columns": ["AEBODSYS", "AEDECOD", "TRT01A", "n", "denom", "n_pct"],
-    "min_rows": 1
-  },
-  "T06": {
-    "output_file": "outputs/table6_teae_severity.csv",
-    "required_columns": ["TRT01A", "Severity", "n", "denom", "n_pct"],
-    "min_rows": 9
-  },
-  "T07": {
-    "output_file": "outputs/table7_teae_risk_difference.csv",
-    "required_columns": ["comparison", "n_arm", "n_placebo", "risk_arm", "risk_placebo", "risk_difference", "ci95_lower", "ci95_upper", "fisher_p"],
-    "min_rows": 2
-  },
-  "T08": {
-    "output_file": "outputs/table8_actot_descriptive.csv",
-    "required_columns": ["TRT01A", "n", "baseline_mean", "baseline_sd", "week24_mean", "week24_sd", "change_mean", "change_sd"],
-    "min_rows": 3
-  },
-  "T09": {
-    "output_file": "outputs/table9_actot_lsmeans.csv",
-    "required_columns": ["analysis", "TRT01A", "n", "lsmean_week24", "se", "ci95_lower", "ci95_upper", "baseline_reference"],
-    "min_rows": 6
-  },
-  "T10": {
-    "output_file": "outputs/table10_actot_ancova_contrasts.csv",
-    "required_columns": ["analysis", "comparison", "n_total", "estimate", "se", "ci95_lower", "ci95_upper", "p_value", "df", "baseline_reference"],
-    "min_rows": 4
-  },
-  "T11": {
-    "output_file": "outputs/mmrm_lsmeans.csv",
-    "required_columns": ["TRT01A", "AVISIT", "emmean", "SE", "df", "lower.CL", "upper.CL", "covariance"],
-    "min_rows": 9
-  },
-  "T12": {
-    "output_file": "outputs/mmrm_treatment_contrasts.csv",
-    "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"],
-    "min_rows": 6
-  },
-  "T13": {
-    "output_file": "outputs/mmrm_covariance_sensitivity.csv",
-    "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"],
-    "min_rows": 12
-  },
-  "T14": {
-    "output_file": "outputs/mmrm_model_diagnostics.csv",
-    "required_columns": ["model", "covariance", "inference", "df_method", "observations", "subjects", "logLik", "AIC", "BIC", "optimizer", "fit_returned"],
-    "min_rows": 2
-  },
-  "T15": {
-    "output_file": "outputs/mmrm_vs_week24_ancova.csv",
-    "required_columns": ["comparison", "mmrm_estimate", "mmrm_se", "mmrm_ci95_lower", "mmrm_ci95_upper", "mmrm_p_value", "ancova_estimate", "ancova_se", "ancova_ci95_lower", "ancova_ci95_upper", "ancova_p_value", "estimate_difference_mmrm_minus_ancova"],
-    "min_rows": 2
-  },
-  "T16": {
-    "output_file": "outputs/table16_actot_missingness_by_visit.csv",
-    "required_columns": ["TRT01A", "AVISIT", "nominal_day", "target_n", "observed_n", "missing_n", "missing_pct", "discontinued_before_or_on_visit_n", "missing_with_prior_discontinuation_n", "missing_without_prior_discontinuation_n", "observed_after_discontinuation_n"],
-    "min_rows": 9
-  },
-  "T17": {
-    "output_file": "outputs/table17_week24_missingness_by_disposition.csv",
-    "required_columns": ["TRT01A", "category", "n", "denominator_missing_week24", "pct_of_missing"],
-    "min_rows": 1
-  },
-  "T18": {
-    "output_file": "outputs/table18_actot_delta_sensitivity.csv",
-    "required_columns": ["scenario_id", "comparison", "active_arm", "delta", "placebo_missing_prop", "active_missing_prop", "contrast_shift_per_delta", "primary_estimate", "shifted_estimate", "SE_fixed_delta", "df", "lower_CL_fixed_delta", "upper_CL_fixed_delta", "p_value_fixed_delta", "direction"],
-    "min_rows": 78
-  },
-  "T19": {
-    "output_file": "outputs/table19_actot_directional_tipping_points.csv",
-    "required_columns": ["scenario_id", "comparison", "active_arm", "contrast_shift_per_delta", "primary_estimate", "primary_p_value", "direction_tipping_delta", "tipping_within_grid", "first_grid_delta_nonnegative", "significance_tipping_status"],
-    "min_rows": 6
-  },
-  "T20": {
-    "output_file": "outputs/table20_rbmi_mar_pairwise.csv",
-    "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations"],
-    "min_rows": 2
-  },
-  "T21": {
-    "output_file": "outputs/table21_rbmi_delta_sensitivity.csv",
-    "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "scenario_id", "scenario_label", "active_delta", "placebo_delta", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations", "estimate_change_from_MAR"],
-    "min_rows": 8
-  },
-  "T22": {
-    "output_file": "outputs/table22_rbmi_reference_based.csv",
-    "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "strategy_id", "strategy_label", "active_discontinuers", "active_ice_subjects", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations", "estimate_change_from_MAR", "mcse_estimate_to_se_ratio", "mcse_pass"],
-    "min_rows": 8
-  },
-  "T23": {
-    "output_file": "outputs/table23_actot_multiplicity.csv",
-    "required_columns": ["family_id", "hypothesis_id", "contrast", "endpoint", "visit", "covariance", "estimate", "SE", "df", "raw_p_value", "adjustment_method", "family_alpha", "comparison_count", "local_alpha", "adjusted_p_value", "reject_familywise"],
-    "min_rows": 2
-  },
-  "T24": {
-    "output_file": "outputs/table24_retention_km.csv",
-    "required_columns": ["TRT01A", "time_days", "n_risk", "retention_probability", "standard_error", "ci95_lower", "ci95_upper"],
-    "min_rows": 12
-  },
-  "T25": {
-    "output_file": "outputs/table25_retention_pairwise.csv",
-    "required_columns": ["comparison", "active_arm", "reference_arm", "hazard_ratio", "ci95_lower", "ci95_upper", "cox_p_value", "logrank_chisq", "logrank_p_value", "ph_test_p_value", "ph_diagnostic", "interpretation"],
-    "min_rows": 2
-  }
+  "T01": {"output_file": "outputs/table1_demographics.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T02": {"output_file": "outputs/table2_disposition.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T03": {"output_file": "outputs/table3_exposure.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T04": {"output_file": "outputs/table4_teae_overview.csv", "required_columns": ["TRT01A", "Statistic", "Value"], "min_rows": 1},
+  "T05": {"output_file": "outputs/table5_teae_soc_pt.csv", "required_columns": ["AEBODSYS", "AEDECOD", "TRT01A", "n", "denom", "n_pct"], "min_rows": 1},
+  "T06": {"output_file": "outputs/table6_teae_severity.csv", "required_columns": ["TRT01A", "Severity", "n", "denom", "n_pct"], "min_rows": 9},
+  "T07": {"output_file": "outputs/table7_teae_risk_difference.csv", "required_columns": ["comparison", "n_arm", "n_placebo", "risk_arm", "risk_placebo", "risk_difference", "ci95_lower", "ci95_upper", "fisher_p"], "min_rows": 2},
+  "T08": {"output_file": "outputs/table8_actot_descriptive.csv", "required_columns": ["TRT01A", "n", "baseline_mean", "baseline_sd", "week24_mean", "week24_sd", "change_mean", "change_sd"], "min_rows": 3},
+  "T09": {"output_file": "outputs/table9_actot_lsmeans.csv", "required_columns": ["analysis", "TRT01A", "n", "lsmean_week24", "se", "ci95_lower", "ci95_upper", "baseline_reference"], "min_rows": 6},
+  "T10": {"output_file": "outputs/table10_actot_ancova_contrasts.csv", "required_columns": ["analysis", "comparison", "n_total", "estimate", "se", "ci95_lower", "ci95_upper", "p_value", "df", "baseline_reference"], "min_rows": 4},
+  "T11": {"output_file": "outputs/mmrm_lsmeans.csv", "required_columns": ["TRT01A", "AVISIT", "emmean", "SE", "df", "lower.CL", "upper.CL", "covariance"], "min_rows": 9},
+  "T12": {"output_file": "outputs/mmrm_treatment_contrasts.csv", "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"], "min_rows": 6},
+  "T13": {"output_file": "outputs/mmrm_covariance_sensitivity.csv", "required_columns": ["contrast", "AVISIT", "estimate", "SE", "df", "lower.CL", "upper.CL", "t.ratio", "p.value", "covariance"], "min_rows": 12},
+  "T14": {"output_file": "outputs/mmrm_model_diagnostics.csv", "required_columns": ["model", "covariance", "inference", "df_method", "observations", "subjects", "logLik", "AIC", "BIC", "optimizer", "fit_returned"], "min_rows": 2},
+  "T15": {"output_file": "outputs/mmrm_vs_week24_ancova.csv", "required_columns": ["comparison", "mmrm_estimate", "mmrm_se", "mmrm_ci95_lower", "mmrm_ci95_upper", "mmrm_p_value", "ancova_estimate", "ancova_se", "ancova_ci95_lower", "ancova_ci95_upper", "ancova_p_value", "estimate_difference_mmrm_minus_ancova"], "min_rows": 2},
+  "T16": {"output_file": "outputs/table16_actot_missingness_by_visit.csv", "required_columns": ["TRT01A", "AVISIT", "nominal_day", "target_n", "observed_n", "missing_n", "missing_pct", "discontinued_before_or_on_visit_n", "missing_with_prior_discontinuation_n", "missing_without_prior_discontinuation_n", "observed_after_discontinuation_n"], "min_rows": 9},
+  "T17": {"output_file": "outputs/table17_week24_missingness_by_disposition.csv", "required_columns": ["TRT01A", "category", "n", "denominator_missing_week24", "pct_of_missing"], "min_rows": 1},
+  "T18": {"output_file": "outputs/table18_actot_delta_sensitivity.csv", "required_columns": ["scenario_id", "comparison", "active_arm", "delta", "placebo_missing_prop", "active_missing_prop", "contrast_shift_per_delta", "primary_estimate", "shifted_estimate", "SE_fixed_delta", "df", "lower_CL_fixed_delta", "upper_CL_fixed_delta", "p_value_fixed_delta", "direction"], "min_rows": 78},
+  "T19": {"output_file": "outputs/table19_actot_directional_tipping_points.csv", "required_columns": ["scenario_id", "comparison", "active_arm", "contrast_shift_per_delta", "primary_estimate", "primary_p_value", "direction_tipping_delta", "tipping_within_grid", "first_grid_delta_nonnegative", "significance_tipping_status"], "min_rows": 6},
+  "T20": {"output_file": "outputs/table20_rbmi_mar_pairwise.csv", "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations"], "min_rows": 2},
+  "T21": {"output_file": "outputs/table21_rbmi_delta_sensitivity.csv", "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "scenario_id", "scenario_label", "active_delta", "placebo_delta", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations", "estimate_change_from_MAR"], "min_rows": 8},
+  "T22": {"output_file": "outputs/table22_rbmi_reference_based.csv", "required_columns": ["comparison_id", "comparison", "active_arm", "reference_arm", "strategy_id", "strategy_label", "active_discontinuers", "active_ice_subjects", "estimate_active_minus_placebo", "SE", "ci95_lower", "ci95_upper", "p_value", "mcse_estimate", "mcse_se", "pool_method", "imputations", "estimate_change_from_MAR", "mcse_estimate_to_se_ratio", "mcse_pass"], "min_rows": 8},
+  "T23": {"output_file": "outputs/table23_actot_multiplicity.csv", "required_columns": ["family_id", "hypothesis_id", "contrast", "endpoint", "visit", "covariance", "estimate", "SE", "df", "raw_p_value", "adjustment_method", "family_alpha", "comparison_count", "local_alpha", "adjusted_p_value", "reject_familywise"], "min_rows": 2},
+  "T24": {"output_file": "outputs/table24_retention_km.csv", "required_columns": ["ANLTRT", "time_days", "n_risk", "retention_probability", "standard_error", "ci95_lower", "ci95_upper"], "min_rows": 12},
+  "T25": {"output_file": "outputs/table25_retention_pairwise.csv", "required_columns": ["comparison", "active_arm", "reference_arm", "analysis_treatment", "hazard_ratio", "ci95_lower", "ci95_upper", "cox_p_value", "logrank_chisq", "logrank_p_value", "ph_test_p_value", "ph_diagnostic", "interpretation"], "min_rows": 2}
 }
