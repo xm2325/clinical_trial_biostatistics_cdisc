@@ -44,6 +44,8 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     end_var = str(parameter.get("event_or_censor_variable", "")).strip()
     randomised_flag = str(population.get("randomised_flag", "")).strip()
     randomised_value = str(population.get("required_value", "")).strip()
+    analysis_trt_var = str(population.get("analysis_treatment_variable", "")).strip()
+    actual_trt_var = str(population.get("actual_treatment_context_variable", "")).strip()
     arms = [str(x) for x in population.get("treatment_arms", [])]
     event_var = str(event_rule.get("condition_variable", "")).strip()
     event_value = str(event_rule.get("condition_value", "")).strip().upper()
@@ -56,6 +58,10 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         raise ValueError("Retention TTE parameter must define PARAM and PARAMCD=TTDISC")
     if not origin_var or not end_var or not randomised_flag or not randomised_value:
         raise ValueError("Retention TTE population/date specification is incomplete")
+    if not analysis_trt_var or not actual_trt_var:
+        raise ValueError("Retention TTE treatment-variable specification is incomplete")
+    if analysis_trt_var == actual_trt_var:
+        raise ValueError("Retention TTE must distinguish planned analysis treatment from actual-treatment context")
     if not event_var or not event_value or not censor_var or not censor_value:
         raise ValueError("Retention TTE event/censor condition specification is incomplete")
     if not event_desc_var or not event_desc_fallback_var:
@@ -68,8 +74,8 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
     required_columns = [
         "STUDYID",
         "USUBJID",
-        "TRT01P",
-        "TRT01A",
+        analysis_trt_var,
+        actual_trt_var,
         "SAFFL",
         randomised_flag,
         origin_var,
@@ -83,16 +89,19 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
 
     d = adsl[
         (adsl[randomised_flag].astype(str).str.strip() == randomised_value)
-        & adsl["TRT01A"].astype(str).isin(arms)
+        & adsl[analysis_trt_var].astype(str).isin(arms)
     ].copy()
     d["STARTDT_PARSED"] = pd.to_datetime(d[origin_var], errors="coerce")
     d["ADT_PARSED"] = pd.to_datetime(d[end_var], errors="coerce")
     event_status = d[event_var].fillna("").astype(str).str.strip().str.upper()
     censor_status = d[censor_var].fillna("").astype(str).str.strip().str.upper()
+    planned_treatment = d[analysis_trt_var].fillna("").astype(str).str.strip()
+    actual_treatment = d[actual_trt_var].fillna("").astype(str).str.strip()
 
     event = event_status.eq(event_value)
     censored = censor_status.eq(censor_value)
     partition_ok = event ^ censored
+    treatment_diff = planned_treatment.ne(actual_treatment)
 
     elapsed = (d["ADT_PARSED"] - d["STARTDT_PARSED"]).dt.days + 1
     event_desc = d[event_desc_var].fillna("").astype(str).str.strip()
@@ -106,8 +115,11 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         {
             "STUDYID": d["STUDYID"].astype(str),
             "USUBJID": d["USUBJID"].astype(str),
-            "TRT01P": d["TRT01P"].astype(str),
-            "TRT01A": d["TRT01A"].astype(str),
+            "TRT01P": d["TRT01P"].astype(str) if "TRT01P" in d.columns else planned_treatment,
+            "TRT01A": d["TRT01A"].astype(str) if "TRT01A" in d.columns else actual_treatment,
+            "ANLTRT": planned_treatment,
+            "ANLTRTSRC": f"ADSL.{analysis_trt_var}",
+            "TRTDIFFL": np.where(treatment_diff, "Y", "N"),
             "SAFFL": d["SAFFL"].astype(str),
             "PARAM": param,
             "PARAMCD": paramcd,
@@ -152,18 +164,22 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         (out.loc[censored.to_numpy(), "CNSRSRC"] == f"ADSL.{censor_var}").all()
         and (out.loc[censored.to_numpy(), "EVNTSRC"] == "SPEC.CENSOR_RULE").all()
     )
+    analysis_treatment_ok = bool(out["ANLTRT"].astype(str).equals(planned_treatment.reset_index(drop=True)))
+    treatment_diff_flag_ok = bool(
+        np.array_equal(out["TRTDIFFL"].to_numpy(), np.where(treatment_diff.to_numpy(), "Y", "N"))
+    )
 
     arm_order = {arm: index for index, arm in enumerate(arms)}
-    out["_arm_order"] = out["TRT01A"].map(arm_order)
+    out["_arm_order"] = out["ANLTRT"].map(arm_order)
     out = out.sort_values(["_arm_order", "USUBJID"]).drop(columns="_arm_order").reset_index(drop=True)
 
     qc_rows: list[dict[str, Any]] = []
     qc_rows.append(_qc_row("Retention population is non-empty", len(out) > 0, f"rows={len(out)}"))
     qc_rows.append(
         _qc_row(
-            "Retention population has all three treatment arms",
-            set(out["TRT01A"]) == set(arms),
-            ", ".join(sorted(out["TRT01A"].unique().tolist())),
+            "Retention population has all three randomised treatment arms",
+            set(out["ANLTRT"]) == set(arms),
+            ", ".join(sorted(out["ANLTRT"].unique().tolist())),
         )
     )
     qc_rows.append(
@@ -171,6 +187,20 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
             "Retention population has one row per subject",
             not out["USUBJID"].duplicated().any(),
             f"duplicate_subjects={int(out['USUBJID'].duplicated().sum())}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Analysis treatment follows planned randomised assignment",
+            analysis_treatment_ok,
+            f"source={analysis_trt_var}; rows={len(out)}",
+        )
+    )
+    qc_rows.append(
+        _qc_row(
+            "Planned-versus-actual treatment difference flag is exact",
+            treatment_diff_flag_ok,
+            f"mismatch_subjects={int(treatment_diff.sum())}",
         )
     )
     qc_rows.append(
@@ -258,13 +288,19 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
 
     arm_counts: dict[str, dict[str, int]] = {}
     for arm in arms:
-        arm_frame = out[out["TRT01A"] == arm]
+        arm_frame = out[out["ANLTRT"] == arm]
         arm_counts[arm] = {
             "subjects": int(len(arm_frame)),
             "events": int((arm_frame["CNSR"] == 0).sum()),
             "censored": int((arm_frame["CNSR"] == 1).sum()),
         }
 
+    transition_counts = (
+        d.groupby([analysis_trt_var, actual_trt_var], dropna=False)
+        .size()
+        .reset_index(name="subjects")
+        .sort_values([analysis_trt_var, actual_trt_var])
+    )
     event_reasons = (
         out.loc[out["CNSR"] == 0, "EVNTDESC"].value_counts().sort_index().astype(int).to_dict()
     )
@@ -276,6 +312,10 @@ def derive_retention_adtte(adsl: pd.DataFrame, spec: dict[str, Any]) -> TTEResul
         "censored": int((out["CNSR"] == 1).sum()),
         "min_aval_days": int(pd.to_numeric(out["AVAL"]).min()),
         "max_aval_days": int(pd.to_numeric(out["AVAL"]).max()),
+        "analysis_treatment_variable": analysis_trt_var,
+        "actual_treatment_context_variable": actual_trt_var,
+        "planned_actual_mismatch_subjects": int(treatment_diff.sum()),
+        "treatment_transition_counts": transition_counts.to_dict(orient="records"),
         "event_condition": f"{event_var}={event_value}",
         "censor_condition": f"{censor_var}={censor_value}",
         "event_description_source": event_desc_var,
