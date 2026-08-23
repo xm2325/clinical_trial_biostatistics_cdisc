@@ -1,18 +1,16 @@
-# Analysis traceability — portfolio version 0.14
+# Analysis traceability — portfolio version 0.15
 
 ## Purpose
 
-The executable traceability layer links each planned TLF to generated analysis data, required output structure and QC evidence. It is structural portfolio traceability, not sponsor-approved submission metadata or independent second-programmer sign-off.
+The executable traceability layer links every planned TLF to generated analysis data, required output structure and QC evidence. It is structural portfolio traceability, not sponsor-approved submission metadata or independent second-programmer sign-off.
 
 ## Versioned registry
 
-`spec/analysis_traceability.csv` now contains `registry_version`. All rows must declare one identical non-empty version. The controlled v0.14 registry version is `0.14.0`.
+`spec/analysis_traceability.csv` contains `registry_version`. All rows must declare one identical non-empty value. The controlled v0.15 registry version is `0.15.0`.
 
-The validator writes that registry version into `outputs/traceability_metrics.json`; the analysis version is no longer hard-coded in Python.
+The validator writes that value into `outputs/traceability_metrics.json`; analysis version is not hard-coded in Python.
 
 ## Traceability chain
-
-Each TLF row links:
 
 ```text
 TLF ID + registry version
@@ -25,14 +23,14 @@ TLF ID + registry version
   -> SHA256 output identity
 ```
 
-`spec/output_contracts.json` defines the output path, required columns and minimum rows. `scripts/validate_traceability.py` validates the generated artifacts after all upstream analysis/QC gates.
+`spec/output_contracts.json` defines output paths, required columns and minimum rows. `scripts/validate_traceability.py` validates generated artifacts after all upstream analysis/QC gates.
 
 ## Required rules
 
 For every TLF, CI requires:
 
 1. a unique TLF ID;
-2. one common non-empty registry version across all planned TLF rows;
+2. one common non-empty registry version;
 3. a matching output contract;
 4. complete planning metadata;
 5. identical registry/contract output paths;
@@ -43,55 +41,62 @@ For every TLF, CI requires:
 10. all linked QC files to exist;
 11. a SHA256 digest for the output that passed validation.
 
-## v0.14 registry
+## v0.15 registry
 
-The registry contains **22 planned TLFs (T01-T22)**. The verified v0.14 formalisation run passed:
+The registry contains **23 planned TLFs (T01–T23)**. The verified v0.15 run passes:
 
-- output files: **22/22**;
-- output contracts: **22/22**;
-- analysis-data links: **22/22**;
-- QC-evidence links: **22/22**;
-- complete structural traceability: **22/22**.
+- output files: **23/23**;
+- output contracts: **23/23**;
+- analysis-data links: **23/23**;
+- QC-evidence links: **23/23**;
+- complete structural traceability: **23/23**.
 
-T18/T19 are deterministic fixed-delta outputs. T20/T21 are v0.13 subject-level MI outputs. T22 is the v0.14 reference-based MI output.
+T18/T19 are deterministic fixed-delta outputs. T20/T21 are subject-level MI outputs. T22 is the reference-based MI output. T23 is the v0.15 primary multiplicity decision output.
 
-## T22 trace
+## T23 trace
 
-T22 reports two active-versus-placebo comparisons under four controlled strategies: MAR, JR, CR and CIR. Minimum rows: **8**.
+T23 contains exactly two rows, corresponding to `H_LOW` and `H_HIGH` at Week 24 from the primary `Unstructured` MMRM.
 
-Analysis evidence includes:
+Analysis evidence:
 
-- `outputs/adsl_style.csv`;
-- `outputs/adqs_actot_style.csv`;
-- `outputs/rbmi_reference_ice_audit.csv`.
+- `outputs/mmrm_analysis_dataset.csv`;
+- `outputs/mmrm_treatment_contrasts.csv`.
 
-Required QC evidence includes:
+Required QC evidence:
 
-- `outputs/estimand_review.csv`;
-- `outputs/rbmi_reference_qc.csv`;
-- `outputs/rbmi_reference_mcse_qc.csv`;
-- `outputs/rbmi_reference_draw_diagnostics.csv`.
+- `outputs/mmrm_qc.csv`;
+- `outputs/multiplicity_qc.csv`.
 
-The T22 contract requires strategy identifiers, ICE subject counts, pooled Week 24 inference, Monte Carlo errors, number of imputations, change from MAR, MCSE-to-SE ratio and a precision-pass flag.
+The T23 contract requires:
+
+- family and hypothesis IDs;
+- contrast, endpoint, visit and covariance;
+- estimate, SE and df;
+- raw p-value;
+- adjustment method;
+- family alpha, comparison count and local alpha;
+- adjusted p-value;
+- family-wise reject flag.
+
+The live public-data values are raw/adjusted p=0.169334/0.338669 for H_LOW and 0.421970/0.843940 for H_HIGH; neither is rejected under family-wise alpha 0.05.
 
 ## QC layers
-
-Structural traceability is the final link in this chain:
 
 ```text
 Python derivation/reference QC
   -> R/Python programming comparison
   -> MMRM QC
+  -> primary multiplicity QC
   -> estimand/missing-data review
   -> deterministic sensitivity QC
   -> subject-level MI and MCSE QC
   -> reference-based MI and MCSE QC
   -> analysis-dataset/TLF reviewer
-  -> statistical change-control gate
-  -> 22-TLF structural traceability
+  -> versioned statistical change-control gate
+  -> 23-TLF structural traceability
 ```
 
-Structural output validity does not prove a numerical estimate is correct, and numerical QC does not prove that every planned output has the required data/QC links. The checks remain separate.
+Structural output validity does not prove a numerical estimate is scientifically correct, and numerical QC does not prove every planned output has the required structural links. The checks remain separate.
 
 ## Generated evidence
 
