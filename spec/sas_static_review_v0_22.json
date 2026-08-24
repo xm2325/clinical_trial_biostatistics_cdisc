@@ -1,0 +1,94 @@
+{
+  "version": "0.22.0",
+  "runtime_status": "NOT_EXECUTED_NO_SAS_RUNTIME",
+  "evidence_claim": "PORTFOLIO_SAS_STATIC_REVIEW_COMPLETE",
+  "evidence_boundary": "Static SAS source and semantic-contract review only; no SAS runtime, no executed SAS output, no validated production SAS and no sponsor/CRO production claim.",
+  "prohibited_claim_fragments": [
+    "sas execution passed",
+    "sas runtime success",
+    "sas output validated",
+    "validated production sas",
+    "submission-ready sas"
+  ],
+  "source_contracts": [
+    {
+      "path": "outputs/adqs_actot_style.csv",
+      "required_columns": ["STUDYID", "USUBJID", "TRT01A", "AVISIT", "AVAL", "BASE", "CHG", "ABLFL", "EFFFL", "QSSEQ"]
+    },
+    {
+      "path": "outputs/adsl_style.csv",
+      "required_columns": ["USUBJID", "TRT01A", "SAFFL"]
+    },
+    {
+      "path": "outputs/adae_style.csv",
+      "required_columns": ["USUBJID", "TRT01A", "TRTEMFL"]
+    },
+    {
+      "path": "outputs/mmrm_treatment_contrasts.csv",
+      "required_columns": ["contrast", "AVISIT", "estimate", "SE", "p.value", "covariance"]
+    },
+    {
+      "path": "outputs/table7_teae_risk_difference.csv",
+      "required_columns": ["comparison", "n_arm", "n_placebo", "risk_arm", "risk_placebo", "risk_difference", "ci95_lower", "ci95_upper", "fisher_p"]
+    }
+  ],
+  "programs": [
+    {
+      "id": "SAS-MACRO-01",
+      "path": "sas/macros/qc_contract.sas",
+      "role": "BASE_SAS_MACRO_QC_UTILITY",
+      "required_fragments": [
+        "%macro assert_vars",
+        "%sysfunc(open(",
+        "%sysfunc(varnum(",
+        "%sysfunc(close(",
+        "%abort cancel",
+        "%mend assert_vars"
+      ],
+      "forbidden_fragments": []
+    },
+    {
+      "id": "SAS-MMRM-01",
+      "path": "sas/actot_mmrm_primary.sas",
+      "role": "PRIMARY_MMRM_STATIC_TRANSLATION",
+      "translation_basis": "R/mmrm_analysis.R",
+      "required_fragments": [
+        "not_executed_no_sas_runtime",
+        "%include \"sas/macros/qc_contract.sas\"",
+        "%assert_vars",
+        "proc import",
+        "outputs/adqs_actot_style.csv",
+        "proc mixed",
+        "method=reml",
+        "ddfm=satterth",
+        "trt01a*avisitn",
+        "base*avisitn",
+        "repeated avisitn / subject=usubjid type=un",
+        "lsmeans trt01a*avisitn / diff cl"
+      ],
+      "forbidden_fragments": ["locf", "last observation carried forward"]
+    },
+    {
+      "id": "SAS-SAFETY-01",
+      "path": "sas/teae_risk_difference.sas",
+      "role": "TEAE_RISK_DIFFERENCE_STATIC_TRANSLATION",
+      "translation_basis": "src/cdisc_portfolio/analysis.py",
+      "required_fragments": [
+        "not_executed_no_sas_runtime",
+        "%include \"sas/macros/qc_contract.sas\"",
+        "%assert_vars",
+        "outputs/adsl_style.csv",
+        "outputs/adae_style.csv",
+        "saffl",
+        "trtemfl",
+        "%macro teae_rd",
+        "proc freq",
+        "riskdiff(cl=wald)",
+        "exact fisher",
+        "%teae_rd(active=xanomeline low dose",
+        "%teae_rd(active=xanomeline high dose"
+      ],
+      "forbidden_fragments": ["odds ratio as risk difference", "sas execution passed"]
+    }
+  ]
+}
