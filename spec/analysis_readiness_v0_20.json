@@ -1,0 +1,49 @@
+{
+  "version": "0.20.0",
+  "analysis_data_cutoff": "2015-03-05",
+  "blinded_review": {
+    "forbidden_fields": ["TRT01P", "TRT01A", "ANLTRT"],
+    "required_subject_count": 306,
+    "required_randomized_count": 254,
+    "required_eos_date_count": 306,
+    "required_actot_baseline_randomized_count": 254
+  },
+  "final_analysis_review": {
+    "expected_planned_actual_mismatch_count": 12,
+    "expected_week24_missing_count": 138,
+    "expected_adqscibc_value_difference_count": 10,
+    "required_prior_gates": [
+      "dataset_review",
+      "metadata_lineage",
+      "dataset_json",
+      "core_standards_state",
+      "change_control",
+      "traceability"
+    ]
+  },
+  "issue_dispositions": {
+    "AR-001": {
+      "title": "Planned versus actual treatment differs for randomized subjects",
+      "expected_count": 12,
+      "status": "ACCEPTED_FOR_ANALYSIS",
+      "blocking": false,
+      "resolution": "Use planned randomized assignment for the randomized-retention analysis and retain actual treatment as auditable context."
+    },
+    "AR-002": {
+      "title": "Week 24 ACTOT is missing for randomized subjects",
+      "expected_count": 138,
+      "status": "ADDRESSED_BY_SENSITIVITY",
+      "blocking": false,
+      "resolution": "Retain observed-data MMRM as the primary estimator and review fixed-delta, subject-level MI and reference-based MI sensitivity evidence."
+    },
+    "AR-003": {
+      "title": "Public ADQSCIBC reference values differ from selected source-derived values",
+      "expected_count": 10,
+      "status": "SOURCE_TRACE_ACCEPTED",
+      "blocking": false,
+      "resolution": "Retain all differences with source-row traceability; selected public QS source rows support the portfolio-derived values."
+    }
+  },
+  "readiness_claim": "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW",
+  "evidence_boundary": "Portfolio study-statistician readiness evidence only. This is not a sponsor database lock, formal blinded data review meeting, regulatory submission readiness decision, or sponsor/CRO sign-off."
+}
