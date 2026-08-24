@@ -1,0 +1,58 @@
+{
+  "base_version": "0.19.0",
+  "version": "0.20.0",
+  "components": {
+    "analysis_readiness_configuration": {
+      "description": "Controlled analysis data cutoff, blinded aggregate checks, known-issue expected counts/dispositions, readiness prerequisites and portfolio-only readiness/closure claims.",
+      "downstream": [
+        "blinded_analysis_readiness_review",
+        "final_analysis_readiness_review",
+        "analysis_evidence_closure"
+      ],
+      "impacts": {
+        "documents": [
+          "docs/study_statistician_analysis_readiness.md",
+          "docs/qc_plan.md"
+        ],
+        "specs": [
+          "spec/analysis_readiness_v0_20.json"
+        ]
+      }
+    },
+    "blinded_analysis_readiness_review": {
+      "description": "Treatment-blind aggregate reconciliation of subject counts, randomized baseline coverage, end-of-study date completeness and configured data-cutoff compliance.",
+      "downstream": [
+        "final_analysis_readiness_review"
+      ],
+      "impacts": {
+        "qc": [
+          "outputs/blinded_analysis_readiness_review.csv"
+        ]
+      }
+    },
+    "final_analysis_readiness_review": {
+      "description": "Final pre-closure review of prior data/metadata/standards gates plus explicit count reconciliation and disposition of retained analysis issues.",
+      "downstream": [],
+      "impacts": {
+        "qc": [
+          "outputs/analysis_readiness_review.csv",
+          "outputs/analysis_readiness_metrics.json",
+          "outputs/analysis_readiness_summary.md"
+        ]
+      }
+    },
+    "analysis_evidence_closure": {
+      "description": "Post-governance closure rule requiring analysis readiness, statistical change control and TLF traceability from the same clean workflow run without making a sponsor or regulatory readiness claim.",
+      "downstream": [],
+      "impacts": {
+        "documents": [
+          "docs/study_statistician_analysis_readiness.md"
+        ],
+        "specs": [
+          "spec/analysis_readiness_v0_20.json"
+        ]
+      }
+    }
+  },
+  "downstream_additions": {}
+}
