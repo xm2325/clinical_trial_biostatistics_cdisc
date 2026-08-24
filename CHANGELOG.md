@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.20.0 — 2026-08-24
+
+- Add a controlled study-statistician analysis-readiness specification with analysis data cutoff **2015-03-05**, treatment-blind aggregate checks, expected known-issue counts/dispositions and portfolio-only readiness/closure claims.
+- Add a pre-closure readiness runner and separate post-governance evidence-closure runner so readiness, change control, traceability and closure have a one-way dependency order rather than a circular gate.
+- Validate **306** subjects / **254** randomized subjects, **254/254** randomized ACTOT baselines, **116** observed and **138** missing Week 24 ACTOT records, and **0** analysed dates beyond the configured cutoff.
+- Pass **5/5** treatment-blind aggregate checks and **7/7** final pre-closure readiness checks; retain **3** controlled public-data issues with explicit dispositions and **0** blocking open issues.
+- Retain the three audited issue counts rather than suppressing them: **12** planned/actual treatment mismatches, **138** randomized subjects without observed Week 24 ACTOT and **10** selected ADQSCIBC reference-value differences.
+- Block the blinded readiness artifact from containing the treatment-assignment field names/tokens `TRT01P`, `TRT01A` or `ANLTRT`.
+- Add `CR-014` for analysis-readiness definition or known-issue-disposition changes. The v0.20 dependency chain covers readiness configuration, blinded aggregate review, final readiness review and evidence closure while intentionally affecting **0 TLFs**.
+- Advance layered statistical change control to **14 change requests**, **88 propagated component links** and **311/311 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
+- Keep the executable statistical output registry at **T01–T25 / version 0.17.0** and retain **25/25** output, contract, analysis-data and QC-evidence links because v0.20 adds statistician review/governance evidence rather than another statistical TLF.
+- Add evidence closure requiring same-run analysis-readiness, change-control and traceability evidence; pass **4/4** closure checks with controlled claim `PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE`.
+- Add negative controls for cutoff overrun, known-issue count drift, blank/blocking issue dispositions, failed readiness prerequisites, failed closure prerequisites and regulatory/submission-readiness overclaims.
+- Repair the readiness/closure unit-test fixtures after the initial refactor exposed stale one-layer assumptions; the full implementation validation passes **192 Python tests**.
+- Order CI as analysis-dataset/TLF reviewer -> pre-closure readiness -> statistical change control -> SAP-to-TLF traceability -> evidence closure.
+- Full implementation clean-runner Actions **#603 / run 32695160717** on head `e2ba881ea08520fa2b337f9979df904fd7133640` passes the complete Python/R analysis, standards, readiness, change-control, traceability and closure workflow; artifact digest `sha256:41433bad895224845f84853533fd990ea72cd0fa722b193847a4be479cabb55d`.
+- Add `docs/study_statistician_analysis_readiness.md` and update the README while preserving the evidence boundary: this is public-data portfolio evidence, not a sponsor database lock, formal blinded data review meeting, sponsor/CRO sign-off, validated production release or regulatory-submission readiness decision.
+
 ## 0.19.0 — 2026-08-24
 
 - Add CDISC Dataset-JSON 1.1 exchange generation for the four validated ADSL-, ADAE-, ADQS- and ADTTE-style analysis datasets and validate every generated payload against a pinned official Dataset-JSON schema.
