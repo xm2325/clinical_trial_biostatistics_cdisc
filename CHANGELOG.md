@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.19.0 — 2026-08-24
+
+- Add CDISC Dataset-JSON 1.1 exchange generation for the four validated ADSL-, ADAE-, ADQS- and ADTTE-style analysis datasets and validate every generated payload against a pinned official Dataset-JSON schema.
+- Exchange **4 datasets / 85 variables / 2,569 records**, preserve **1,675** missing values as JSON `null`, and complete the official schema gate with **0 errors**.
+- Generate CORE CSV transport metadata from the same controlled v0.18 metadata catalog, using CORE-recognised `Char` / `Num` types and SAS-epoch numeric days for transported date values while retaining ISO dates in Dataset-JSON.
+- Pin the official CDISC CORE engine, an official populated cache snapshot and `cdisc-open-rules` source; reject placeholder cache files and record SHA256 identities for required cache and rule-discovery evidence.
+- Verify the populated official cache contains **981** unique CORE rule IDs, with **981/981** literal ID overlap between `rules_dictionary.pkl` and `rules.pkl`, while the requested `adamig/1-3` dictionary key is present but returns **0 executable rule IDs**.
+- Verify the pinned open-rule source contains **191** `Unpublished/ADAMIG` YAML files and one published executable rule explicitly referencing ADaMIG; do not reinterpret that evidence as a complete published ADaMIG 1.3 executable ruleset.
+- Introduce the controlled state **`NOT_AVAILABLE_IN_PINNED_OFFICIAL_CACHE`**. A zero-rule result is never reported as zero issues, successful executable validation or formal ADaM conformance; no `core_official_report.json` is fabricated when executable validation is unavailable.
+- Retain a strict alternate execution path for future official caches that expose non-zero ADaMIG rules: at least one rule must execute and CLI failure, unknown status or CORE `EXECUTION ERROR` is blocking.
+- Add negative controls for cache placeholders, availability-state mismatch, zero-rule success overclaiming, empty executable reports and CORE execution errors.
+- Add `CR-013` for official standards-engine/rule-availability changes and a four-component standards governance chain covering configuration, Dataset-JSON exchange validation, CORE rule-availability audit and executable-versus-NOT_AVAILABLE evidence state.
+- Validate **13 change requests**, **84 propagated component links** and **304/304 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources; CR-013 has **0 impacted TLFs**.
+- Retain the statistical output registry at **T01–T25 / version 0.17.0** and pass **25/25** output, output-contract, analysis-data and QC-evidence links because v0.19 adds standards/governance evidence rather than another statistical TLF.
+- Clean-runner Actions #564 on head `051b74ec7335ecb5da0e48b24bb60a25d1701f79` passes the complete Python/R analysis, standards, reviewer, change-control and traceability workflow; artifact digest `sha256:925e8d5b02f8cefc5e8b3fe9c589b333d2b446428403b4a1a37d6294bd0b8c85`.
+- Preserve the explicit evidence boundary: successful Dataset-JSON schema validation plus CORE availability governance is portfolio evidence only, not formal ADaM/Define-XML conformance, submission readiness, sponsor/CRO production experience or regulatory validation.
+
 ## 0.18.0 — 2026-08-23
 
 - Add controlled ADaM-style variable metadata and source/derivation lineage for four generated analysis datasets: ADSL-, ADAE-, ADQS- and ADTTE-style outputs.
