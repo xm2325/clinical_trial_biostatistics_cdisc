@@ -108,20 +108,26 @@ def test_analysis_readiness_happy_path_and_blinded_artifact_boundary(tmp_path: P
     assert metrics["all_passed"] is True
     assert metrics["blocking_open_issues"] == 0
     assert metrics["week24_actot_missing"] == 1
-    blinded = pd.read_csv(root / "outputs" / "blinded_analysis_readiness_review.csv")
+    blinded_path = root / "outputs" / "blinded_analysis_readiness_review.csv"
+    blinded = pd.read_csv(blinded_path)
     assert not {"TRT01P", "TRT01A", "ANLTRT"} & set(blinded.columns)
+    blinded_text = blinded_path.read_text().lower()
+    assert all(token.lower() not in blinded_text for token in ["TRT01P", "TRT01A", "ANLTRT"])
     assert bool(blinded["passed"].all())
 
 
-def test_record_after_data_cutoff_is_blocking(tmp_path: Path) -> None:
+def test_date_value_after_data_cutoff_is_blocking(tmp_path: Path) -> None:
     root = _fixture(tmp_path)
     adsl = pd.read_csv(root / "outputs" / "adsl_style.csv")
     adsl.loc[0, "EOSDT"] = "2021-01-01"
     adsl.to_csv(root / "outputs" / "adsl_style.csv", index=False)
     blinded, _, metrics = assess_analysis_readiness(root)
     assert metrics["all_passed"] is False
-    assert metrics["records_after_data_cutoff"] == 1
-    assert any(row["check"] == "no analysed dates exceed configured data cutoff" and not row["passed"] for row in blinded)
+    assert metrics["date_values_after_data_cutoff"] == 1
+    assert any(
+        row["check"] == "no analysed date values exceed configured data cutoff" and not row["passed"]
+        for row in blinded
+    )
 
 
 def test_known_issue_count_drift_is_blocking(tmp_path: Path) -> None:
@@ -153,7 +159,30 @@ def test_failed_prior_gate_blocks_final_readiness(tmp_path: Path) -> None:
     _write_json(root / "outputs" / "traceability_metrics.json", {"all_passed": False})
     _, final, metrics = assess_analysis_readiness(root)
     assert metrics["all_passed"] is False
-    assert any(row["check"] == "prior gate: traceability" and not row["passed"] for row in final)
+    assert any(
+        row.get("check") == "prior gate: traceability" and not row["passed"]
+        for row in final
+    )
+
+
+def test_expected_count_configuration_drift_is_rejected(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    cfg_path = root / "spec" / "analysis_readiness_v0_20.json"
+    cfg = json.loads(cfg_path.read_text())
+    cfg["final_analysis_review"]["expected_week24_missing_count"] = 999
+    cfg_path.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError, match="expected-count configuration drift for AR-002"):
+        assess_analysis_readiness(root)
+
+
+def test_missing_controlled_issue_disposition_is_rejected(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    cfg_path = root / "spec" / "analysis_readiness_v0_20.json"
+    cfg = json.loads(cfg_path.read_text())
+    del cfg["issue_dispositions"]["AR-003"]
+    cfg_path.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError, match="exactly the controlled issue IDs"):
+        assess_analysis_readiness(root)
 
 
 def test_regulatory_readiness_overclaim_is_rejected(tmp_path: Path) -> None:
