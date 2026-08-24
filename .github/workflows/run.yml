@@ -172,12 +172,14 @@ jobs:
         run: Rscript R/rbmi_reference_based.R
       - name: Analysis-dataset and TLF reviewer gate
         run: python scripts/run_dataset_review.py
+      - name: Study-statistician pre-closure analysis readiness gate
+        run: python scripts/run_analysis_readiness.py
       - name: Statistical change-control impact gate
         run: python scripts/run_change_impact.py
       - name: Validate SAP-to-TLF traceability
         run: python scripts/validate_traceability.py
-      - name: Study-statistician analysis readiness gate
-        run: python scripts/run_analysis_readiness.py
+      - name: Study-statistician evidence closure gate
+        run: python scripts/run_analysis_closure.py
 
       - name: Show measurable run summary
         if: always()
@@ -225,14 +227,17 @@ jobs:
             outputs/rbmi_reference_qc.csv
             outputs/analysis_dataset_review_summary.md
             outputs/analysis_dataset_review.csv
-            outputs/change_impact_summary.md
-            outputs/change_impact_assessment.csv
-            outputs/traceability_summary.md
-            outputs/traceability_validation.csv
             outputs/analysis_readiness_summary.md
             outputs/blinded_analysis_readiness_review.csv
             outputs/analysis_readiness_review.csv
             outputs/analysis_readiness_metrics.json
+            outputs/change_impact_summary.md
+            outputs/change_impact_assessment.csv
+            outputs/traceability_summary.md
+            outputs/traceability_validation.csv
+            outputs/analysis_closure_summary.md
+            outputs/analysis_closure_review.csv
+            outputs/analysis_closure_metrics.json
           )
           for f in "${files[@]}"; do
             if [ -f "$f" ]; then
