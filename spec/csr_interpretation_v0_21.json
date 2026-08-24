@@ -1,0 +1,36 @@
+{
+  "version": "0.21.0",
+  "primary_family_id": "ACTOT_W24_ACTIVE_VS_PLACEBO",
+  "primary_visit": "Week 24",
+  "primary_comparisons": [
+    "Xanomeline Low Dose vs Placebo",
+    "Xanomeline High Dose vs Placebo"
+  ],
+  "reference_based_strategies": ["MAR", "JR", "CR", "CIR"],
+  "primary_estimate_tolerance": 1e-08,
+  "required_closure_claim": "PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE",
+  "interpretation_claim": "PORTFOLIO_STATISTICAL_INTERPRETATION_READY",
+  "rules": {
+    "efficacy_success_requires_familywise_rejection": true,
+    "sensitivity_is_supportive_not_confirmatory": true,
+    "safety_is_descriptive": true,
+    "retention_is_exploratory": true,
+    "retention_hr_above_one_means_higher_discontinuation_hazard": true
+  },
+  "required_inputs": [
+    "outputs/analysis_closure_metrics.json",
+    "outputs/mmrm_treatment_contrasts.csv",
+    "outputs/table23_actot_multiplicity.csv",
+    "outputs/table22_rbmi_reference_based.csv",
+    "outputs/table7_teae_risk_difference.csv",
+    "outputs/table25_retention_pairwise.csv"
+  ],
+  "prohibited_claim_fragments": [
+    "demonstrated efficacy",
+    "confirmed efficacy",
+    "statistically significant efficacy",
+    "submission ready",
+    "regulatory ready"
+  ],
+  "evidence_boundary": "Portfolio CSR-style statistical interpretation of public-data outputs only. This is not a sponsor clinical study report, medical writing sign-off, regulatory conclusion, benefit-risk decision, or submission-ready report."
+}
