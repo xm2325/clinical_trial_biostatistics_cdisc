@@ -1,0 +1,24 @@
+{
+  "version": "0.21.0",
+  "primary_comparisons": [
+    "Xanomeline Low Dose vs Placebo",
+    "Xanomeline High Dose vs Placebo"
+  ],
+  "fixed_delta_scenarios": [
+    "COMMON_WORSENING",
+    "ACTIVE_ONLY_WORSENING",
+    "DIVERGENT_WORSENING"
+  ],
+  "primary_estimate_tolerance": 1e-08,
+  "rules": {
+    "multiplicity_reject_flag_must_match_adjusted_and_local_p_rules": true,
+    "fixed_delta_is_supportive_not_confirmatory": true,
+    "direction_tipping_context_must_be_reported": true
+  },
+  "required_inputs": [
+    "outputs/table23_actot_multiplicity.csv",
+    "outputs/table19_actot_directional_tipping_points.csv",
+    "outputs/csr_conclusion_matrix.csv",
+    "outputs/csr_statistical_interpretation.md"
+  ]
+}
