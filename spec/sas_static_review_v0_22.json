@@ -4,11 +4,12 @@
   "evidence_claim": "PORTFOLIO_SAS_STATIC_REVIEW_COMPLETE",
   "evidence_boundary": "Static SAS source and semantic-contract review only; no SAS runtime, no executed SAS output, no validated production SAS and no sponsor/CRO production claim.",
   "prohibited_claim_fragments": [
+    "execution status: executed",
     "sas execution passed",
     "sas runtime success",
-    "sas output validated",
-    "validated production sas",
-    "submission-ready sas"
+    "sas output validated=true",
+    "production sas validated=true",
+    "submission-ready sas=true"
   ],
   "source_contracts": [
     {
