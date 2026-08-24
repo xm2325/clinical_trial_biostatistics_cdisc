@@ -1,0 +1,33 @@
+{
+  "base_version": "0.19.0",
+  "version": "0.20.0",
+  "declared_impact_additions": {},
+  "changes": [
+    {
+      "change_id": "CR-014",
+      "title": "Analysis-readiness definition or known-issue disposition change",
+      "description": "Illustrative change to the analysis data cutoff, blinded aggregate review requirements, expected known-issue counts/dispositions, readiness prerequisites or portfolio-only closure rule.",
+      "rationale": "Tests whether a study-statistician readiness change forces review of the controlled v0.20 specification, blinded readiness evidence, final issue-disposition/readiness evidence and review documentation without changing statistical estimands, models or TLF content.",
+      "changed_components": [
+        "analysis_readiness_configuration"
+      ],
+      "declared_impacts": {
+        "analysis_datasets": [],
+        "tlfs": [],
+        "qc": [
+          "outputs/blinded_analysis_readiness_review.csv",
+          "outputs/analysis_readiness_review.csv",
+          "outputs/analysis_readiness_metrics.json",
+          "outputs/analysis_readiness_summary.md"
+        ],
+        "documents": [
+          "docs/study_statistician_analysis_readiness.md",
+          "docs/qc_plan.md"
+        ],
+        "specs": [
+          "spec/analysis_readiness_v0_20.json"
+        ]
+      }
+    }
+  ]
+}
