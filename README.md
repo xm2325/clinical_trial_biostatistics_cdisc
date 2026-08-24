@@ -22,7 +22,7 @@ validated analysis / TLF / QC evidence
        -> exploratory retention interpretation
 ```
 
-Validated v0.21 evidence includes:
+Pre-documentation clean-run Actions **#625 / run 32701384371** on head `2c7186255004b286b483e0564b162dcc1edfad55` verifies:
 
 - base CSR-style interpretation checks: **11/11 PASS**;
 - fixed-delta interpretation extension checks: **4/4 PASS**;
@@ -48,8 +48,6 @@ PORTFOLIO_STATISTICAL_INTERPRETATION_READY
 ```
 
 It means the portfolio interpretation contract and executable checks passed. It does not mean sponsor CSR approval, medical-writing sign-off, regulatory readiness or a benefit-risk decision.
-
-Functional clean-run evidence: Actions **#625 / run 32701384371** on head `2c7186255004b286b483e0564b162dcc1edfad55`, artifact `9510775094`, digest `sha256:30f046072cc4207bf6686d3bcc877384a74e3c43efe69da8f65e1719a7b3b8b8`. Documentation head `07e4026d9dfdfe581138aa874a5afec26ee8fb97` then passed Actions **#629 / run 32702193882**. The final changelog-inclusive head is validated separately in CI before merge.
 
 See `docs/csr_statistical_interpretation.md` for the full v0.21 interpretation logic, statistical roles, tipping context and evidence boundary.
 
@@ -86,7 +84,7 @@ Final v0.20 frozen-head validation was Actions **#607 / run 32695875945** on hea
 - evidence-closure checks: **4/4 PASS**;
 - closure claim: **`PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE`**.
 
-The three retained issues are not hidden: **12** planned/actual treatment mismatches, **138** randomized subjects without observed Week 24 ACTOT, and **10** selected ADQSCIBC value differences. Their controlled dispositions are count-reconciled on every clean run.
+The three retained issues are not hidden: **12** planned/actual treatment mismatches, **138** randomized subjects without observed Week 24 ACTOT, and **10** selected ADQSCIBC value differences. Their controlled dispositions are count-reconciled on every clean run. A count drift, blank disposition, blocking disposition, date beyond cutoff, failed prerequisite, failed change-control gate or failed traceability gate blocks the appropriate readiness/closure stage.
 
 See `docs/study_statistician_analysis_readiness.md` for the v0.20 review sequence and evidence boundary.
 
@@ -144,10 +142,11 @@ public CDISC / pharmaverse test data
   -> layered CR-001–CR-014 statistical change-impact assessment
   -> T01–T25 executable structural traceability
   -> portfolio evidence closure
-  -> controlled CSR-style statistical interpretation
+  -> CSR-style interpretation contract + cross-output reconciliation
+  -> bounded confirmatory/supportive/descriptive/exploratory conclusions
 ```
 
-The statistical output registry remains **T01–T25 at version 0.17.0** because v0.18–v0.21 add metadata, standards, readiness/governance and interpretation evidence rather than new statistical tables/listings/figures.
+Readiness, governance and interpretation evidence remain separate from the TLF registry. v0.21 does **not** invent a T26; the statistical output registry remains **T01–T25 at version 0.17.0** because no new statistical table/listing/figure is added.
 
 ## Public CDISC/reference evidence
 
@@ -226,6 +225,8 @@ Sensitivity evidence includes:
 
 The reference-based layer passes **27/27** required checks; maximum `MCSE(estimate) / pooled SE` is **5.381%** against a 7.5% threshold.
 
+v0.21 reads both sensitivity families during interpretation. The reference-based strategies retain the same effect sign for both active comparisons, while fixed-delta `DIVERGENT_WORSENING` reaches direction tipping at **1.5621 / 1.0333 ACTOT points** for Low / High. These two facts are reported together so the sensitivity evidence is not reduced to a single “robust/not robust” label.
+
 ## Randomized-arm ADTTE / survival evidence
 
 A material public-data assignment issue is retained rather than hidden: **12/254 randomized subjects have `TRT01P != TRT01A`**. Exploratory retention therefore uses planned randomized assignment:
@@ -247,28 +248,121 @@ Validated TTDISC evidence:
 - High vs Placebo discontinuation HR **2.9246**;
 - `cox.zph` p-values **0.8310 / 0.7577**.
 
-HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family.
+HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family. v0.21 tests this interpretation rather than relying on prose alone.
 
-## Statistical change control and executable traceability
+## v0.20 statistical change control
 
-The layered change-control graph remains CR-001–CR-014. v0.21 does not add CR-015 because interpretation executes after evidence closure; making the pre-closure change-control gate depend on post-closure interpretation would create a circular dependency.
+The change-control graph is layered rather than rewriting earlier validated specifications:
 
-The validated v0.20 change-control baseline is **14 changes / 88 propagated links / 311 of 311 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
+```text
+v0.15 -> multiplicity
+v0.16 -> cross-package MMRM validation
+v0.17 -> randomized-retention TTE / T24–T25
+v0.18 -> analysis metadata / lineage / Define-XML-inspired export
+v0.19 -> Dataset-JSON + CORE standards-validation governance
+v0.20 -> study-statistician analysis readiness + evidence closure
+v0.21 -> post-closure CSR-style interpretation QC (separate from the pre-closure change-control graph)
+```
 
-The statistical output registry remains **T01–T25 at version 0.17.0**. The workflow requires **25/25** outputs, contracts, analysis-dataset links and QC-evidence links.
+`CR-014 — Analysis-readiness definition or known-issue disposition change` propagates through:
+
+```text
+analysis_readiness_configuration
+  -> blinded_analysis_readiness_review
+  -> final_analysis_readiness_review
+  -> analysis_evidence_closure
+```
+
+CR-014 reviews the v0.20 readiness specification, treatment-blind review artifact, final issue-disposition/readiness evidence and review documentation. It has **0 impacted TLFs** and does not propagate into MMRM, multiplicity, missing-data sensitivity, retention-survival or standards-validation analysis families.
+
+The validated v0.20 change-control result is **14 changes / 88 propagated links / 311 of 311 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
+
+v0.21 deliberately does not add a post-closure interpretation output to this pre-closure dependency graph. Interpretation-rule changes are controlled by the v0.21 executable contract and negative-control tests. This avoids making change control depend on outputs that are only generated after evidence closure.
+
+This is portfolio change-control simulation, not a sponsor-approved protocol/SAP change process.
+
+## Executable TLF traceability
+
+The statistical output registry remains **T01–T25 at version 0.17.0**. The workflow requires:
+
+- outputs found: **25/25**;
+- output contracts: **25/25**;
+- analysis-dataset links: **25/25**;
+- QC-evidence links: **25/25**;
+- complete validated TLFs: **25/25**.
+
+## Study-statistician readiness and closure artifacts
+
+Pre-closure readiness writes:
+
+```text
+outputs/blinded_analysis_readiness_review.csv
+outputs/analysis_readiness_review.csv
+outputs/analysis_readiness_metrics.json
+outputs/analysis_readiness_summary.md
+```
+
+The treatment-blind artifact is blocked from containing the configured treatment-assignment fields/tokens `TRT01P`, `TRT01A` or `ANLTRT`.
+
+After change control and traceability pass, closure writes:
+
+```text
+outputs/analysis_closure_review.csv
+outputs/analysis_closure_metrics.json
+outputs/analysis_closure_summary.md
+```
+
+The readiness claim is `PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW`; the closure claim is `PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE`. Tests reject regulatory/submission-ready replacements.
+
+## CSR-style interpretation artifacts
+
+After evidence closure, v0.21 writes:
+
+```text
+outputs/csr_conclusion_matrix.csv
+outputs/csr_interpretation_checks.csv
+outputs/csr_interpretation_metrics.json
+outputs/csr_fixed_delta_context.csv
+outputs/csr_interpretation_extension_checks.csv
+outputs/csr_interpretation_extension_metrics.json
+outputs/csr_statistical_interpretation.md
+```
+
+The conclusion matrix records source, analysis role, comparison, estimate/context, decision and controlled interpretation. Negative controls block incomplete source sets, cross-output drift, invalid multiplicity flags, MI MCSE failures, missing fixed-delta scenarios, reversed retention-hazard interpretation and regulatory/efficacy overclaims.
 
 ## Key v0.21 files
 
 ```text
-src/cdisc_portfolio/csr_interpretation.py              controlled post-closure interpretation
-src/cdisc_portfolio/csr_interpretation_v021.py         fixed-delta/tipping extension and decision audit
-scripts/run_csr_interpretation.py                      standalone interpretation runner
-scripts/run_analysis_closure.py                        closure then interpretation runner
-spec/csr_interpretation_v0_21.json                     interpretation contract and role boundaries
-tests/test_csr_interpretation.py                       base positive + negative controls
-tests/test_csr_interpretation_v021.py                  tipping/decision-audit controls
-docs/csr_statistical_interpretation.md                 statistical interpretation rationale
-CHANGELOG.md                                            versioned evidence history
+spec/csr_interpretation_v0_21.json                     base interpretation contract and claim boundary
+spec/csr_interpretation_extension_v0_21.json           multiplicity decision + fixed-delta context controls
+src/cdisc_portfolio/csr_interpretation.py              cross-output CSR-style interpretation logic
+src/cdisc_portfolio/csr_interpretation_extension.py    fixed-delta and reject-flag interpretation audit
+scripts/run_csr_interpretation.py                      standalone complete interpretation runner
+tests/test_csr_interpretation.py                       base positive + negative interpretation controls
+tests/test_csr_interpretation_extension.py             multiplicity/tipping negative controls
+docs/csr_statistical_interpretation.md                 statistical interpretation design and evidence
+
+spec/analysis_readiness_v0_20.json                     cutoff, checks, issue dispositions and closure claims
+src/cdisc_portfolio/analysis_readiness.py              readiness + closure implementation
+scripts/run_analysis_readiness.py                      pre-closure readiness runner
+scripts/run_analysis_closure.py                        closure followed by v0.21 interpretation runner
+docs/study_statistician_analysis_readiness.md          v0.20 review sequence and evidence boundary
+
+src/cdisc_portfolio/change_control_v020.py             layered v0.20 change-control merger
+spec/change_impact_graph_v0_20_extension.json          readiness dependency extension
+spec/change_requests_v0_20_extension.json              CR-014
+
+spec/standards_validation_v0_19.json                   pinned official standards evidence contract
+src/cdisc_portfolio/dataset_json.py                    Dataset-JSON + CORE transport generation
+src/cdisc_portfolio/core_cache.py                      safe cache/rule-availability audit
+src/cdisc_portfolio/core_validation.py                 executable / NOT_AVAILABLE evidence state
+
+R/mmrm_analysis.R                                      primary ACTOT MMRM
+R/mmrm_cross_package_qc.R                              independent rows + nlme MMRM
+R/tte_retention_analysis.R                             KM/log-rank/Cox retention
+R/rbmi_reference_based.R                               MAR/JR/CR/CIR sensitivity
+spec/analysis_traceability.csv                         T01–T25 registry
+spec/output_contracts.json                             executable TLF contracts
 ```
 
 ## Reproduce
@@ -302,7 +396,8 @@ python scripts/run_analysis_readiness.py
 python scripts/run_change_impact.py
 python scripts/validate_traceability.py
 python scripts/run_analysis_closure.py
-python scripts/run_csr_interpretation.py
 ```
+
+`run_analysis_closure.py` executes evidence closure and then the complete v0.21 CSR-style interpretation pack. `scripts/run_csr_interpretation.py` can rerun the complete interpretation pack after the required source outputs and v0.20 closure metrics already exist.
 
 Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, standards, lineage, readiness, governance and interpretation evidence can be inspected from the same clean run.
