@@ -7,6 +7,8 @@ from typing import Any
 import pandas as pd
 
 VERSION = "0.20.0"
+READINESS_CLAIM = "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW"
+CLOSURE_CLAIM = "PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE"
 REQUIRED_ISSUES = {
     "AR-001": "expected_planned_actual_mismatch_count",
     "AR-002": "expected_week24_missing_count",
@@ -45,7 +47,7 @@ def _require_columns(frame: pd.DataFrame, required: set[str], label: str) -> Non
 def _validate_configuration(cfg: dict[str, Any]) -> None:
     if cfg.get("version") != VERSION:
         raise ValueError("analysis-readiness config must be version 0.20.0")
-    if cfg.get("readiness_claim") != "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW":
+    if cfg.get("readiness_claim") != READINESS_CLAIM:
         raise ValueError("readiness_claim must remain portfolio-scoped")
 
     dispositions = cfg.get("issue_dispositions")
@@ -69,6 +71,13 @@ def _validate_configuration(cfg: dict[str, Any]) -> None:
     prior = final_cfg.get("required_prior_gates", [])
     if not isinstance(prior, list) or not prior or len(prior) != len(set(prior)):
         raise ValueError("required_prior_gates must be a non-empty unique list")
+
+    closure_cfg = cfg.get("closure_review", {})
+    closure_gates = closure_cfg.get("required_closure_gates", [])
+    if not isinstance(closure_gates, list) or not closure_gates or len(closure_gates) != len(set(closure_gates)):
+        raise ValueError("required_closure_gates must be a non-empty unique list")
+    if closure_cfg.get("closure_claim") != CLOSURE_CLAIM:
+        raise ValueError("closure_claim must remain portfolio-scoped")
 
 
 def assess_analysis_readiness(
@@ -198,8 +207,6 @@ def assess_analysis_readiness(
         "metadata_lineage": (outputs / "metadata_lineage_metrics.json", ("all_passed",)),
         "dataset_json": (outputs / "dataset_json_metrics.json", ("all_passed",)),
         "core_standards_state": (outputs / "core_validation_metrics.json", ("all_passed",)),
-        "change_control": (outputs / "change_impact_metrics.json", ("all_passed",)),
-        "traceability": (outputs / "traceability_metrics.json", ("all_passed",)),
     }
     final_rows: list[dict[str, Any]] = []
     required_prior = list(cfg["final_analysis_review"]["required_prior_gates"])
@@ -238,7 +245,7 @@ def assess_analysis_readiness(
                 "record_type": "FINAL_GATE",
                 "review_scope": "FINAL_ANALYSIS",
                 "check": "portfolio readiness claim remains non-regulatory",
-                "passed": cfg["readiness_claim"] == "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW",
+                "passed": cfg["readiness_claim"] == READINESS_CLAIM,
                 "detail": cfg["readiness_claim"],
             },
         ]
@@ -311,13 +318,86 @@ def write_analysis_readiness_outputs(root: Path) -> dict[str, Any]:
         f"- Blinded aggregate checks: {metrics['blinded_checks_passed']}/{metrics['blinded_checks']}.",
         f"- Known issues dispositioned: {metrics['known_issues_dispositioned']}/{metrics['known_issues']}.",
         f"- Blocking open issues: {metrics['blocking_open_issues']}.",
-        f"- Final readiness checks: {metrics['final_checks_passed']}/{metrics['final_checks']}.",
+        f"- Pre-closure readiness checks: {metrics['final_checks_passed']}/{metrics['final_checks']}.",
         f"- Readiness gate: {'PASS' if metrics['all_passed'] else 'FAIL'}.",
         "",
         "The blinded artifact contains aggregate readiness checks only and does not emit treatment assignment fields or their configured field tokens. The separate final-analysis review retains known non-blocking issues with explicit dispositions rather than hiding them.",
-        "This is portfolio analysis-package readiness evidence, not a sponsor database-lock decision, formal blinded-data-review sign-off, or regulatory-submission readiness certification.",
+        "This pre-closure gate is portfolio analysis-package readiness evidence. Change-control and TLF-traceability closure are checked separately afterwards; no sponsor database-lock, formal blinded-data-review, or regulatory-submission readiness claim is made.",
     ]
     (outputs / "analysis_readiness_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
     if not metrics["all_passed"]:
         raise ValueError("analysis-readiness gate failed; inspect outputs/analysis_readiness_review.csv")
+    return metrics
+
+
+def assess_analysis_closure(root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    root = Path(root)
+    cfg = _load_json(root / "spec" / "analysis_readiness_v0_20.json")
+    _validate_configuration(cfg)
+    outputs = root / "outputs"
+
+    closure_paths = {
+        "analysis_readiness": (outputs / "analysis_readiness_metrics.json", ("all_passed",)),
+        "change_control": (outputs / "change_impact_metrics.json", ("all_passed",)),
+        "traceability": (outputs / "traceability_metrics.json", ("all_passed",)),
+    }
+    rows: list[dict[str, Any]] = []
+    required = list(cfg["closure_review"]["required_closure_gates"])
+    for gate in required:
+        if gate not in closure_paths:
+            raise ValueError(f"unknown required closure gate: {gate}")
+        path, keys = closure_paths[gate]
+        passed = _bool_metric(path, *keys)
+        rows.append(
+            {
+                "record_type": "CLOSURE_GATE",
+                "check": gate,
+                "passed": passed,
+                "detail": path.name,
+            }
+        )
+    rows.append(
+        {
+            "record_type": "CLOSURE_GATE",
+            "check": "portfolio closure claim remains non-regulatory",
+            "passed": cfg["closure_review"]["closure_claim"] == CLOSURE_CLAIM,
+            "detail": cfg["closure_review"]["closure_claim"],
+        }
+    )
+    all_passed = all(bool(row["passed"]) for row in rows)
+    readiness = _load_json(outputs / "analysis_readiness_metrics.json")
+    metrics = {
+        "analysis_version": VERSION,
+        "closure_claim": cfg["closure_review"]["closure_claim"],
+        "closure_checks": len(rows),
+        "closure_checks_passed": sum(bool(row["passed"]) for row in rows),
+        "readiness_known_issues": int(readiness.get("known_issues", 0)),
+        "readiness_blocking_open_issues": int(readiness.get("blocking_open_issues", -1)),
+        "all_passed": all_passed,
+    }
+    return rows, metrics
+
+
+def write_analysis_closure_outputs(root: Path) -> dict[str, Any]:
+    root = Path(root)
+    rows, metrics = assess_analysis_closure(root)
+    outputs = root / "outputs"
+    pd.DataFrame(rows).to_csv(outputs / "analysis_closure_review.csv", index=False)
+    (outputs / "analysis_closure_metrics.json").write_text(
+        json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    summary = [
+        "# Portfolio analysis-evidence closure",
+        "",
+        f"- Closure checks: {metrics['closure_checks_passed']}/{metrics['closure_checks']}.",
+        f"- Known issues carried from readiness: {metrics['readiness_known_issues']}.",
+        f"- Blocking open issues carried from readiness: {metrics['readiness_blocking_open_issues']}.",
+        f"- Closure claim: `{metrics['closure_claim']}`.",
+        f"- Closure gate: {'PASS' if metrics['all_passed'] else 'FAIL'}.",
+        "",
+        "Closure requires the pre-change-control analysis-readiness gate, statistical change-control impact gate and TLF traceability gate from the same workflow run. It is portfolio evidence closure only, not sponsor/CRO sign-off, database lock, validated production release, or regulatory submission readiness.",
+    ]
+    (outputs / "analysis_closure_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
+    if not metrics["all_passed"]:
+        raise ValueError("analysis-evidence closure gate failed; inspect outputs/analysis_closure_review.csv")
     return metrics
