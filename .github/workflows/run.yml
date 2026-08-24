@@ -176,6 +176,8 @@ jobs:
         run: python scripts/run_change_impact.py
       - name: Validate SAP-to-TLF traceability
         run: python scripts/validate_traceability.py
+      - name: Study-statistician analysis readiness gate
+        run: python scripts/run_analysis_readiness.py
 
       - name: Show measurable run summary
         if: always()
@@ -227,6 +229,10 @@ jobs:
             outputs/change_impact_assessment.csv
             outputs/traceability_summary.md
             outputs/traceability_validation.csv
+            outputs/analysis_readiness_summary.md
+            outputs/blinded_analysis_readiness_review.csv
+            outputs/analysis_readiness_review.csv
+            outputs/analysis_readiness_metrics.json
           )
           for f in "${files[@]}"; do
             if [ -f "$f" ]; then
