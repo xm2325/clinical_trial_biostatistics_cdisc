@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from cdisc_portfolio.analysis_readiness import write_analysis_closure_outputs
 from cdisc_portfolio.csr_interpretation import write_csr_interpretation_outputs
 from cdisc_portfolio.csr_interpretation_extension import write_csr_interpretation_extension_outputs
+from cdisc_portfolio.statistical_review_queries import write_statistical_review_query_outputs
 
 
 def main() -> None:
@@ -32,6 +33,16 @@ def main() -> None:
         f"checks={interpretation['required_checks_passed']}/{interpretation['required_checks']}+"
         f"{extension['required_checks_passed']}/{extension['required_checks']}; "
         f"passed={interpretation['all_passed'] and extension['all_passed']}"
+    )
+
+    review = write_statistical_review_query_outputs(ROOT)
+    print(
+        "Statistical review responses: "
+        f"queries={review['query_rows']}; "
+        f"week24_missing={review['week24_missing']}/{review['week24_randomized']}; "
+        f"mismatches={review['planned_actual_treatment_mismatches']}; "
+        f"checks={review['required_checks_passed']}/{review['required_checks']}; "
+        f"passed={review['all_passed']}"
     )
 
 
