@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.21.0 — 2026-08-24
+
+- Add a post-closure Study Statistician interpretation layer that turns already validated efficacy, missing-data, safety and retention evidence into an executable CSR-style conclusion matrix rather than adding another model, estimand, population or TLF.
+- Reconcile the two Week 24 primary `mmrm::mmrm` contrasts directly against the controlled Bonferroni multiplicity table; require exact agreement of estimates and raw p-values and independently audit `reject_familywise` against both local-alpha and adjusted-p decision rules.
+- Preserve the primary statistical conclusion: adjusted p-values **0.338669 / 0.843940** yield **0/2 family-wise rejections**, so the interpretation layer explicitly blocks a confirmatory efficacy-success conclusion.
+- Keep reference-based MAR/JR/CR/CIR analyses as supportive sensitivity evidence: validate **8/8 expected rows** and **8/8 MCSE passes** without promoting sensitivity analyses into the confirmatory family.
+- Add fixed-delta directional-tipping interpretation alongside reference-based MI so same-direction MI results are not over-described as complete robustness. Validate **6/6 expected fixed-delta rows** across three scenarios and two active-versus-placebo comparisons.
+- Record earliest directional tipping deltas of **1.5621 ACTOT points** for Low Dose versus Placebo and **1.0333 ACTOT points** for High Dose versus Placebo, both under `DIVERGENT_WORSENING`.
+- Retain TEAE risk differences as descriptive safety evidence and time-to-discontinuation hazard ratios as exploratory retention evidence; HR > 1 is explicitly interpreted as higher study-discontinuation hazard, not worse efficacy.
+- Generate `outputs/csr_conclusion_matrix.csv`, `outputs/csr_interpretation_checks.csv`, `outputs/csr_interpretation_metrics.json` and `outputs/csr_statistical_interpretation.md` after v0.20 evidence closure.
+- Pass **11/11** base interpretation checks plus **4/4** fixed-delta extension checks, producing a **10-row** final conclusion matrix with zero prohibited efficacy/regulatory overclaim fragments.
+- Add negative controls for failed evidence closure, MMRM/multiplicity drift, inconsistent family-wise rejection flags, incomplete MI strategy coverage, MCSE failure, missing fixed-delta scenarios, invalid tipping provenance, retention-hazard direction errors and sponsor/regulatory overclaims.
+- Keep CR-001–CR-014 and the T01–T25 registry unchanged. v0.21 is a post-closure interpretation/review layer; forcing a new pre-closure change-request dependency would create a circular governance order.
+- Controlled interpretation claim: `PORTFOLIO_STATISTICAL_INTERPRETATION_READY`. This is public-data portfolio evidence only, not a sponsor CSR, medical-writing sign-off, benefit-risk decision or regulatory-submission decision.
+- Functional clean run Actions **#625 / run 32701384371** on head `2c7186255004b286b483e0564b162dcc1edfad55` passed the full Python/R/CDISC/MMRM/MI/readiness/closure/interpretation workflow; artifact `9510775094`, digest `sha256:30f046072cc4207bf6686d3bcc877384a74e3c43efe69da8f65e1719a7b3b8b8`.
+- README/documentation head `07e4026d9dfdfe581138aa874a5afec26ee8fb97` subsequently passed Actions **#629 / run 32702193882** before this changelog entry was added.
+
 ## 0.20.0 — 2026-08-24
 
 - Add a controlled study-statistician analysis-readiness specification with analysis data cutoff **2015-03-05**, treatment-blind aggregate checks, expected known-issue counts/dispositions and portfolio-only readiness/closure claims.
