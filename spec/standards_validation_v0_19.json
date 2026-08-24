@@ -1,0 +1,50 @@
+{
+  "version": "0.19.0",
+  "dataset_json": {
+    "standard": "Dataset-JSON",
+    "version": "1.1.0",
+    "official_repository": "cdisc-org/DataExchange-DatasetJson",
+    "official_commit": "a379f49a3f43c2aaed63bdeca761bdb7140df2c3",
+    "schema_relative_path": ".external/dataset-json/schema/dataset.schema.json",
+    "creation_datetime": "2026-08-23T00:00:00Z",
+    "originator": "Independent public-data portfolio",
+    "source_system": {
+      "name": "clinical_trial_biostatistics_cdisc",
+      "version": "0.19.0"
+    }
+  },
+  "core": {
+    "repository": "cdisc-org/cdisc-rules-engine",
+    "commit": "4270ccac9304bd0ed9627470fc9d9d922ea52939",
+    "cache_repository": "cdisc-org/cdisc-rules-engine",
+    "cache_commit": "73d07f32a7469cd21111b18376166d4ec4d328f9",
+    "cache_commit_is_engine_ancestor": true,
+    "open_rules_repository": "cdisc-org/cdisc-open-rules",
+    "open_rules_commit": "618ab81d9bb38cf499469cd01aea5aa25ecda1ab",
+    "open_rules_unpublished_adamig_path": "Unpublished/ADAMIG",
+    "expected_ruleset_state": "NOT_AVAILABLE_IN_PINNED_OFFICIAL_CACHE",
+    "standard": "adamig",
+    "version": "1-3",
+    "input_format": "csv",
+    "allowed_statuses": [
+      "SUCCESS",
+      "ISSUE REPORTED",
+      "SKIPPED",
+      "EXECUTION ERROR"
+    ],
+    "blocking_statuses": [
+      "EXECUTION ERROR"
+    ],
+    "require_executed_rule": true,
+    "required_cache_files": [
+      "rules.pkl",
+      "rules_dictionary.pkl",
+      "standards_details.pkl",
+      "standards_models.pkl",
+      "variables_metadata.pkl"
+    ],
+    "minimum_rule_ids": 1,
+    "conformance_claim": "NOT_ASSESSED"
+  },
+  "evidence_boundary": "Official Dataset-JSON schema validation is executable evidence. CDISC CORE executable ADaMIG validation is run only when the pinned official cache exposes a non-empty ADaMIG ruleset; a zero-rule official cache is recorded as NOT_AVAILABLE rather than treated as validation success. Neither outcome establishes formal ADaM, Define-XML, Dataset-JSON regulatory-submission, or sponsor/CRO conformance certification."
+}

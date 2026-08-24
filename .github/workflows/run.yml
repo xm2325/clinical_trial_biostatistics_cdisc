@@ -13,7 +13,7 @@ concurrency:
 jobs:
   test-and-live-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,6 +32,102 @@ jobs:
         run: python scripts/run_tte_retention.py
       - name: ADaM-style variable metadata and lineage gate
         run: python scripts/run_metadata_lineage.py
+      - name: Checkout pinned official Dataset-JSON 1.1 specification
+        uses: actions/checkout@v4
+        with:
+          repository: cdisc-org/DataExchange-DatasetJson
+          ref: a379f49a3f43c2aaed63bdeca761bdb7140df2c3
+          path: .external/dataset-json
+          persist-credentials: false
+      - name: Dataset-JSON 1.1 exchange and official-schema gate
+        run: python scripts/run_dataset_json.py
+      - name: Checkout pinned official CDISC CORE engine
+        uses: actions/checkout@v4
+        with:
+          repository: cdisc-org/cdisc-rules-engine
+          ref: 4270ccac9304bd0ed9627470fc9d9d922ea52939
+          path: .external/cdisc-core
+          persist-credentials: false
+      - name: Checkout pinned official CDISC CORE cache snapshot
+        uses: actions/checkout@v4
+        with:
+          repository: cdisc-org/cdisc-rules-engine
+          ref: 73d07f32a7469cd21111b18376166d4ec4d328f9
+          path: .external/cdisc-core-cache
+          persist-credentials: false
+          sparse-checkout: |
+            resources/cache
+          sparse-checkout-cone-mode: false
+      - name: Checkout pinned official CDISC open-rule source
+        uses: actions/checkout@v4
+        with:
+          repository: cdisc-org/cdisc-open-rules
+          ref: 618ab81d9bb38cf499469cd01aea5aa25ecda1ab
+          path: .external/cdisc-open-rules
+          persist-credentials: false
+      - name: Hydrate engine with pinned official CORE cache
+        run: |
+          rm -rf .external/cdisc-core/resources/cache
+          cp -a .external/cdisc-core-cache/resources/cache .external/cdisc-core/resources/cache
+          test "$(stat -c%s .external/cdisc-core/resources/cache/rules.pkl)" -gt 5
+      - name: Install pinned CDISC CORE in isolated Python environment
+        run: |
+          python -m venv .external/core-venv
+          .external/core-venv/bin/python -m pip install --upgrade pip
+          .external/core-venv/bin/python -m pip install ./.external/cdisc-core
+      - name: Audit pinned CORE cache and ADaMIG 1.3 rule availability
+        run: |
+          CORE_PYTHON="$GITHUB_WORKSPACE/.external/core-venv/bin/python"
+          (
+            cd .external/cdisc-core
+            "$CORE_PYTHON" core.py list-rules
+          ) | tee outputs/core_list_all_rules.txt
+          (
+            cd .external/cdisc-core
+            "$CORE_PYTHON" core.py list-rules --standard adamig --version 1-3
+          ) | tee outputs/core_list_rules.txt
+          python scripts/run_core_cache_audit.py \
+            --cache-dir .external/cdisc-core/resources/cache \
+            --list-rules outputs/core_list_rules.txt \
+            --list-all-rules outputs/core_list_all_rules.txt \
+            --open-rules-root .external/cdisc-open-rules
+      - name: Execute official CORE when ADaMIG rules are available or record controlled limitation
+        run: |
+          CORE_AVAILABLE=$(python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('outputs/core_cache_manifest.json').read_text())
+          print('true' if manifest['executable_validation_available'] else 'false')
+          PY
+          )
+          if [ "$CORE_AVAILABLE" = "true" ]; then
+            CORE_DATA="$GITHUB_WORKSPACE/outputs/core_input"
+            CORE_REPORT="$GITHUB_WORKSPACE/outputs/core_official_report"
+            CORE_LOG="$GITHUB_WORKSPACE/outputs/core_cli.log"
+            CORE_PYTHON="$GITHUB_WORKSPACE/.external/core-venv/bin/python"
+            set +e
+            (
+              cd .external/cdisc-core
+              "$CORE_PYTHON" core.py validate \
+                --standard adamig \
+                --version 1-3 \
+                --data "$CORE_DATA" \
+                --output "$CORE_REPORT" \
+                --output-format JSON \
+                --raw-report \
+                --progress disabled
+            ) > "$CORE_LOG" 2>&1
+            core_status=$?
+            set -e
+            cat "$CORE_LOG"
+            echo "$core_status" > outputs/core_cli_exit_code.txt
+            python scripts/run_core_validation.py \
+              --report outputs/core_official_report.json \
+              --cli-exit-code "$core_status"
+          else
+            python scripts/run_core_unavailable.py \
+              --cache-manifest outputs/core_cache_manifest.json
+          fi
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
       - name: Randomisation and kit schedule QC
@@ -90,6 +186,13 @@ jobs:
             outputs/adtte_retention_qc.csv
             outputs/metadata_lineage_summary.md
             outputs/metadata_lineage_validation.csv
+            outputs/dataset_json_summary.md
+            outputs/dataset_json_validation.csv
+            outputs/core_cache_summary.md
+            outputs/core_cache_manifest.json
+            outputs/core_validation_summary.md
+            outputs/core_validation_qc.csv
+            outputs/core_validation_metrics.json
             outputs/define_xml_like_metadata.xml
             outputs/tte_retention_survival_summary.md
             outputs/tte_retention_survival_qc.csv
