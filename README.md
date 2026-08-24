@@ -1,17 +1,49 @@
 # Clinical Trial Biostatistics & CDISC Portfolio
 
-A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines study-design QC, source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, estimands, missing-data sensitivity, survival analysis, machine-readable analysis metadata, official exchange-schema validation, executable QC, statistical change control and SAP-to-TLF traceability.
+A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines study-design QC, source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, estimands, missing-data sensitivity, survival analysis, machine-readable analysis metadata, official exchange-schema validation, executable QC, statistical change control, SAP-to-TLF traceability and study-statistician analysis-readiness review.
 
-> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
+> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
 
-## Current milestone: v0.19 — official standards integration without false conformance claims
+## Current milestone: v0.20 — study-statistician analysis readiness and evidence closure
 
-v0.19 extends the validated v0.18 analysis-metadata layer in two distinct ways:
+v0.20 moves the portfolio from standards plumbing back to study-statistician review work. It does **not** add another statistical model or another TLF. Instead, it adds a controlled transition from the validated analysis package to a review decision:
 
-1. generate four **CDISC Dataset-JSON 1.1** exchange files and validate them against the pinned official schema;
-2. pin the official **CDISC CORE** engine, a populated official cache snapshot and `cdisc-open-rules`, then distinguish executable ADaMIG rule validation from official-rule unavailability.
+```text
+analysis data / TLF / metadata / standards evidence
+  -> treatment-blind aggregate readiness review
+  -> explicit known-issue disposition
+  -> pre-closure analysis-readiness gate
+  -> statistical change-control impact gate
+  -> SAP-to-TLF traceability gate
+  -> evidence-closure gate
+```
 
-The clean-runner evidence verifies:
+Clean-runner Actions **#603 / run 32695160717** on head `e2ba881ea08520fa2b337f9979df904fd7133640` verifies:
+
+- configured analysis data cutoff: **2015-03-05**;
+- subjects / randomized: **306 / 254**;
+- randomized subjects with ACTOT baseline: **254/254**;
+- Week 24 ACTOT observed / missing: **116 / 138**;
+- date values after the configured cutoff: **0**;
+- treatment-blind aggregate checks: **5/5 PASS**;
+- controlled known issues dispositioned: **3/3**;
+- blocking open issues: **0**;
+- pre-closure readiness checks: **7/7 PASS**;
+- change requests: **CR-001–CR-014**;
+- propagated component links: **88**;
+- required change-impact relationships/resources: **311/311**;
+- missing / extra / unresolved required change impacts: **0 / 0 / 0**;
+- TLF output / contract / analysis-data / QC links: **25/25** for each layer;
+- evidence-closure checks: **4/4 PASS**;
+- closure claim: **`PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE`**.
+
+The three retained issues are not hidden: **12** planned/actual treatment mismatches, **138** randomized subjects without observed Week 24 ACTOT, and **10** selected ADQSCIBC value differences. Their controlled dispositions are count-reconciled on every clean run. A count drift, blank disposition, blocking disposition, date beyond cutoff, failed prerequisite, failed change-control gate or failed traceability gate blocks the appropriate readiness/closure stage.
+
+See `docs/study_statistician_analysis_readiness.md` for the v0.20 review sequence and evidence boundary.
+
+## v0.19 standards evidence retained underneath v0.20
+
+v0.19 added four **CDISC Dataset-JSON 1.1** exchange files plus a pinned official **CDISC CORE** engine/cache/open-rule evidence path. The validated evidence remains:
 
 - Dataset-JSON datasets: **4**;
 - variables: **85**;
@@ -28,7 +60,7 @@ The clean-runner evidence verifies:
 - executable ADaMIG CORE validation performed: **false**;
 - conformance claim: **`NOT_ASSESSED`**.
 
-A zero-rule result is deliberately **not** reported as zero issues, validation success or formal conformance. If a future pinned official cache exposes non-zero ADaMIG rules, the same CI path automatically switches to strict executable validation and requires at least one executed rule with no CORE `EXECUTION ERROR`.
+A zero-rule result is deliberately **not** reported as zero issues, validation success or formal conformance. If a future pinned official cache exposes non-zero ADaMIG rules, the same CI path switches to strict executable validation and requires at least one executed rule with no CORE `EXECUTION ERROR`.
 
 See `docs/cdisc_standards_validation.md` for the full provenance, state machine and evidence boundary.
 
@@ -59,11 +91,13 @@ public CDISC / pharmaverse test data
   -> Kaplan–Meier + exploratory log-rank/Cox retention analysis
 
   -> analysis-dataset/TLF reviewer
-  -> layered CR-001–CR-013 statistical change-impact assessment
+  -> pre-closure study-statistician readiness review
+  -> layered CR-001–CR-014 statistical change-impact assessment
   -> T01–T25 executable structural traceability
+  -> portfolio evidence closure
 ```
 
-Standards/metadata governance remains separate from the TLF registry. v0.19 does **not** invent a T26; the statistical output registry remains **T01–T25 at version 0.17.0** because no new statistical table/listing/figure is added.
+Readiness/governance evidence remains separate from the TLF registry. v0.20 does **not** invent a T26; the statistical output registry remains **T01–T25 at version 0.17.0** because no new statistical table/listing/figure is added.
 
 ## Public CDISC/reference evidence
 
@@ -165,7 +199,7 @@ Validated TTDISC evidence:
 
 HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family.
 
-## v0.19 statistical change control
+## v0.20 statistical change control
 
 The change-control graph is layered rather than rewriting earlier validated specifications:
 
@@ -175,18 +209,21 @@ v0.16 -> cross-package MMRM validation
 v0.17 -> randomized-retention TTE / T24–T25
 v0.18 -> analysis metadata / lineage / Define-XML-inspired export
 v0.19 -> Dataset-JSON + CORE standards-validation governance
+v0.20 -> study-statistician analysis readiness + evidence closure
 ```
 
-`CR-013 — Official CDISC standards-engine or rule-availability change` propagates through:
+`CR-014 — Analysis-readiness definition or known-issue disposition change` propagates through:
 
 ```text
-standards_validation_configuration
-  -> dataset_json_exchange_validation
-  -> core_rule_availability_audit
-       -> core_validation_evidence_state
+analysis_readiness_configuration
+  -> blinded_analysis_readiness_review
+  -> final_analysis_readiness_review
+  -> analysis_evidence_closure
 ```
 
-CR-013 reviews the four exchanged analysis datasets, Dataset-JSON artifacts/QC, CORE cache/rule-discovery evidence, the executed-versus-NOT_AVAILABLE state, documentation and the v0.19 standards spec. It has **0 impacted TLFs** and does not propagate into MMRM, multiplicity, missing-data sensitivity or retention-survival families.
+CR-014 reviews the v0.20 readiness specification, treatment-blind review artifact, final issue-disposition/readiness evidence and review documentation. It has **0 impacted TLFs** and does not propagate into MMRM, multiplicity, missing-data sensitivity, retention-survival or standards-validation analysis families.
+
+The validated v0.20 change-control result is **14 changes / 88 propagated links / 311 of 311 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
 
 This is portfolio change-control simulation, not a sponsor-approved protocol/SAP change process.
 
@@ -200,29 +237,55 @@ The statistical output registry remains **T01–T25 at version 0.17.0**. The wor
 - QC-evidence links: **25/25**;
 - complete validated TLFs: **25/25**.
 
-## Key v0.19 files
+## Study-statistician readiness and closure artifacts
+
+Pre-closure readiness writes:
 
 ```text
-spec/standards_validation_v0_19.json                  pinned official standards evidence contract
-src/cdisc_portfolio/dataset_json.py                  Dataset-JSON + CORE transport generation
-src/cdisc_portfolio/core_cache.py                    safe cache/rule-availability audit
-src/cdisc_portfolio/core_validation.py               executable / NOT_AVAILABLE evidence state
-scripts/run_dataset_json.py                           official-schema gate
-scripts/run_core_cache_audit.py                       CORE cache/rule discovery gate
-scripts/run_core_validation.py                        strict executable-rule triage
-scripts/run_core_unavailable.py                       controlled no-execution evidence path
+outputs/blinded_analysis_readiness_review.csv
+outputs/analysis_readiness_review.csv
+outputs/analysis_readiness_metrics.json
+outputs/analysis_readiness_summary.md
+```
 
-docs/cdisc_standards_validation.md                   provenance, metrics and evidence boundary
-src/cdisc_portfolio/change_control_v019.py            layered v0.19 change-control merger
-spec/change_impact_graph_v0_19_extension.json         standards dependency extension
-spec/change_requests_v0_19_extension.json             CR-013
+The treatment-blind artifact is blocked from containing the configured treatment-assignment fields/tokens `TRT01P`, `TRT01A` or `ANLTRT`.
 
-R/mmrm_analysis.R                                     primary ACTOT MMRM
-R/mmrm_cross_package_qc.R                             independent rows + nlme MMRM
-R/tte_retention_analysis.R                            KM/log-rank/Cox retention
-R/rbmi_reference_based.R                              MAR/JR/CR/CIR sensitivity
-spec/analysis_traceability.csv                        T01–T25 registry
-spec/output_contracts.json                            executable TLF contracts
+After change control and traceability pass, closure writes:
+
+```text
+outputs/analysis_closure_review.csv
+outputs/analysis_closure_metrics.json
+outputs/analysis_closure_summary.md
+```
+
+The readiness claim is `PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW`; the closure claim is `PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE`. Tests reject regulatory/submission-ready replacements.
+
+## Key v0.20 files
+
+```text
+spec/analysis_readiness_v0_20.json                    cutoff, checks, issue dispositions and claims
+src/cdisc_portfolio/analysis_readiness.py             readiness + closure implementation
+scripts/run_analysis_readiness.py                     pre-closure readiness runner
+scripts/run_analysis_closure.py                       post-governance closure runner
+docs/study_statistician_analysis_readiness.md         review sequence and evidence boundary
+
+src/cdisc_portfolio/change_control_v020.py             layered v0.20 change-control merger
+spec/change_impact_graph_v0_20_extension.json          readiness dependency extension
+spec/change_requests_v0_20_extension.json              CR-014
+tests/test_analysis_readiness.py                       readiness/closure positive + negative controls
+tests/test_change_control_v020.py                      CR-014 dependency controls
+
+spec/standards_validation_v0_19.json                   pinned official standards evidence contract
+src/cdisc_portfolio/dataset_json.py                    Dataset-JSON + CORE transport generation
+src/cdisc_portfolio/core_cache.py                      safe cache/rule-availability audit
+src/cdisc_portfolio/core_validation.py                 executable / NOT_AVAILABLE evidence state
+
+R/mmrm_analysis.R                                      primary ACTOT MMRM
+R/mmrm_cross_package_qc.R                              independent rows + nlme MMRM
+R/tte_retention_analysis.R                             KM/log-rank/Cox retention
+R/rbmi_reference_based.R                               MAR/JR/CR/CIR sensitivity
+spec/analysis_traceability.csv                         T01–T25 registry
+spec/output_contracts.json                             executable TLF contracts
 ```
 
 ## Reproduce
@@ -252,8 +315,10 @@ Rscript R/rbmi_sensitivity.R
 Rscript R/rbmi_mcse_qc.R
 Rscript R/rbmi_reference_based.R
 python scripts/run_dataset_review.py
+python scripts/run_analysis_readiness.py
 python scripts/run_change_impact.py
 python scripts/validate_traceability.py
+python scripts/run_analysis_closure.py
 ```
 
-Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, standards, lineage and governance evidence can be inspected from the same clean run.
+Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, standards, lineage, readiness and governance evidence can be inspected from the same clean run.
