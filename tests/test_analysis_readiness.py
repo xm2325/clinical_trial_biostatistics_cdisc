@@ -6,7 +6,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from cdisc_portfolio.analysis_readiness import assess_analysis_readiness, write_analysis_readiness_outputs
+from cdisc_portfolio.analysis_readiness import (
+    assess_analysis_closure,
+    assess_analysis_readiness,
+    write_analysis_closure_outputs,
+    write_analysis_readiness_outputs,
+)
 
 
 def _write_json(path: Path, data: dict) -> None:
@@ -35,14 +40,38 @@ def _fixture(tmp_path: Path) -> Path:
                 "metadata_lineage",
                 "dataset_json",
                 "core_standards_state",
+            ],
+        },
+        "closure_review": {
+            "required_closure_gates": [
+                "analysis_readiness",
                 "change_control",
                 "traceability",
             ],
+            "closure_claim": "PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE",
         },
         "issue_dispositions": {
-            "AR-001": {"title": "mismatch", "expected_count": 1, "status": "ACCEPTED_FOR_ANALYSIS", "blocking": False, "resolution": "planned assignment retained"},
-            "AR-002": {"title": "missing", "expected_count": 1, "status": "ADDRESSED_BY_SENSITIVITY", "blocking": False, "resolution": "sensitivity reviewed"},
-            "AR-003": {"title": "reference", "expected_count": 1, "status": "SOURCE_TRACE_ACCEPTED", "blocking": False, "resolution": "source trace retained"},
+            "AR-001": {
+                "title": "mismatch",
+                "expected_count": 1,
+                "status": "ACCEPTED_FOR_ANALYSIS",
+                "blocking": False,
+                "resolution": "planned assignment retained",
+            },
+            "AR-002": {
+                "title": "missing",
+                "expected_count": 1,
+                "status": "ADDRESSED_BY_SENSITIVITY",
+                "blocking": False,
+                "resolution": "sensitivity reviewed",
+            },
+            "AR-003": {
+                "title": "reference",
+                "expected_count": 1,
+                "status": "SOURCE_TRACE_ACCEPTED",
+                "blocking": False,
+                "resolution": "source trace retained",
+            },
         },
         "readiness_claim": "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW",
         "evidence_boundary": "test",
@@ -90,7 +119,10 @@ def _fixture(tmp_path: Path) -> Path:
         tmp_path / "outputs" / "adqscibc_reference_detail.csv", index=False
     )
 
-    _write_json(tmp_path / "outputs" / "analysis_dataset_review_metrics.json", {"all_required_review_passed": True})
+    _write_json(
+        tmp_path / "outputs" / "analysis_dataset_review_metrics.json",
+        {"all_required_review_passed": True},
+    )
     for name in [
         "metadata_lineage_metrics.json",
         "dataset_json_metrics.json",
@@ -112,7 +144,10 @@ def test_analysis_readiness_happy_path_and_blinded_artifact_boundary(tmp_path: P
     blinded = pd.read_csv(blinded_path)
     assert not {"TRT01P", "TRT01A", "ANLTRT"} & set(blinded.columns)
     blinded_text = blinded_path.read_text().lower()
-    assert all(token.lower() not in blinded_text for token in ["TRT01P", "TRT01A", "ANLTRT"])
+    assert all(
+        token.lower() not in blinded_text
+        for token in ["TRT01P", "TRT01A", "ANLTRT"]
+    )
     assert bool(blinded["passed"].all())
 
 
@@ -125,7 +160,8 @@ def test_date_value_after_data_cutoff_is_blocking(tmp_path: Path) -> None:
     assert metrics["all_passed"] is False
     assert metrics["date_values_after_data_cutoff"] == 1
     assert any(
-        row["check"] == "no analysed date values exceed configured data cutoff" and not row["passed"]
+        row["check"] == "no analysed date values exceed configured data cutoff"
+        and not row["passed"]
         for row in blinded
     )
 
@@ -154,15 +190,46 @@ def test_blocking_or_blank_issue_disposition_is_rejected(tmp_path: Path) -> None
     assert metrics["blocking_open_issues"] >= 1
 
 
-def test_failed_prior_gate_blocks_final_readiness(tmp_path: Path) -> None:
+def test_failed_readiness_prior_gate_blocks_readiness(tmp_path: Path) -> None:
     root = _fixture(tmp_path)
-    _write_json(root / "outputs" / "traceability_metrics.json", {"all_passed": False})
+    _write_json(
+        root / "outputs" / "analysis_dataset_review_metrics.json",
+        {"all_required_review_passed": False},
+    )
     _, final, metrics = assess_analysis_readiness(root)
     assert metrics["all_passed"] is False
     assert any(
-        row.get("check") == "prior gate: traceability" and not row["passed"]
+        row.get("check") == "prior gate: dataset_review" and not row["passed"]
         for row in final
     )
+
+
+def test_closure_happy_path_requires_same_run_governance_gates(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    write_analysis_readiness_outputs(root)
+    metrics = write_analysis_closure_outputs(root)
+    assert metrics["all_passed"] is True
+    assert metrics["closure_checks_passed"] == metrics["closure_checks"]
+    assert metrics["readiness_blocking_open_issues"] == 0
+
+
+def test_failed_traceability_blocks_closure_not_preclosure_readiness(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    readiness = write_analysis_readiness_outputs(root)
+    assert readiness["all_passed"] is True
+    _write_json(root / "outputs" / "traceability_metrics.json", {"all_passed": False})
+    rows, metrics = assess_analysis_closure(root)
+    assert metrics["all_passed"] is False
+    assert any(row["check"] == "traceability" and not row["passed"] for row in rows)
+
+
+def test_failed_change_control_blocks_closure(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    write_analysis_readiness_outputs(root)
+    _write_json(root / "outputs" / "change_impact_metrics.json", {"all_passed": False})
+    rows, metrics = assess_analysis_closure(root)
+    assert metrics["all_passed"] is False
+    assert any(row["check"] == "change_control" and not row["passed"] for row in rows)
 
 
 def test_expected_count_configuration_drift_is_rejected(tmp_path: Path) -> None:
@@ -192,4 +259,14 @@ def test_regulatory_readiness_overclaim_is_rejected(tmp_path: Path) -> None:
     cfg["readiness_claim"] = "SUBMISSION_READY"
     cfg_path.write_text(json.dumps(cfg))
     with pytest.raises(ValueError, match="portfolio-scoped"):
+        assess_analysis_readiness(root)
+
+
+def test_regulatory_closure_overclaim_is_rejected(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    cfg_path = root / "spec" / "analysis_readiness_v0_20.json"
+    cfg = json.loads(cfg_path.read_text())
+    cfg["closure_review"]["closure_claim"] = "REGULATORY_PACKAGE_COMPLETE"
+    cfg_path.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError, match="closure_claim must remain portfolio-scoped"):
         assess_analysis_readiness(root)
