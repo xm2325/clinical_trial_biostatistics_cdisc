@@ -16,10 +16,16 @@
       "dataset_review",
       "metadata_lineage",
       "dataset_json",
-      "core_standards_state",
+      "core_standards_state"
+    ]
+  },
+  "closure_review": {
+    "required_closure_gates": [
+      "analysis_readiness",
       "change_control",
       "traceability"
-    ]
+    ],
+    "closure_claim": "PORTFOLIO_EVIDENCE_CLOSURE_COMPLETE"
   },
   "issue_dispositions": {
     "AR-001": {
@@ -45,5 +51,5 @@
     }
   },
   "readiness_claim": "PORTFOLIO_ANALYSIS_PACKAGE_READY_FOR_REVIEW",
-  "evidence_boundary": "Portfolio study-statistician readiness evidence only. This is not a sponsor database lock, formal blinded data review meeting, regulatory submission readiness decision, or sponsor/CRO sign-off."
+  "evidence_boundary": "Portfolio study-statistician readiness and evidence-closure workflow only. This is not a sponsor database lock, formal blinded data review meeting, regulatory submission readiness decision, sponsor/CRO sign-off, or validated production release."
 }
