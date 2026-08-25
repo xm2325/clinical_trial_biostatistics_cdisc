@@ -1,0 +1,21 @@
+{
+  "version": "0.24.0",
+  "claim": "PORTFOLIO_SAFETY_POPULATION_ASSIGNMENT_READY",
+  "safety_flag": "SAFFL",
+  "safety_assignment": "TRT01A",
+  "efficacy_assignment_context": "TRT01P",
+  "teae_flag": "TRTEMFL",
+  "rules": [
+    "Safety denominators are unique SAFFL=Y subjects.",
+    "Safety summaries use actual treatment TRT01A because this portfolio safety question is exposure-based.",
+    "Planned treatment TRT01P is retained only as a diagnostic counterfactual and must not silently replace actual treatment in safety denominators.",
+    "Subject incidence counts each subject at most once per endpoint; event counts may count multiple events.",
+    "Every ADAE-style treatment label must reconcile to the subject-level ADSL-style actual treatment.",
+    "The v0.23 efficacy rule is intentionally different: efficacy missing-data grouping follows planned randomised treatment."
+  ],
+  "interpretation_boundary": [
+    "This is a public-data portfolio safety review, not a sponsor safety analysis convention for every protocol.",
+    "Risk differences are descriptive and are not a confirmatory safety hypothesis family.",
+    "The planned-versus-actual comparison is an audit showing why analysis purpose governs treatment assignment; it is not an alternative safety result for reporting."
+  ]
+}
