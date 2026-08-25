@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.22.0 — 2026-08-25
+
+- Add a post-interpretation Statistical Review Query and Decision-Provenance Pack that converts Study Statistician review questions into executable evidence reconciliations rather than adding another model, estimand, analysis population or TLF.
+- Add exactly five controlled reviewer queries, SRQ-001–SRQ-005, covering the primary Week 24 efficacy decision, missing-data robustness, planned-versus-actual treatment mismatches, descriptive safety interpretation and exploratory retention interpretation.
+- Reconcile the primary reviewer response to the controlled multiplicity decision; the live evidence remains **0/2 family-wise rejections** with adjusted p-values **0.338669 / 0.843940**, so no confirmatory efficacy-success conclusion is supported.
+- Require the missing-data reviewer response to reconcile **116 observed + 138 missing = 254 randomized subjects (54.3% missing)**, require exact MAR/JR/CR/CIR strategy coverage for both primary comparisons, require all reference-based MCSE gates to pass, and include fixed-delta directional-tipping context.
+- Retain **8/8** reference-based strategy/comparison rows with **8/8 MCSE passes** and report directional tipping at **1.5621 ACTOT points** for Low Dose versus Placebo and **1.0333 ACTOT points** for High Dose versus Placebo; the response explicitly avoids a blanket `fully robust` claim.
+- Recount planned-versus-actual treatment assignment mismatches directly from the generated ADTTE-style data and reconcile the result to readiness evidence; the live count remains **12**. Exploratory retention continues to use planned randomized treatment (`TRT01P`) as `ANLTRT` while retaining actual treatment as context.
+- Keep the two TEAE risk-difference rows descriptive only; first-live-run risk differences range from **0.1192 to 0.1886** and are not promoted to inferential safety or benefit-risk claims.
+- Preserve the two retention hazard ratios as exploratory study-discontinuation evidence: **3.0852** and **2.9246**, both interpreted as higher study-discontinuation hazard rather than efficacy results.
+- Generate `outputs/statistical_review_queries.csv`, `outputs/statistical_review_query_checks.csv`, `outputs/statistical_review_query_metrics.json` and `outputs/statistical_review_query_response.md` after v0.21 statistical interpretation.
+- First live implementation run Actions **#651 / run 32774536503** on head `a130bc12f591fcccc989242148698edfd490bc52` completed the full Python/R/CDISC/MMRM/MI/readiness/closure/reviewer-response workflow successfully with **10/10 reviewer-response checks PASS**; artifact `9537615679`, digest `sha256:561e3c8c50c7697a7306e78018280add24ac89f75c750c753810d3c0488b0b63`.
+- Harden the post-live-run gate by requiring exact strategy coverage per comparison, exact fixed-delta comparison coverage and a lexical overclaim guard with no exception path.
+- Expand negative controls to block primary multiplicity/CSR decision drift, Week 24 denominator drift, incomplete reference-based strategies, missing fixed-delta comparison evidence, treatment-mismatch drift, safety-role promotion, retention-hazard direction errors, generated overclaim fragments and regulatory-scoped review claims.
+- Keep CR-001–CR-014 and T01–T25 unchanged. v0.22 is a post-closure/post-interpretation reviewer-response layer and does not create a circular dependency into the pre-closure change-control graph.
+- Controlled review-response claim: `PORTFOLIO_STATISTICAL_REVIEW_RESPONSE_READY`. This is independent public-data portfolio evidence only, not sponsor/CRO correspondence, a health-authority response, sponsor-approved CSR review, benefit-risk approval or submission readiness.
+
 ## 0.21.0 — 2026-08-24
 
 - Add a post-closure Study Statistician interpretation layer that turns already validated efficacy, missing-data, safety and retention evidence into an executable CSR-style conclusion matrix rather than adding another model, estimand, population or TLF.
