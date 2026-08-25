@@ -14,9 +14,10 @@ on:
       - "scripts/install_sas_oda_encryption_jars.py"
       - "scripts/run_sas_oda_probe.py"
       - "scripts/run_sas_oda_validation.py"
+      - "requirements.txt"
       - "spec/**"
       - "src/cdisc_portfolio/**"
-      - "R/**"
+      - "R/mmrm_analysis.R"
 
 permissions:
   contents: read
@@ -26,10 +27,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  connectivity-probe:
+  sas-oda-validation:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     env:
       SAS_ODA_USER: ${{ secrets.SAS_ODA_USER }}
       SAS_ODA_PASSWORD: ${{ secrets.SAS_ODA_PASSWORD }}
@@ -69,8 +70,10 @@ jobs:
             exit 1
           fi
 
-      - name: Install SASPy probe dependencies
-        run: python -m pip install "saspy==5.108.0" "pandas==2.2.3"
+      - name: Install Python and SASPy dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install "saspy==5.108.0"
 
       - name: Decrypt and install SAS ODA encryption JARs
         shell: bash
@@ -93,13 +96,33 @@ jobs:
           SASPY_CFGFILE: ${{ steps.oda_config.outputs.cfgfile }}
         run: python scripts/run_sas_oda_probe.py
 
+      - name: Generate validated Python clinical-programming references
+        run: python scripts/run_all.py
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.6.1"
+          use-public-rspm: true
+
+      - name: Install R MMRM reference dependencies
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
+
+      - name: Generate validated R MMRM reference
+        run: Rscript R/mmrm_analysis.R
+
+      - name: Execute and reconcile BMS SAS programs on ODA
+        env:
+          SASPY_CFGFILE: ${{ steps.oda_config.outputs.cfgfile }}
+        run: python scripts/run_sas_oda_validation.py
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sas-oda-probe-${{ github.run_id }}
+          name: sas-oda-validation-${{ github.run_id }}
           path: |
-            outputs/sas_oda_probe.csv
-            outputs/sas_oda_probe_metrics.json
-            outputs/sas_oda_probe_summary.md
+            outputs/sas_oda_*
+            outputs/mmrm_treatment_contrasts.csv
+            outputs/mmrm_analysis_dataset.csv
+            outputs/table7_teae_risk_difference.csv
           if-no-files-found: warn
           retention-days: 30
