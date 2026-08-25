@@ -162,6 +162,7 @@ def test_happy_path_generates_five_controlled_reviewer_responses(tmp_path: Path)
     assert "54.3%" in text
     assert "supportive sensitivity evidence only" in text
     assert "higher discontinuation hazard" in text
+    assert "proves safety" not in text
 
 
 def test_failed_prior_interpretation_blocks_review_pack(tmp_path: Path) -> None:
@@ -180,6 +181,16 @@ def test_failed_prior_interpretation_blocks_review_pack(tmp_path: Path) -> None:
     assert any("v0.20 readiness and v0.21 interpretation" in row["check"] and not row["passed"] for row in checks)
 
 
+def test_primary_multiplicity_csr_decision_drift_is_blocking(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    table = pd.read_csv(root / "outputs" / "table23_actot_multiplicity.csv")
+    table.loc[table["contrast"].eq(LOW), "reject_familywise"] = True
+    table.to_csv(root / "outputs" / "table23_actot_multiplicity.csv", index=False)
+    _, checks, metrics = assess_statistical_review_queries(root)
+    assert metrics["all_passed"] is False
+    assert any("primary reviewer response reconciles" in row["check"] and not row["passed"] for row in checks)
+
+
 def test_missingness_denominator_drift_is_blocking(tmp_path: Path) -> None:
     root = _fixture(tmp_path)
     readiness = json.loads((root / "outputs" / "analysis_readiness_metrics.json").read_text())
@@ -188,6 +199,26 @@ def test_missingness_denominator_drift_is_blocking(tmp_path: Path) -> None:
     _, checks, metrics = assess_statistical_review_queries(root)
     assert metrics["all_passed"] is False
     assert any("missingness denominator reconciles" in row["check"] and not row["passed"] for row in checks)
+
+
+def test_incomplete_reference_based_strategy_set_is_blocking(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    table = pd.read_csv(root / "outputs" / "table22_rbmi_reference_based.csv")
+    table = table.loc[~(table["comparison"].eq(LOW) & table["strategy_id"].eq("CIR"))]
+    table.to_csv(root / "outputs" / "table22_rbmi_reference_based.csv", index=False)
+    _, checks, metrics = assess_statistical_review_queries(root)
+    assert metrics["all_passed"] is False
+    assert any("complete reference-based MI" in row["check"] and not row["passed"] for row in checks)
+
+
+def test_missing_fixed_delta_comparison_is_blocking(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    table = pd.read_csv(root / "outputs" / "csr_fixed_delta_context.csv")
+    table = table.loc[table["comparison"].eq(LOW)]
+    table.to_csv(root / "outputs" / "csr_fixed_delta_context.csv", index=False)
+    _, checks, metrics = assess_statistical_review_queries(root)
+    assert metrics["all_passed"] is False
+    assert any("directional tipping evidence" in row["check"] and not row["passed"] for row in checks)
 
 
 def test_treatment_mismatch_count_drift_is_blocking(tmp_path: Path) -> None:
@@ -218,6 +249,17 @@ def test_retention_hazard_direction_error_is_blocking(tmp_path: Path) -> None:
     _, checks, metrics = assess_statistical_review_queries(root)
     assert metrics["all_passed"] is False
     assert any("retention reviewer response preserves hazard direction" in row["check"] and not row["passed"] for row in checks)
+
+
+def test_generated_overclaim_fragment_is_blocking(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    cfg_path = root / "spec" / "statistical_review_queries_v0_22.json"
+    cfg = json.loads(cfg_path.read_text())
+    cfg["prohibited_claim_fragments"].append("descriptive safety comparisons")
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+    _, checks, metrics = assess_statistical_review_queries(root)
+    assert metrics["all_passed"] is False
+    assert any("no prohibited positive overclaim fragments" in row["check"] and not row["passed"] for row in checks)
 
 
 def test_regulatory_review_claim_configuration_is_rejected(tmp_path: Path) -> None:
