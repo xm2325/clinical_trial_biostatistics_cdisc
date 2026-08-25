@@ -127,14 +127,29 @@ def assess_statistical_review_queries(
         f"observed={observed}; missing={missing}; randomized={randomized}; missing_rate={missing_rate:.6f}",
     )
 
-    expected_rbmi_rows = 8
-    rbmi_ok = len(rbmi) == expected_rbmi_rows and bool(rbmi["mcse_pass"].all())
-    fixed_ok = len(fixed) == 2 and set(fixed["section"].astype(str)) == {"FIXED_DELTA_SENSITIVITY"}
+    expected_comparisons = set(multiplicity["contrast"].astype(str))
+    expected_strategies = {"MAR", "JR", "CR", "CIR"}
+    rbmi_structure_ok = set(rbmi["comparison"].astype(str)) == expected_comparisons
+    rbmi_details: list[str] = []
+    for comparison in sorted(expected_comparisons):
+        subset = rbmi.loc[rbmi["comparison"].astype(str).eq(comparison)]
+        observed_strategies = set(subset["strategy_id"].astype(str))
+        comparison_ok = len(subset) == len(expected_strategies) and observed_strategies == expected_strategies
+        rbmi_structure_ok = rbmi_structure_ok and comparison_ok
+        rbmi_details.append(
+            f"{comparison}:strategies={sorted(observed_strategies)},mcse={int(subset['mcse_pass'].sum())}/{len(subset)}"
+        )
+    rbmi_ok = len(rbmi) == len(expected_comparisons) * len(expected_strategies) and rbmi_structure_ok and bool(rbmi["mcse_pass"].all())
+    fixed_ok = (
+        len(fixed) == len(expected_comparisons)
+        and set(fixed["section"].astype(str)) == {"FIXED_DELTA_SENSITIVITY"}
+        and set(fixed["comparison"].astype(str)) == expected_comparisons
+    )
     _check(
         checks,
         "missing-data reviewer response includes complete reference-based MI and directional tipping evidence",
         rbmi_ok and fixed_ok,
-        f"rbmi_mcse={int(rbmi['mcse_pass'].sum())}/{len(rbmi)}; fixed_delta_context_rows={len(fixed)}",
+        "; ".join(rbmi_details) + f"; fixed_delta_context_rows={len(fixed)}",
     )
 
     if {"TRT01P", "TRT01A"}.issubset(adtte.columns):
@@ -219,7 +234,7 @@ def assess_statistical_review_queries(
     rd_values = safety["risk_difference"].astype(float)
     safety_response = (
         f"The two active-versus-placebo TEAE risk differences range from {rd_values.min():.4f} to {rd_values.max():.4f}. "
-        "They are descriptive safety comparisons in this portfolio and do not establish a benefit-risk conclusion or prove safety."
+        "They are descriptive safety comparisons in this portfolio; they do not establish a benefit-risk conclusion or constitute evidence of established safety."
     )
 
     retention_bits = []
@@ -294,10 +309,6 @@ def assess_statistical_review_queries(
         for fragment in cfg.get("prohibited_claim_fragments", [])
         if str(fragment).lower() in response_text
     ]
-    # The safety response intentionally names the prohibited phrase "prove safety" only to reject it.
-    # Remove that phrase from generated prose rather than weakening this lexical overclaim guard.
-    if "proves safety" in prohibited:
-        prohibited.remove("proves safety")
     _check(
         checks,
         "generated reviewer responses contain no prohibited positive overclaim fragments",
