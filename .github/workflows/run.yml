@@ -28,6 +28,8 @@ jobs:
         run: python scripts/profile_official_references.py
       - name: Run public CDISC workflow
         run: python scripts/run_all.py
+      - name: Safety population and assignment review
+        run: python scripts/run_safety_population_review.py
       - name: ADTTE-style retention derivation gate
         run: python scripts/run_tte_retention.py
       - name: ADaM-style variable metadata and lineage gate
@@ -130,6 +132,8 @@ jobs:
           fi
       - name: Protocol design and sample-size QC
         run: python scripts/run_protocol_design.py
+      - name: Prospective design operating-characteristics gate
+        run: python scripts/run_design_operating_characteristics.py
       - name: Randomisation and kit schedule QC
         run: python scripts/run_randomisation.py
 
@@ -180,12 +184,18 @@ jobs:
         run: python scripts/validate_traceability.py
       - name: Study-statistician evidence closure gate
         run: python scripts/run_analysis_closure.py
+      - name: Post-data-review statistical change decision gate
+        run: python scripts/run_statistical_change_decision.py
 
       - name: Show measurable run summary
         if: always()
         run: |
           files=(
             outputs/analysis_run_note.md
+            outputs/safety_population_review_summary.md
+            outputs/safety_population_review_qc.csv
+            outputs/safety_population_review_metrics.json
+            outputs/safety_assignment_comparison.csv
             outputs/adtte_retention_summary.md
             outputs/adtte_retention_qc.csv
             outputs/metadata_lineage_summary.md
@@ -204,6 +214,10 @@ jobs:
             outputs/table25_retention_pairwise.csv
             outputs/protocol_design_summary.md
             outputs/protocol_design_qc.csv
+            outputs/design_operating_characteristics_summary.md
+            outputs/design_operating_characteristics.csv
+            outputs/design_operating_characteristics_qc.csv
+            outputs/design_operating_characteristics_metrics.json
             outputs/randomisation_summary.md
             outputs/randomisation_qc.csv
             outputs/r_independent_qc_summary.md
@@ -238,6 +252,10 @@ jobs:
             outputs/analysis_closure_summary.md
             outputs/analysis_closure_review.csv
             outputs/analysis_closure_metrics.json
+            outputs/statistical_change_decision_summary.md
+            outputs/statistical_change_decision.csv
+            outputs/statistical_change_decision_qc.csv
+            outputs/statistical_change_decision_metrics.json
           )
           for f in "${files[@]}"; do
             if [ -f "$f" ]; then
