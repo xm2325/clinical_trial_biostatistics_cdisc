@@ -11,7 +11,9 @@
       "objective": "Compare each active treatment with placebo on ACTOT change from baseline at Week 24 while retaining observed outcomes after treatment discontinuation.",
       "treatment": {
         "conditions": ["Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"],
-        "comparisons": ["Xanomeline Low Dose vs Placebo", "Xanomeline High Dose vs Placebo"]
+        "comparisons": ["Xanomeline Low Dose vs Placebo", "Xanomeline High Dose vs Placebo"],
+        "assignment_variable": "TRT01P",
+        "assignment_rule": "Use planned randomised treatment assignment for efficacy grouping; retain TRT01A separately as actual-treatment context when planned and actual treatment differ."
       },
       "population": {
         "description": "Portfolio analysis population operationalised as randomised subjects with an observed baseline ACTOT score.",
@@ -55,7 +57,8 @@
       },
       "portfolio_input_limitations": [
         "Treatment discontinuation is the only intercurrent event operationalised in this estimand review because it is explicitly represented in the current DS-derived subject data.",
-        "Rescue medication, treatment switching and other potential intercurrent events are not inferred when they are not explicitly available in the current portfolio inputs."
+        "Rescue medication, treatment switching and other potential intercurrent events are not inferred when they are not explicitly available in the current portfolio inputs.",
+        "The public pilot data contain planned-versus-actual treatment mismatches. v0.23 controls efficacy missing-data sensitivity grouping by planned randomised assignment and preserves actual treatment as contextual provenance."
       ]
     }
   ]
