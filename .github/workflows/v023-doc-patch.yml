@@ -1,0 +1,166 @@
+name: v0.23 documentation patch
+
+on:
+  push:
+    branches: ["upgrade/v0.23-analysis-population-provenance"]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-docs:
+    if: ${{ !contains(github.event.head_commit.message, '[doc-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upgrade/v0.23-analysis-population-provenance
+      - name: Patch README and CHANGELOG without truncating history
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          marker = '## Current milestone: v0.22 — statistical review query and decision provenance'
+          if '## Current milestone: v0.23 — randomised-assignment consistency repair and population provenance' not in readme:
+              if marker not in readme:
+                  raise SystemExit('README v0.22 milestone marker not found')
+              section = '''## Current milestone: v0.23 — randomised-assignment consistency repair and population provenance
+
+v0.23 is a **repair**, not a new efficacy model. A subject-level assignment audit found that 12/254 randomised subjects have `TRT01P != TRT01A`, all planned High Dose -> actual Low Dose. Those 12 subjects contribute no observed Week 8/16/24 ACTOT rows to the primary MMRM, but they do belong to the 254-subject missing-data target and therefore affect imputation-group assignment.
+
+The earlier T20/T21/T22 sensitivity path grouped the imputation target by actual treatment (`TRT01A`), producing Placebo / Low / High counts **86 / 96 / 72** and pairwise targets **182 / 158**. v0.23 aligns the efficacy missing-data sensitivity target with the randomised treatment condition by using planned assignment (`TRT01P`) for MI grouping while retaining actual treatment as explicit context. The corrected planned allocation is **86 / 84 / 84**, giving **170 / 170** Low-vs-Placebo and High-vs-Placebo MI targets.
+
+The repair is deliberately bounded:
+
+```text
+original ADSL-/ADQS-style files with actual-treatment provenance
+  -> subject-level planned/actual assignment audit
+  -> planned-assignment MI input copies
+  -> hard guard: mismatch subjects must not silently enter observed primary MMRM
+  -> T20/T21 subject-level MAR/delta MI + MCSE
+  -> T22 MAR/JR/CR/CIR reference-based MI + MCSE
+  -> post-execution pair-target audit
+  -> byte-for-byte restore of original analysis inputs
+```
+
+First governance-inclusive clean validation was Actions **#689 / run 32851464310** on head `bee4e338099d2a769037ec9f4190308a0c350de2`. It passed the complete Python/R/CDISC/MMRM/MI/readiness/change-control/traceability/closure/reviewer-response workflow and verified:
+
+- subjects / randomised / baseline-ACTOT target: **306 / 254 / 254**;
+- planned randomised allocation: **86 / 84 / 84**;
+- actual-treatment allocation in those randomised subjects: **86 / 96 / 72**;
+- planned-versus-actual mismatches: **12**;
+- mismatch subjects entering the observed primary MMRM: **0**;
+- primary MMRM subjects: **189**;
+- randomised baseline subjects with no observed post-baseline ACTOT: **65**;
+- Week 24 observed / missing: **116 / 138**;
+- corrected executed MI pair targets: **170 / 170**;
+- pre-MI assignment checks: **10/10 PASS**;
+- post-MI execution checks: **4/4 PASS**;
+- reference-based MAR/JR/CR/CIR rows: **8/8**, with **8/8 MCSE passes**;
+- controlled assignment claim: **`PORTFOLIO_RANDOMISED_ASSIGNMENT_CONSISTENCY_READY`**;
+- change requests: **CR-001–CR-015**;
+- propagated component links: **94**;
+- required change-impact relationships/resources: **333/333**;
+- missing / extra / unresolved required impacts: **0 / 0 / 0**;
+- CR-015 impacts **T20/T21/T22** through **6** propagated components and **22** required impacts.
+
+The repaired MI estimates remain supportive rather than confirmatory. Week 24 MAR estimates are approximately **-1.5397** for Low Dose versus Placebo and **-0.7237** for High Dose versus Placebo; the primary Bonferroni family remains **0/2 rejected**, so v0.21/v0.22 still correctly block a confirmatory efficacy-success claim. The repair therefore fixes population assignment without opportunistically changing the statistical interpretation.
+
+The #689 artifact is `clinical-biostatistics-cdisc-outputs`, ID **9564651055**, digest `sha256:106abf356e19437e2f60cfdb4fc5b0fca55db712e45270c6b1865ac9780f2623`.
+
+See `docs/mi_randomised_assignment_repair_v0_23.md` for the repair rationale, controlled boundary and evidence.
+
+## v0.22 baseline retained under v0.23 — statistical review query and decision provenance'''
+              readme = readme.replace(marker, section, 1)
+
+              readme = readme.replace(
+                  '  -> fixed-delta diagnostics\n  -> subject-level MAR/delta MI + MCSE QC\n  -> reference-based MAR/JR/CR/CIR MI + MCSE QC',
+                  '  -> fixed-delta diagnostics\n  -> v0.23 planned-randomisation MI assignment boundary + subject-level audit\n  -> subject-level MAR/delta MI + MCSE QC\n  -> reference-based MAR/JR/CR/CIR MI + MCSE QC',
+                  1,
+              )
+              readme = readme.replace(
+                  '  -> layered CR-001–CR-014 statistical change-impact assessment',
+                  '  -> layered CR-001–CR-015 statistical change-impact assessment',
+                  1,
+              )
+              old = ('Readiness, governance, interpretation and reviewer-response evidence remain separate from the TLF registry. '
+                     'v0.22 does **not** invent a T26 or CR-015; the statistical output registry remains **T01–T25 at version 0.17.0** '
+                     'and the pre-closure change-control graph remains **CR-001–CR-014** because v0.22 adds post-closure statistical review evidence '
+                     'rather than a new statistical table/listing/figure or upstream analysis change.')
+              new = ('Readiness, governance, interpretation and reviewer-response evidence remain separate from the TLF registry. '
+                     'The statistical output registry remains **T01–T25 at version 0.17.0**: v0.23 does not create a T26. '
+                     'Unlike post-closure v0.21/v0.22, however, v0.23 changes an upstream missing-data sensitivity assignment source, so it is controlled as **CR-015** and explicitly propagates to T20/T21/T22.')
+              if old not in readme:
+                  raise SystemExit('README v0.22 CR-015 boundary paragraph not found')
+              readme = readme.replace(old, new, 1)
+
+              readme = readme.replace(
+                  'v0.22 -> post-interpretation statistical reviewer-response QC\n```',
+                  'v0.22 -> post-interpretation statistical reviewer-response QC\nv0.23 -> randomised-assignment consistency repair for T20–T22\n```',
+                  1,
+              )
+              retained = ('The validated v0.20 change-control result is **14 changes / 88 propagated links / 311 of 311 required impact relationships/resources**, '
+                          'with zero missing declarations, zero extra declarations and zero unresolved required resources.')
+              current = (retained + '\n\nv0.23 advances the active layered change-control result to **15 changes / 94 propagated links / 333 of 333 required impact relationships/resources**, '
+                         'again with zero missing declarations, zero extra declarations and zero unresolved required resources. **CR-015** controls the randomised-assignment source used by efficacy missing-data sensitivity analyses and propagates to **T20/T21/T22**; the TLF registry itself remains T01–T25.')
+              if retained not in readme:
+                  raise SystemExit('README v0.20 change-control metric paragraph not found')
+              readme = readme.replace(retained, current, 1)
+
+              readme = readme.replace('## Key v0.22 and inherited files', '## Key v0.23 and inherited files', 1)
+              key_marker = '```text\nspec/statistical_review_queries_v0_22.json'
+              key_repl = '''```text
+spec/change_impact_graph_v0_23_extension.json            CR-015 dependency extension
+spec/change_requests_v0_23_extension.json                CR-015 controlled repair record
+src/cdisc_portfolio/change_control_v023.py               layered v0.23 change-control merger
+src/cdisc_portfolio/mi_assignment.py                      planned/actual assignment audit + MI input builder
+scripts/run_mi_assignment_inputs.py                       controlled MI staging boundary
+scripts/run_mi_assignment_output_audit.py                 post-MI execution + restore audit
+tests/test_mi_assignment.py                               assignment and population negative controls
+tests/test_change_control_v023.py                         CR-015 propagation negative controls
+docs/mi_randomised_assignment_repair_v0_23.md             repair rationale and evidence boundary
+
+spec/statistical_review_queries_v0_22.json'''
+              if key_marker not in readme:
+                  raise SystemExit('README key-files marker not found')
+              readme = readme.replace(key_marker, key_repl, 1)
+              readme_path.write_text(readme, encoding='utf-8')
+
+          changelog_path = Path('CHANGELOG.md')
+          changelog = changelog_path.read_text(encoding='utf-8')
+          if '## 0.23.0 — 2026-08-25' not in changelog:
+              if not changelog.startswith('# Changelog\n\n'):
+                  raise SystemExit('CHANGELOG header not found')
+              entry = '''## 0.23.0 — 2026-08-25
+
+- Repair a material efficacy missing-data treatment-assignment inconsistency discovered by a new subject-level population audit. Among **254 randomised subjects**, **12** have `TRT01P != TRT01A`, all planned High Dose -> actual Low Dose.
+- Verify that those **12/12** mismatch subjects contribute no observed Week 8/16/24 ACTOT rows to the primary MMRM, so the existing observed-data primary model and Bonferroni decision are not silently changed by this repair.
+- Correct T20/T21/T22 MI grouping from actual treatment (`TRT01A`) to planned randomised assignment (`TRT01P`) for the estimand-defined randomised baseline-ACTOT target while preserving actual treatment as explicit context.
+- Correct the MI target allocation from Placebo / Low / High **86 / 96 / 72** to the randomised **86 / 84 / 84**, changing pairwise MI targets from **182 / 158** to **170 / 170**.
+- Add deterministic planned-assignment MI input copies, retain `TRT01A_ACTUAL`, stage them only across the rbmi sensitivity-analysis boundary, and restore the original ADSL-/ADQS-style files before downstream dataset review/readiness/closure.
+- Add a hard primary-MMRM assignment guard: any future planned/actual mismatch subject entering the observed primary MMRM is blocking and requires explicit statistical review rather than silent continuation.
+- Add `analysis_population_provenance.csv`, pre-MI **10/10** assignment checks and post-MI **4/4** execution/restore checks. Corrected executed pair targets are **170/170** and the controlled claim is `PORTFOLIO_RANDOMISED_ASSIGNMENT_CONSISTENCY_READY`.
+- Re-run 200-imputation MAR/delta MI and MAR/JR/CR/CIR reference-based MI on the corrected randomised grouping. Corrected Week 24 MAR estimates are approximately **-1.5397** for Low Dose versus Placebo and **-0.7237** for High Dose versus Placebo; both remain non-confirmatory, and reference-based evidence retains **8/8 MCSE passes**.
+- Preserve the primary family conclusion: adjusted MMRM p-values remain **0.338669 / 0.843940**, so **0/2** primary hypotheses are rejected and no confirmatory efficacy-success conclusion is supported.
+- Add **CR-015 — Randomised treatment-assignment source correction for efficacy missing-data sensitivity analyses**. It propagates through **6** components, requires **22** impacts and explicitly affects **T20/T21/T22**.
+- Advance layered change control to **15 changes / 94 propagated component links / 333/333 required impact relationships/resources**, with **0 missing / 0 extra / 0 unresolved** required impacts. The statistical TLF registry remains **T01–T25 / version 0.17.0**; no T26 is invented.
+- Governance-inclusive clean run Actions **#689 / run 32851464310** on head `bee4e338099d2a769037ec9f4190308a0c350de2` passes the full Python/R/CDISC/MMRM/MI/readiness/change-control/traceability/closure/reviewer-response workflow. Artifact `9564651055`, digest `sha256:106abf356e19437e2f60cfdb4fc5b0fca55db712e45270c6b1865ac9780f2623`.
+- Preserve the evidence boundary: this is a public-data portfolio repair, not a sponsor-approved SAP amendment, database-lock change, regulatory response, formal ADaM validation or submission-ready sensitivity analysis.
+
+'''
+              changelog = '# Changelog\n\n' + entry + changelog[len('# Changelog\n\n'):]
+              changelog_path.write_text(changelog, encoding='utf-8')
+          PY
+      - name: Commit documentation patch
+        run: |
+          if git diff --quiet -- README.md CHANGELOG.md; then
+            echo "Documentation already patched"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md CHANGELOG.md
+          git commit -m "Document v0.23 randomised-assignment repair [doc-patch]"
+          git push origin HEAD:upgrade/v0.23-analysis-population-provenance
