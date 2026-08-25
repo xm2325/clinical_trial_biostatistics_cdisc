@@ -1,0 +1,32 @@
+{
+  "version": "0.24.0",
+  "claim": "PORTFOLIO_STATISTICAL_CHANGE_DECISION_READY",
+  "decision_id": "SCD-001",
+  "proposal": "Replace the primary Week 24 MMRM analysis with reference-based multiple imputation because Week 24 missingness is high.",
+  "proposal_timing": "POST_DATA_REVIEW",
+  "current_primary_analysis": "Observed-data ACTOT MMRM with a two-comparison Bonferroni family",
+  "proposed_primary_analysis": "Reference-based multiple imputation",
+  "required_current_role": "CONFIRMATORY_PRIMARY",
+  "required_proposed_role": "SUPPORTIVE_SENSITIVITY",
+  "decision": "REJECT_PRIMARY_CHANGE",
+  "permitted_action": "Retain the controlled primary MMRM/multiplicity decision and use reference-based MI as supportive missing-data sensitivity evidence.",
+  "rules": {
+    "missingness_alone_does_not_justify_post_hoc_primary_switch": true,
+    "supportive_sensitivity_cannot_be_promoted_post_hoc_to_rescue_primary": true,
+    "primary_multiplicity_family_must_remain_intact": true,
+    "decision_must_be_independent_of_favourability": true,
+    "existing_sensitivity_evidence_must_be_complete": true
+  },
+  "required_evidence": [
+    "outputs/analysis_readiness_metrics.json",
+    "outputs/table23_actot_multiplicity.csv",
+    "outputs/table22_rbmi_reference_based.csv",
+    "outputs/rbmi_reference_qc.csv",
+    "outputs/analysis_closure_metrics.json"
+  ],
+  "interpretation_boundary": [
+    "This is a portfolio governance exercise, not a sponsor SAP amendment or health-authority interaction.",
+    "The decision is intentionally outcome-independent: the proposed switch is rejected because of analysis-role, timing and multiplicity principles, not because the observed treatment effect is favourable or unfavourable.",
+    "A prospectively specified change before unblinded review could require a different decision process; this exercise does not claim that every SAP change is prohibited."
+  ]
+}
