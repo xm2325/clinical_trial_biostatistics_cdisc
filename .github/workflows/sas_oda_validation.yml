@@ -8,8 +8,10 @@ on:
       - feature/v0.26-bms-statistical-programming
     paths:
       - ".github/workflows/sas_oda_validation.yml"
+      - "ci/vendor/**"
       - "sas/**"
       - "scripts/configure_sas_oda_ci.py"
+      - "scripts/install_sas_oda_encryption_jars.py"
       - "scripts/run_sas_oda_probe.py"
       - "scripts/run_sas_oda_validation.py"
       - "spec/**"
@@ -31,6 +33,7 @@ jobs:
     env:
       SAS_ODA_USER: ${{ secrets.SAS_ODA_USER }}
       SAS_ODA_PASSWORD: ${{ secrets.SAS_ODA_PASSWORD }}
+      SAS_ODA_JARS_PASSPHRASE: ${{ secrets.SAS_ODA_JARS_PASSPHRASE }}
       SAS_ODA_REGION: ${{ vars.SAS_ODA_REGION }}
 
     steps:
@@ -41,12 +44,12 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Verify ODA secrets are configured
+      - name: Verify ODA secrets and encrypted client bundle
         shell: bash
         run: |
           if [ -z "$SAS_ODA_USER" ]; then
@@ -57,9 +60,29 @@ jobs:
             echo "::error::Repository secret SAS_ODA_PASSWORD is missing"
             exit 1
           fi
+          if [ -z "$SAS_ODA_JARS_PASSPHRASE" ]; then
+            echo "::error::Repository secret SAS_ODA_JARS_PASSPHRASE is missing"
+            exit 1
+          fi
+          if [ ! -f ci/vendor/SAS-ODA-JarFiles.zip.gpg ]; then
+            echo "::error::Encrypted SAS ODA client bundle is missing at ci/vendor/SAS-ODA-JarFiles.zip.gpg"
+            exit 1
+          fi
 
       - name: Install SASPy probe dependencies
         run: python -m pip install "saspy==5.108.0" "pandas==2.2.3"
+
+      - name: Decrypt and install SAS ODA encryption JARs
+        shell: bash
+        run: |
+          set -euo pipefail
+          decrypted="$RUNNER_TEMP/SAS-ODA-JarFiles.zip"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$SAS_ODA_JARS_PASSPHRASE" \
+            --output "$decrypted" \
+            --decrypt ci/vendor/SAS-ODA-JarFiles.zip.gpg
+          python scripts/install_sas_oda_encryption_jars.py "$decrypted"
+          rm -f "$decrypted"
 
       - name: Configure ephemeral SAS ODA connection
         id: oda_config
