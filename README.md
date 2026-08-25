@@ -4,7 +4,43 @@ A reproducible public-data work sample for clinical-trial biostatistics and stat
 
 > **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
 
-## Current milestone: v0.23 — randomised-assignment consistency repair and population provenance
+## Current milestone: v0.24 — Study Statistician design, safety and governance decision suite
+
+v0.24 is an **additive Study Statistician decision layer** on the validated v0.23 analysis package. It does not replace the primary MMRM, add T26, or convert supportive sensitivity analyses into confirmatory analyses. It closes three distinct gaps: prospective design operating characteristics, purpose-specific safety treatment assignment, and a controlled post-data-review primary-analysis change decision.
+
+The first full live implementation run, Actions **#727 / run 32874178501** on head `6fefbca6aec511133cec330b3d7110d482bdcedb`, passed the complete Python/R/CDISC/MMRM/MI/readiness/change-control/traceability/closure workflow plus all three new v0.24 gates. Its artifact is `clinical-biostatistics-cdisc-outputs`, ID **9573449472**, digest `sha256:c42bbd9a7f6e77d61067f388d5da08676131c7686a79179fd853a3fb8e4e4af5`.
+
+### Prospective design operating characteristics
+
+The controlled planning exercise uses the randomised **86 / 84 / 84** allocation, a correlated longitudinal generator and a Week 24 baseline-adjusted planning approximation with Bonferroni control across the two active-versus-placebo comparisons. It is explicitly **not** claimed to reproduce a sponsor protocol power calculation or a full `mmrm` operating-characteristics engine.
+
+Across five controlled scenarios, each with **2,000 alternative + 2,000 null replicates**:
+
+- under 20% / 35% / 50% MAR dropout, mean observed Week 24 N falls **202.9 -> 165.1 -> 126.9** and probability of at least one primary rejection under the hypothetical -3-point planning alternative falls **65.5% -> 53.2% -> 45.1%**;
+- the maximum simulated global-null family-wise error is **0.065**, below the predeclared **0.07** simulation gate;
+- under 50% adverse-MNAR stress, the largest observed-analysis bias versus the latent full-data target is approximately **1.054 ACTOT points**;
+- design-operating-characteristics QC is **11/11 PASS**;
+- controlled claim: **`PORTFOLIO_DESIGN_OPERATING_CHARACTERISTICS_READY`**.
+
+### Safety population and treatment-assignment judgement
+
+The same 12 planned-versus-actual mismatches that require **planned randomised treatment (`TRT01P`)** for v0.23 efficacy MI provide a deliberately different safety question. For this portfolio's exposure-based safety summary, denominators use **actual treatment (`TRT01A`)**.
+
+The live review verifies **254** unique safety subjects, **217** subjects with at least one TEAE and **1,116** TEAE records. It separates subject incidence from event count and reconciles ADAE-style treatment labels back to ADSL-style actual treatment. If planned assignment were incorrectly substituted into this safety question, an arm denominator would shift by up to **12 subjects** and any-TEAE risk by up to **0.0516 (5.16 percentage points)**. Safety-assignment QC is **6/6 PASS** with controlled claim **`PORTFOLIO_SAFETY_POPULATION_ASSIGNMENT_READY`**.
+
+The point is not “planned is right” or “actual is right”; the treatment variable follows the statistical question and analysis-population definition.
+
+### Post-data-review statistical change decision
+
+Controlled decision `SCD-001` asks whether **138/254 = 54.3% Week 24 missingness** should justify replacing the primary MMRM after data review with reference-based MI. The evidence includes complete MAR/JR/CR/CIR sensitivity evidence (**8/8 MCSE-pass rows**) and the unchanged primary Bonferroni conclusion (**0/2 rejected**).
+
+The controlled decision is **`REJECT_PRIMARY_CHANGE`**: retain the primary MMRM and multiplicity family and keep reference-based MI supportive. High missingness warrants sensitivity analysis, but does not by itself justify an outcome-driven promotion of a post-data-review sensitivity method to the confirmatory role. The decision rule is deliberately independent of whether the alternative analysis looks more or less favourable. Change-decision QC is **7/7 PASS** with claim **`PORTFOLIO_STATISTICAL_CHANGE_DECISION_READY`**.
+
+The suite-level contract requires all three v0.24 component claims plus the inherited v0.23 evidence closure before it can emit **`PORTFOLIO_STUDY_STATISTICIAN_DECISION_SUITE_READY`**.
+
+See `docs/study_statistician_design_safety_governance_v0_24.md` for the assumptions, scenario-level results, assignment logic, governance rationale and evidence boundary.
+
+## v0.23 baseline retained under v0.24 — randomised-assignment consistency repair and population provenance
 
 v0.23 is a **repair**, not a new efficacy model. A subject-level audit found that **12/254 randomised subjects** have `TRT01P != TRT01A`, all planned High Dose -> actual Low Dose. Those 12 subjects contribute no observed Week 8/16/24 ACTOT rows to the primary MMRM, but they do belong to the 254-subject missing-data target and therefore affect imputation-group assignment.
 
