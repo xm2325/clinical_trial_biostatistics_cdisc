@@ -31,7 +31,7 @@ def test_design_operating_characteristics_runs_and_controls_null_fwer(tmp_path: 
         "quality_gates": {
             "max_null_familywise_error": 0.10,
             "max_mcse_probability": 0.023,
-            "require_monotone_observed_n_under_mar": true
+            "require_monotone_observed_n_under_mar": True
         },
         "interpretation_boundary": ["test"]
     }
@@ -68,7 +68,7 @@ def test_mnar_stress_exposes_full_data_bias(tmp_path: Path) -> None:
         "quality_gates": {
             "max_null_familywise_error": 0.10,
             "max_mcse_probability": 0.023,
-            "require_monotone_observed_n_under_mar": true
+            "require_monotone_observed_n_under_mar": True
         },
         "interpretation_boundary": ["test"]
     }
