@@ -45,7 +45,7 @@ Corrected Week 24 MAR estimates are approximately **-1.5397** for Low Dose versu
 
 The #689 artifact is `clinical-biostatistics-cdisc-outputs`, ID **9564651055**, digest `sha256:106abf356e19437e2f60cfdb4fc5b0fca55db712e45270c6b1865ac9780f2623`.
 
-See `docs/mi_randomised_assignment_repair_v0_23.md` for the repair rationale, controlled boundary and evidence.
+See `docs/randomised_treatment_assignment_repair.md` for the repair rationale, controlled boundary and evidence.
 
 ## v0.22 baseline retained under v0.23 — statistical review query and decision provenance
 
@@ -430,9 +430,21 @@ outputs/statistical_review_query_response.md
 
 The response table records query ID, risk area, reviewer question, evidence sources, decision status, generated response and allowed claim. Negative controls block primary decision drift, Week 24 denominator drift, incomplete MAR/JR/CR/CIR evidence, missing fixed-delta comparison context, treatment-assignment mismatch drift, safety role promotion, retention-hazard direction errors, generated overclaim fragments and regulatory-scoped review claims.
 
-## Key v0.22 and inherited files
+## Key v0.23 and inherited files
 
 ```text
+spec/mi_assignment_v0_23.json                            assignment and MI-boundary contract
+spec/change_impact_graph_v0_23_extension.json            CR-015 dependency extension
+spec/change_requests_v0_23_extension.json                CR-015 controlled repair record
+src/cdisc_portfolio/mi_assignment.py                      subject-level assignment audit and planned MI inputs
+src/cdisc_portfolio/change_control_v023.py               layered v0.23 change-control merger
+scripts/run_mi_assignment_inputs.py                       planned-assignment MI staging
+scripts/run_mi_assignment_audit.py                        assignment audit runner
+scripts/restore_mi_assignment_inputs.py                   post-MI input restoration
+tests/test_mi_assignment.py                               assignment/population negative controls
+tests/test_change_control_v023.py                         CR-015 propagation negative controls
+docs/randomised_treatment_assignment_repair.md            repair rationale and evidence boundary
+
 spec/statistical_review_queries_v0_22.json              reviewer-query contract and claim boundary
 src/cdisc_portfolio/statistical_review_queries.py       evidence reconciliation + response generation
 scripts/run_statistical_review_queries.py               standalone reviewer-response runner
