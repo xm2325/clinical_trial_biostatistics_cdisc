@@ -1,0 +1,28 @@
+{
+  "version": "0.24.0",
+  "claim": "PORTFOLIO_STUDY_STATISTICIAN_DECISION_SUITE_READY",
+  "components": [
+    {
+      "id": "prospective_design",
+      "metrics": "outputs/design_operating_characteristics_metrics.json",
+      "required_claim": "PORTFOLIO_DESIGN_OPERATING_CHARACTERISTICS_READY"
+    },
+    {
+      "id": "safety_assignment",
+      "metrics": "outputs/safety_population_review_metrics.json",
+      "required_claim": "PORTFOLIO_SAFETY_POPULATION_ASSIGNMENT_READY"
+    },
+    {
+      "id": "post_data_review_change_decision",
+      "metrics": "outputs/statistical_change_decision_metrics.json",
+      "required_claim": "PORTFOLIO_STATISTICAL_CHANGE_DECISION_READY"
+    }
+  ],
+  "inherited_closure": "outputs/analysis_closure_metrics.json",
+  "scope": "Additive Study Statistician decision evidence layered on the validated v0.23 analysis package; no new TLF, no replacement of the primary model, and no formal sponsor/regulatory claim.",
+  "interpretation_boundary": [
+    "The suite demonstrates three distinct decision contexts: prospective planning, exposure-based safety summarisation and post-data-review analysis governance.",
+    "Component PASS means the controlled portfolio checks passed; it does not establish sponsor/CRO production experience or regulatory acceptance.",
+    "The existing T01-T25 analysis package remains the inherited controlled evidence base."
+  ]
+}
