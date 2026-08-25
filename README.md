@@ -1,10 +1,48 @@
 # Clinical Trial Biostatistics & CDISC Portfolio
 
-A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines study-design QC, source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, estimands, missing-data sensitivity, survival analysis, machine-readable analysis metadata, official exchange-schema validation, executable QC, statistical change control, SAP-to-TLF traceability, study-statistician analysis readiness and controlled CSR-style statistical interpretation.
+A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines study-design QC, source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, estimands, missing-data sensitivity, survival analysis, machine-readable analysis metadata, official exchange-schema validation, executable QC, statistical change control, SAP-to-TLF traceability, study-statistician analysis readiness, controlled CSR-style statistical interpretation and machine-validated statistical reviewer responses.
 
-> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
+> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
 
-## Current milestone: v0.21 — controlled CSR-style statistical interpretation
+## Current milestone: v0.22 — statistical review query and decision provenance
+
+v0.22 adds a post-interpretation Study Statistician reviewer-response layer. It does **not** add another model, estimand, analysis population, TLF or pre-closure change request. Instead, it makes difficult review questions reproducible by forcing every answer to resolve to current statistical evidence, a bounded decision status and a permitted claim:
+
+```text
+validated analysis / TLF / QC evidence
+  -> v0.20 analysis readiness + evidence closure
+  -> v0.21 controlled statistical interpretation
+  -> v0.22 statistical reviewer responses
+       -> SRQ-001 primary efficacy decision
+       -> SRQ-002 missing-data robustness context
+       -> SRQ-003 treatment-assignment mismatch handling
+       -> SRQ-004 descriptive safety boundary
+       -> SRQ-005 exploratory retention boundary
+```
+
+First full live implementation run Actions **#651 / run 32774536503** on head `a130bc12f591fcccc989242148698edfd490bc52` completed the entire Python/R/CDISC/MMRM/MI/readiness/closure workflow plus the reviewer-response gate. The live v0.22 evidence was:
+
+- controlled reviewer queries: **5/5**;
+- reviewer-response checks: **10/10 PASS**;
+- Week 24 primary family-wise rejections: **0/2**;
+- adjusted primary p-values: **0.338669 / 0.843940**;
+- Week 24 ACTOT observed / missing: **116 / 138** of **254 randomized**, or **54.3% missing**;
+- reference-based MAR/JR/CR/CIR evidence: **8/8 expected rows** with **8/8 MCSE passes**;
+- fixed-delta reviewer context: **2/2 comparisons**, with directional tipping at **1.5621 / 1.0333 ACTOT points** for Low / High versus Placebo;
+- planned-versus-actual treatment mismatches: **12** and reconciled directly to ADTTE-style data;
+- descriptive safety response rows: **2/2**, with TEAE risk differences **0.1192 to 0.1886**;
+- exploratory retention response rows: **2/2**, with discontinuation HRs **3.0852 / 2.9246**;
+- controlled review-response claim: **`PORTFOLIO_STATISTICAL_REVIEW_RESPONSE_READY`**.
+
+The first-live-run artifact was `clinical-biostatistics-cdisc-outputs`, ID **9537615679**, digest `sha256:561e3c8c50c7697a7306e78018280add24ac89f75c750c753810d3c0488b0b63`.
+
+After that live run, v0.22 was hardened further: each primary comparison must contain exactly MAR/JR/CR/CIR reference-based evidence, both primary comparisons must have fixed-delta context, generated overclaim text has no exception path, and additional negative controls block primary decision drift, incomplete MI strategies and missing tipping evidence. The final documentation-inclusive head is revalidated in a separate full clean run before merge.
+
+The five controlled reviewer questions are deliberately decision-focused rather than presentation-only. For example, the missing-data response must report **138/254 Week 24 missingness**, **8/8 MCSE passes** and the two fixed-delta tipping thresholds together; it is not allowed to call the result simply “fully robust”. Likewise, HR > 1 is interpreted as higher **study-discontinuation hazard**, not worse efficacy.
+
+See `docs/statistical_review_query_provenance.md` for the complete v0.22 query contract, blocking checks, negative controls and evidence boundary.
+
+## v0.21 baseline retained under v0.22 — controlled CSR-style statistical interpretation
 
 v0.21 adds a post-closure Study Statistician interpretation layer. It does **not** add another model, estimand, analysis population or TLF. Instead, it makes the interpretation of already validated statistical results executable and testable:
 
@@ -51,7 +89,7 @@ It means the portfolio interpretation contract and executable checks passed. It 
 
 See `docs/csr_statistical_interpretation.md` for the full v0.21 interpretation logic, statistical roles, tipping context and evidence boundary.
 
-## v0.20 baseline retained under v0.21 — study-statistician analysis readiness and evidence closure
+## v0.20 baseline retained under v0.22 — study-statistician analysis readiness and evidence closure
 
 v0.20 moved the portfolio from standards plumbing back to study-statistician review work. It did **not** add another statistical model or another TLF. It added a controlled transition from the validated analysis package to a review decision:
 
@@ -144,9 +182,10 @@ public CDISC / pharmaverse test data
   -> portfolio evidence closure
   -> CSR-style interpretation contract + cross-output reconciliation
   -> bounded confirmatory/supportive/descriptive/exploratory conclusions
+  -> reviewer question + evidence + decision + allowed-claim provenance
 ```
 
-Readiness, governance and interpretation evidence remain separate from the TLF registry. v0.21 does **not** invent a T26; the statistical output registry remains **T01–T25 at version 0.17.0** because no new statistical table/listing/figure is added.
+Readiness, governance, interpretation and reviewer-response evidence remain separate from the TLF registry. v0.22 does **not** invent a T26 or CR-015; the statistical output registry remains **T01–T25 at version 0.17.0** and the pre-closure change-control graph remains **CR-001–CR-014** because v0.22 adds post-closure statistical review evidence rather than a new statistical table/listing/figure or upstream analysis change.
 
 ## Public CDISC/reference evidence
 
@@ -225,7 +264,7 @@ Sensitivity evidence includes:
 
 The reference-based layer passes **27/27** required checks; maximum `MCSE(estimate) / pooled SE` is **5.381%** against a 7.5% threshold.
 
-v0.21 reads both sensitivity families during interpretation. The reference-based strategies retain the same effect sign for both active comparisons, while fixed-delta `DIVERGENT_WORSENING` reaches direction tipping at **1.5621 / 1.0333 ACTOT points** for Low / High. These two facts are reported together so the sensitivity evidence is not reduced to a single “robust/not robust” label.
+v0.21 reads both sensitivity families during interpretation. The reference-based strategies retain the same effect sign for both active comparisons, while fixed-delta `DIVERGENT_WORSENING` reaches direction tipping at **1.5621 / 1.0333 ACTOT points** for Low / High. v0.22 then turns that combined evidence into the controlled SRQ-002 reviewer response, so the sensitivity evidence is not reduced to a single “robust/not robust” label.
 
 ## Randomized-arm ADTTE / survival evidence
 
@@ -248,7 +287,7 @@ Validated TTDISC evidence:
 - High vs Placebo discontinuation HR **2.9246**;
 - `cox.zph` p-values **0.8310 / 0.7577**.
 
-HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family. v0.21 tests this interpretation rather than relying on prose alone.
+HR > 1 means higher **study-discontinuation hazard**, not worse efficacy. T24/T25 are exploratory and remain outside the ACTOT confirmatory family. v0.21 tests the interpretation and v0.22 requires the same direction/status in the reviewer response rather than relying on prose alone.
 
 ## v0.20 statistical change control
 
@@ -261,7 +300,8 @@ v0.17 -> randomized-retention TTE / T24–T25
 v0.18 -> analysis metadata / lineage / Define-XML-inspired export
 v0.19 -> Dataset-JSON + CORE standards-validation governance
 v0.20 -> study-statistician analysis readiness + evidence closure
-v0.21 -> post-closure CSR-style interpretation QC (separate from the pre-closure change-control graph)
+v0.21 -> post-closure CSR-style interpretation QC
+v0.22 -> post-interpretation statistical reviewer-response QC
 ```
 
 `CR-014 — Analysis-readiness definition or known-issue disposition change` propagates through:
@@ -277,7 +317,7 @@ CR-014 reviews the v0.20 readiness specification, treatment-blind review artifac
 
 The validated v0.20 change-control result is **14 changes / 88 propagated links / 311 of 311 required impact relationships/resources**, with zero missing declarations, zero extra declarations and zero unresolved required resources.
 
-v0.21 deliberately does not add a post-closure interpretation output to this pre-closure dependency graph. Interpretation-rule changes are controlled by the v0.21 executable contract and negative-control tests. This avoids making change control depend on outputs that are only generated after evidence closure.
+v0.21 and v0.22 deliberately remain after the pre-closure dependency graph. Interpretation/reviewer-response rules are controlled by their own executable contracts and negative-control tests. This avoids making pre-closure change control depend on evidence generated only after closure.
 
 This is portfolio change-control simulation, not a sponsor-approved protocol/SAP change process.
 
@@ -330,39 +370,58 @@ outputs/csr_statistical_interpretation.md
 
 The conclusion matrix records source, analysis role, comparison, estimate/context, decision and controlled interpretation. Negative controls block incomplete source sets, cross-output drift, invalid multiplicity flags, MI MCSE failures, missing fixed-delta scenarios, reversed retention-hazard interpretation and regulatory/efficacy overclaims.
 
-## Key v0.21 files
+## Statistical reviewer-response artifacts
+
+After v0.21 interpretation, v0.22 writes:
 
 ```text
-spec/csr_interpretation_v0_21.json                     base interpretation contract and claim boundary
-spec/csr_interpretation_extension_v0_21.json           multiplicity decision + fixed-delta context controls
-src/cdisc_portfolio/csr_interpretation.py              cross-output CSR-style interpretation logic
-src/cdisc_portfolio/csr_interpretation_extension.py    fixed-delta and reject-flag interpretation audit
-scripts/run_csr_interpretation.py                      standalone complete interpretation runner
-tests/test_csr_interpretation.py                       base positive + negative interpretation controls
-tests/test_csr_interpretation_extension.py             multiplicity/tipping negative controls
-docs/csr_statistical_interpretation.md                 statistical interpretation design and evidence
+outputs/statistical_review_queries.csv
+outputs/statistical_review_query_checks.csv
+outputs/statistical_review_query_metrics.json
+outputs/statistical_review_query_response.md
+```
 
-spec/analysis_readiness_v0_20.json                     cutoff, checks, issue dispositions and closure claims
-src/cdisc_portfolio/analysis_readiness.py              readiness + closure implementation
-scripts/run_analysis_readiness.py                      pre-closure readiness runner
-scripts/run_analysis_closure.py                        closure followed by v0.21 interpretation runner
-docs/study_statistician_analysis_readiness.md          v0.20 review sequence and evidence boundary
+The response table records query ID, risk area, reviewer question, evidence sources, decision status, generated response and allowed claim. Negative controls block primary decision drift, Week 24 denominator drift, incomplete MAR/JR/CR/CIR evidence, missing fixed-delta comparison context, treatment-assignment mismatch drift, safety role promotion, retention-hazard direction errors, generated overclaim fragments and regulatory-scoped review claims.
 
-src/cdisc_portfolio/change_control_v020.py             layered v0.20 change-control merger
-spec/change_impact_graph_v0_20_extension.json          readiness dependency extension
-spec/change_requests_v0_20_extension.json              CR-014
+## Key v0.22 and inherited files
 
-spec/standards_validation_v0_19.json                   pinned official standards evidence contract
-src/cdisc_portfolio/dataset_json.py                    Dataset-JSON + CORE transport generation
-src/cdisc_portfolio/core_cache.py                      safe cache/rule-availability audit
-src/cdisc_portfolio/core_validation.py                 executable / NOT_AVAILABLE evidence state
+```text
+spec/statistical_review_queries_v0_22.json              reviewer-query contract and claim boundary
+src/cdisc_portfolio/statistical_review_queries.py       evidence reconciliation + response generation
+scripts/run_statistical_review_queries.py               standalone reviewer-response runner
+tests/test_statistical_review_queries.py                positive + blocking negative controls
+docs/statistical_review_query_provenance.md             v0.22 design, evidence and boundary
 
-R/mmrm_analysis.R                                      primary ACTOT MMRM
-R/mmrm_cross_package_qc.R                              independent rows + nlme MMRM
-R/tte_retention_analysis.R                             KM/log-rank/Cox retention
-R/rbmi_reference_based.R                               MAR/JR/CR/CIR sensitivity
-spec/analysis_traceability.csv                         T01–T25 registry
-spec/output_contracts.json                             executable TLF contracts
+spec/csr_interpretation_v0_21.json                      base interpretation contract and claim boundary
+spec/csr_interpretation_extension_v0_21.json            multiplicity decision + fixed-delta context controls
+src/cdisc_portfolio/csr_interpretation.py               cross-output CSR-style interpretation logic
+src/cdisc_portfolio/csr_interpretation_extension.py     fixed-delta and reject-flag interpretation audit
+scripts/run_csr_interpretation.py                       standalone complete interpretation runner
+tests/test_csr_interpretation.py                        base positive + negative interpretation controls
+tests/test_csr_interpretation_extension.py              multiplicity/tipping negative controls
+docs/csr_statistical_interpretation.md                  statistical interpretation design and evidence
+
+spec/analysis_readiness_v0_20.json                      cutoff, checks, issue dispositions and closure claims
+src/cdisc_portfolio/analysis_readiness.py               readiness + closure implementation
+scripts/run_analysis_readiness.py                       pre-closure readiness runner
+scripts/run_analysis_closure.py                         closure -> v0.21 interpretation -> v0.22 reviewer responses
+docs/study_statistician_analysis_readiness.md           v0.20 review sequence and evidence boundary
+
+src/cdisc_portfolio/change_control_v020.py              layered v0.20 change-control merger
+spec/change_impact_graph_v0_20_extension.json           readiness dependency extension
+spec/change_requests_v0_20_extension.json               CR-014
+
+spec/standards_validation_v0_19.json                    pinned official standards evidence contract
+src/cdisc_portfolio/dataset_json.py                     Dataset-JSON + CORE transport generation
+src/cdisc_portfolio/core_cache.py                       safe cache/rule-availability audit
+src/cdisc_portfolio/core_validation.py                  executable / NOT_AVAILABLE evidence state
+
+R/mmrm_analysis.R                                       primary ACTOT MMRM
+R/mmrm_cross_package_qc.R                               independent rows + nlme MMRM
+R/tte_retention_analysis.R                              KM/log-rank/Cox retention
+R/rbmi_reference_based.R                                MAR/JR/CR/CIR sensitivity
+spec/analysis_traceability.csv                          T01–T25 registry
+spec/output_contracts.json                              executable TLF contracts
 ```
 
 ## Reproduce
@@ -398,6 +457,6 @@ python scripts/validate_traceability.py
 python scripts/run_analysis_closure.py
 ```
 
-`run_analysis_closure.py` executes evidence closure and then the complete v0.21 CSR-style interpretation pack. `scripts/run_csr_interpretation.py` can rerun the complete interpretation pack after the required source outputs and v0.20 closure metrics already exist.
+`run_analysis_closure.py` executes evidence closure, the complete v0.21 CSR-style interpretation pack, and then the v0.22 reviewer-response pack. `scripts/run_statistical_review_queries.py` can rerun only the reviewer-response layer after all required upstream outputs already exist.
 
-Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, standards, lineage, readiness, governance and interpretation evidence can be inspected from the same clean run.
+Generated evidence is written under `outputs/`; GitHub Actions uploads the complete output directory so statistical, metadata, standards, lineage, readiness, governance, interpretation and reviewer-response evidence can be inspected from the same clean run.

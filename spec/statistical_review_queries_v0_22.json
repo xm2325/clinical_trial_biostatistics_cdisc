@@ -1,0 +1,43 @@
+{
+  "version": "0.22.0",
+  "review_claim": "PORTFOLIO_STATISTICAL_REVIEW_RESPONSE_READY",
+  "required_interpretation_claim": "PORTFOLIO_STATISTICAL_INTERPRETATION_READY",
+  "required_query_ids": [
+    "SRQ-001",
+    "SRQ-002",
+    "SRQ-003",
+    "SRQ-004",
+    "SRQ-005"
+  ],
+  "required_inputs": [
+    "outputs/analysis_readiness_metrics.json",
+    "outputs/csr_interpretation_metrics.json",
+    "outputs/csr_interpretation_extension_metrics.json",
+    "outputs/csr_conclusion_matrix.csv",
+    "outputs/csr_fixed_delta_context.csv",
+    "outputs/table23_actot_multiplicity.csv",
+    "outputs/table22_rbmi_reference_based.csv",
+    "outputs/table7_teae_risk_difference.csv",
+    "outputs/table25_retention_pairwise.csv",
+    "outputs/adtte_retention_style.csv"
+  ],
+  "rules": {
+    "primary_response_must_follow_familywise_decision": true,
+    "missing_data_response_must_report_missingness_and_tipping": true,
+    "treatment_mismatch_response_must_reconcile_to_analysis_data": true,
+    "safety_response_must_remain_descriptive": true,
+    "retention_response_must_remain_exploratory": true
+  },
+  "prohibited_claim_fragments": [
+    "demonstrated efficacy",
+    "confirmed efficacy",
+    "statistically significant efficacy",
+    "fully robust",
+    "proves safety",
+    "benefit-risk is positive",
+    "regulatory ready",
+    "submission ready",
+    "sponsor approved"
+  ],
+  "evidence_boundary": "Independent public-data portfolio reviewer-response evidence only; not sponsor/CRO correspondence, a regulatory-agency response, medical-writing approval, benefit-risk approval or submission readiness."
+}
