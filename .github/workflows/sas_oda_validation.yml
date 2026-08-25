@@ -14,6 +14,7 @@ on:
       - "scripts/install_sas_oda_encryption_jars.py"
       - "scripts/run_sas_oda_probe.py"
       - "scripts/run_sas_oda_validation.py"
+      - "scripts/run_sas_oda_validation_canonical.py"
       - "requirements.txt"
       - "spec/**"
       - "src/cdisc_portfolio/**"
@@ -113,7 +114,7 @@ jobs:
       - name: Execute and reconcile BMS SAS programs on ODA
         env:
           SASPY_CFGFILE: ${{ steps.oda_config.outputs.cfgfile }}
-        run: python scripts/run_sas_oda_validation.py
+        run: python scripts/run_sas_oda_validation_canonical.py
 
       - uses: actions/upload-artifact@v4
         if: always()
