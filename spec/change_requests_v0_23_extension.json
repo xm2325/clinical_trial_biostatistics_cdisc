@@ -1,0 +1,46 @@
+{
+  "base_version": "0.20.0",
+  "version": "0.23.0",
+  "declared_impact_additions": {},
+  "changes": [
+    {
+      "change_id": "CR-015",
+      "title": "Randomised treatment-assignment source correction for efficacy missing-data sensitivity analyses",
+      "description": "Correct T20/T21/T22 missing-data sensitivity grouping from actual treatment to planned randomised treatment while preserving actual treatment as context and adding subject-level population provenance.",
+      "rationale": "The public pilot data contain 12 randomised subjects with TRT01P != TRT01A, all planned High Dose to actual Low Dose. None enters the current observed primary MMRM, but all are in the 254-subject missing-data target. Grouping rbmi by TRT01A therefore changed the imputation target from the planned 86/84/84 allocation to 86/96/72. The repair aligns sensitivity analyses with the randomised efficacy treatment assignment, preserves actual-treatment provenance, audits the 306-to-254-to-189-to-116 denominator chain and blocks silent future mismatch entry into the observed primary MMRM.",
+      "changed_components": [
+        "efficacy_randomised_assignment_source"
+      ],
+      "declared_impacts": {
+        "analysis_datasets": [
+          "outputs/adsl_mi_planned.csv",
+          "outputs/adqs_actot_mi_planned.csv",
+          "outputs/mmrm_analysis_dataset.csv"
+        ],
+        "tlfs": ["T20", "T21", "T22"],
+        "qc": [
+          "outputs/analysis_population_provenance.csv",
+          "outputs/mi_assignment_input_checks.csv",
+          "outputs/mi_assignment_input_metrics.json",
+          "outputs/mi_assignment_output_checks.csv",
+          "outputs/mi_assignment_output_metrics.json",
+          "outputs/rbmi_pairwise_input_counts.csv",
+          "outputs/rbmi_mi_qc.csv",
+          "outputs/rbmi_mcse_qc.csv",
+          "outputs/rbmi_reference_qc.csv",
+          "outputs/rbmi_reference_mcse_qc.csv"
+        ],
+        "documents": [
+          "docs/randomised_treatment_assignment_repair.md",
+          "docs/qc_plan.md"
+        ],
+        "specs": [
+          "spec/estimands.json",
+          "spec/mi_assignment_v0_23.json",
+          "spec/mi_sensitivity.json",
+          "spec/reference_based_mi.json"
+        ]
+      }
+    }
+  ]
+}

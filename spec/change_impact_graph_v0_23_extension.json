@@ -1,0 +1,99 @@
+{
+  "base_version": "0.20.0",
+  "version": "0.23.0",
+  "components": {
+    "efficacy_randomised_assignment_source": {
+      "description": "Controlled choice of planned randomised treatment versus actual treatment as the efficacy grouping source for missing-data sensitivity analyses.",
+      "downstream": [
+        "planned_assignment_mi_inputs",
+        "primary_mmrm_assignment_guard"
+      ],
+      "impacts": {
+        "documents": [
+          "docs/randomised_treatment_assignment_repair.md",
+          "docs/qc_plan.md"
+        ],
+        "specs": [
+          "spec/estimands.json",
+          "spec/mi_assignment_v0_23.json"
+        ]
+      }
+    },
+    "planned_assignment_mi_inputs": {
+      "description": "MI-specific copies that preserve actual treatment as context while using planned randomised assignment for the rbmi grouping field.",
+      "downstream": [
+        "subject_level_mi_assignment",
+        "reference_based_mi_assignment"
+      ],
+      "impacts": {
+        "analysis_datasets": [
+          "outputs/adsl_mi_planned.csv",
+          "outputs/adqs_actot_mi_planned.csv"
+        ],
+        "qc": [
+          "outputs/analysis_population_provenance.csv",
+          "outputs/mi_assignment_input_checks.csv",
+          "outputs/mi_assignment_input_metrics.json"
+        ]
+      }
+    },
+    "subject_level_mi_assignment": {
+      "description": "Planned-randomisation grouping for the controlled subject-level MAR/delta rbmi sensitivity analyses.",
+      "downstream": [
+        "mi_assignment_post_execution_audit"
+      ],
+      "impacts": {
+        "tlfs": ["T20", "T21"],
+        "qc": [
+          "outputs/rbmi_pairwise_input_counts.csv",
+          "outputs/rbmi_mi_qc.csv",
+          "outputs/rbmi_mcse_qc.csv"
+        ],
+        "specs": [
+          "spec/mi_sensitivity.json"
+        ]
+      }
+    },
+    "reference_based_mi_assignment": {
+      "description": "Planned-randomisation grouping for MAR/JR/CR/CIR reference-based rbmi sensitivity analyses and discontinuation/ICE classification.",
+      "downstream": [
+        "mi_assignment_post_execution_audit"
+      ],
+      "impacts": {
+        "tlfs": ["T22"],
+        "qc": [
+          "outputs/rbmi_reference_qc.csv",
+          "outputs/rbmi_reference_mcse_qc.csv"
+        ],
+        "specs": [
+          "spec/reference_based_mi.json"
+        ]
+      }
+    },
+    "primary_mmrm_assignment_guard": {
+      "description": "Blocking check that a planned-versus-actual mismatch subject cannot silently enter the observed primary MMRM under the current public-data analysis definition.",
+      "downstream": [],
+      "impacts": {
+        "analysis_datasets": [
+          "outputs/mmrm_analysis_dataset.csv"
+        ],
+        "qc": [
+          "outputs/analysis_population_provenance.csv",
+          "outputs/mi_assignment_input_checks.csv",
+          "outputs/mi_assignment_input_metrics.json"
+        ]
+      }
+    },
+    "mi_assignment_post_execution_audit": {
+      "description": "Post-rbmi verification that executed pairwise target counts follow the planned randomised allocation and that the complete reference-based sensitivity set remains valid.",
+      "downstream": [],
+      "impacts": {
+        "qc": [
+          "outputs/mi_assignment_output_checks.csv",
+          "outputs/mi_assignment_output_metrics.json"
+        ]
+      }
+    }
+  },
+  "downstream_additions": {}
+}

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.23.0 — 2026-08-25
+
+- Repair a material efficacy missing-data treatment-assignment inconsistency found by a subject-level population audit: **12/254 randomised subjects** have `TRT01P != TRT01A`, all planned High Dose -> actual Low Dose.
+- Verify **0/12** mismatch subjects enter the observed Week 8/16/24 primary MMRM, so the observed-data primary model and multiplicity decision are not silently changed by the repair.
+- Correct T20/T21/T22 MI grouping from actual treatment (`TRT01A`) to planned randomised assignment (`TRT01P`) for the estimand-defined randomised baseline-ACTOT target while retaining actual treatment as context.
+- Correct target allocation from **86 / 96 / 72** to **86 / 84 / 84**, changing pairwise MI targets from **182 / 158** to **170 / 170**.
+- Add planned-assignment MI input copies, `TRT01A_ACTUAL` provenance, pre-MI **10/10** checks, post-MI **4/4** execution/restore checks, `analysis_population_provenance.csv`, and a hard guard against future mismatch subjects silently entering the primary MMRM.
+- Re-run 200-imputation MAR/delta MI and MAR/JR/CR/CIR reference-based MI on the corrected randomised grouping. Corrected Week 24 MAR estimates are approximately **-1.5397** and **-0.7237** for Low/High versus Placebo; reference-based evidence retains **8/8 MCSE passes**.
+- Preserve the primary conclusion: adjusted MMRM p-values remain **0.338669 / 0.843940**, so **0/2** primary hypotheses are rejected and no confirmatory efficacy-success conclusion is supported.
+- Add **CR-015 — Randomised treatment-assignment source correction for efficacy missing-data sensitivity analyses**. It propagates through **6** components, requires **22** impacts and explicitly affects **T20/T21/T22**.
+- Advance layered change control to **15 changes / 94 propagated links / 333/333 required impacts**, with **0 missing / 0 extra / 0 unresolved**. The TLF registry remains **T01–T25 / version 0.17.0**; no T26 is created.
+- Governance-inclusive clean run Actions **#689 / run 32851464310** on head `bee4e338099d2a769037ec9f4190308a0c350de2` passes the full workflow. Artifact `9564651055`, digest `sha256:106abf356e19437e2f60cfdb4fc5b0fca55db712e45270c6b1865ac9780f2623`.
+- Evidence remains public-data portfolio evidence only, not a sponsor-approved SAP amendment, database-lock change, regulatory response, formal ADaM validation or submission-ready analysis.
+
 ## 0.22.0 — 2026-08-25
 
 - Add a post-interpretation Statistical Review Query and Decision-Provenance Pack that converts Study Statistician review questions into executable evidence reconciliations rather than adding another model, estimand, analysis population or TLF.

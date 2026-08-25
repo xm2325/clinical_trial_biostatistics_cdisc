@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +19,19 @@ CONTRACT_PATH = ROOT / "spec" / "analysis_dataset_contracts.json"
 
 
 def main() -> None:
+    # v0.23 repair boundary: T20/T21/T22 have just run using the temporary
+    # planned-randomisation MI inputs. Restore the byte-preserved original
+    # actual-treatment-labelled analysis files before any generic dataset review,
+    # then verify the executed rbmi target counts and reference-based evidence.
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "restore_mi_assignment_inputs.py")],
+        check=True,
+    )
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "run_mi_assignment_audit.py")],
+        check=True,
+    )
+
     frames = load_review_frames(OUTPUT_DIR)
     review = review_frames(frames)
     contract_spec = load_dataset_contracts(CONTRACT_PATH)

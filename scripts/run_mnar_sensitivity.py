@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,6 +56,16 @@ def main() -> None:
     sensitivity_inputs.to_csv(out / "mnar_sensitivity_inputs.csv", index=False)
     grid.to_csv(out / "table18_actot_delta_sensitivity.csv", index=False)
     tipping.to_csv(out / "table19_actot_directional_tipping_points.csv", index=False)
+
+    # v0.23 repair boundary: the observed-data analyses above run on the original
+    # actual-treatment-labelled analysis files. Only after they have completed do
+    # we stage planned-randomised assignment for the subsequent rbmi sensitivity
+    # analyses. The original files are byte-backed-up and restored before the
+    # dataset reviewer runs.
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "run_mi_assignment_inputs.py")],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
