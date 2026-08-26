@@ -98,20 +98,31 @@ jobs:
             --transfer-dir outputs/vendor_transfer_v0_28 \
             --output-dir outputs/submission_handoff_v0_28 \
             --target-sha "$TARGET_SHA"
-          cp upstream_identity.txt outputs/submission_handoff_v0_28/submission_package_v0_28/manifest/upstream_identity.txt
+
+      - name: Finalize projected Define, evidence identity and final SHA256 manifest
+        run: |
+          python scripts/finalize_submission_handoff_v0_28.py \
+            --p21-dir upstream_p21 \
+            --output-dir outputs/submission_handoff_v0_28 \
+            --upstream-identity upstream_identity.txt
 
       - name: Verify ADRG PDF and release package inventory
         shell: bash
         run: |
           set -euo pipefail
-          adrg=$(find outputs/submission_handoff_v0_28/submission_package_v0_28 -name adrg.pdf -print -quit)
+          package=outputs/submission_handoff_v0_28/submission_package_v0_28
+          adrg=$(find "$package" -name adrg.pdf -print -quit)
           test -n "$adrg"
           test -s "$adrg"
           head -c 4 "$adrg" | grep -q '%PDF'
           test -s outputs/submission_handoff_v0_28/submission_package_v0_28.zip
           test -s outputs/submission_handoff_v0_28/submission_package_v0_28.zip.sha256
-          cat outputs/submission_handoff_v0_28/submission_package_v0_28/RELEASE_DECISION.md
-          cat outputs/submission_handoff_v0_28/submission_package_v0_28/submission_handoff_metrics.json
+          test -s "$package/manifest/upstream_identity.txt"
+          test -s "$package/manifest/sha256_manifest.csv"
+          test -s "$package/portfolio_evidence/qc/submission_projection_v0_28_manifest.json"
+          grep -q 'submission_projection_validated' "$package/submission_handoff_metrics.json"
+          cat "$package/RELEASE_DECISION.md"
+          cat "$package/submission_handoff_metrics.json"
 
       - uses: actions/upload-artifact@v4
         if: always()
