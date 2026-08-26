@@ -8,9 +8,11 @@ from pathlib import Path
 
 ODM_NS = "http://www.cdisc.org/ns/odm/v1.3"
 DEF_NS = "http://www.cdisc.org/ns/def/v2.1"
+XLINK_NS = "http://www.w3.org/1999/xlink"
 
 ET.register_namespace("", ODM_NS)
 ET.register_namespace("def", DEF_NS)
+ET.register_namespace("xlink", XLINK_NS)
 
 ROUND3_RUN_ID = 32955862586
 ROUND3_ARTIFACT_ID = 9602143224
@@ -18,6 +20,7 @@ ROUND3_ARTIFACT_DIGEST = "sha256:c7f13c9c5ed8cac2c88762443ca7ea8dafbb33db391a0a1
 ROUND3_ISSUE_CLASSES = 1
 ROUND3_OCCURRENCES = 1
 Y_BLANK_CODELIST_OID = "CL.Y_BLANK"
+EXPECTED_DATASET_HREFS = ("ADSL.csv", "ADAE.csv", "ADQS.csv", "ADTTE.csv")
 
 
 def _add_y_blank_codelist(meta: ET.Element) -> None:
@@ -31,6 +34,7 @@ def _add_y_blank_codelist(meta: ET.Element) -> None:
             "OID": Y_BLANK_CODELIST_OID,
             "Name": "Y or blank analysis flag",
             "DataType": "text",
+            f"{{{DEF_NS}}}IsNonStandard": "Yes",
         },
     )
     ET.SubElement(codelist, f"{{{ODM_NS}}}EnumeratedItem", {"CodedValue": "Y"})
@@ -71,10 +75,23 @@ def _assert_round4(meta: ET.Element) -> dict[str, bool]:
         "y_blank_codelist_present": codelist is not None,
         "y_is_only_explicit_value": values == ["Y"],
         "codelist_is_sponsor_scoped": codelist is not None and f"{{{DEF_NS}}}StandardOID" not in codelist.attrib,
+        "codelist_marked_nonstandard": codelist is not None and codelist.get(f"{{{DEF_NS}}}IsNonStandard") == "Yes",
     }
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         raise RuntimeError(f"Round-4 Define-XML assertions failed: {failed}")
+    return checks
+
+
+def _assert_serialized_xml(xml_text: str) -> dict[str, bool]:
+    checks = {
+        "xlink_namespace_declared": f'xmlns:xlink="{XLINK_NS}"' in xml_text,
+        "no_generated_ns2_href_prefix": "ns2:href" not in xml_text,
+        "all_dataset_leaves_use_xlink_href": all(f'xlink:href="{href}"' in xml_text for href in EXPECTED_DATASET_HREFS),
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        raise RuntimeError(f"Round-4 serialized Define-XML assertions failed: {failed}")
     return checks
 
 
@@ -102,14 +119,12 @@ def main() -> None:
 
     _add_y_blank_codelist(meta)
     _link_trtemfl(meta)
-    checks = _assert_round4(meta)
+    structural_checks = _assert_round4(meta)
 
     ET.indent(tree, space="  ")
-    source.write_text(
-        '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode") + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    xml_text = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode") + "\n"
+    serialization_checks = _assert_serialized_xml(xml_text)
+    source.write_text(xml_text, encoding="utf-8", newline="\n")
     final_copy = output_dir / "define_xml_candidate_v0_27_round4.xml"
     shutil.copy2(source, final_copy)
 
@@ -125,9 +140,10 @@ def main() -> None:
             "residual_variable": "TRTEMFL",
             "expected_standard_codelist_code": "CL.Y",
         },
-        "remediation": "TRTEMFL data semantics changed coherently to Y/blank in Python and SAS; Define-XML now links TRTEMFL to a sponsor-scoped Y-only codelist rather than suppressing the validator finding.",
+        "remediation": "TRTEMFL data semantics changed coherently to Y/blank in Python and SAS; Define-XML links TRTEMFL to a sponsor-scoped Y-only codelist explicitly marked non-standard, and final serialization preserves the required xlink namespace for dataset leaves.",
         "codelist_oid": Y_BLANK_CODELIST_OID,
-        "structural_assertions": checks,
+        "structural_assertions": structural_checks,
+        "serialization_assertions": serialization_checks,
         "evidence_boundary": "A clean P21 report would remain public-data portfolio evidence only and would not establish formal ADaM conformance, GxP validation, or submission readiness.",
     }
     (output_dir / "define_xml_round4_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
