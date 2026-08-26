@@ -11,9 +11,9 @@ from pathlib import Path
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 CONTROLLED_CLAIM = "PORTFOLIO_SUBMISSION_HANDOFF_PACKAGE_RECONCILED"
 EVIDENCE_BOUNDARY = (
@@ -74,13 +74,49 @@ def _json(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
-def _make_adrg_pdf(path: Path, study_id: str, dataset_rows: dict[str, int], p21: dict[str, object], xpt: dict[str, object], target_sha: str) -> None:
+def _make_adrg_pdf(
+    path: Path,
+    study_id: str,
+    dataset_rows: dict[str, int],
+    p21: dict[str, object],
+    xpt: dict[str, object],
+    target_sha: str,
+) -> None:
     styles = getSampleStyleSheet()
-    title = ParagraphStyle("TitleTight", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=16, leading=19, spaceAfter=8)
-    h1 = ParagraphStyle("H1Tight", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=11.5, leading=14, spaceBefore=7, spaceAfter=4)
-    body = ParagraphStyle("BodyTight", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.8, leading=11.5, spaceAfter=4)
+    title = ParagraphStyle(
+        "TitleTight",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=16,
+        leading=19,
+        spaceAfter=8,
+    )
+    h1 = ParagraphStyle(
+        "H1Tight",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=11.5,
+        leading=14,
+        spaceBefore=7,
+        spaceAfter=4,
+    )
+    body = ParagraphStyle(
+        "BodyTight",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=8.8,
+        leading=11.5,
+        spaceAfter=4,
+    )
     small = ParagraphStyle("Small", parent=body, fontSize=7.8, leading=10)
-    doc = SimpleDocTemplate(str(path), pagesize=A4, rightMargin=16 * mm, leftMargin=16 * mm, topMargin=14 * mm, bottomMargin=14 * mm)
+    doc = SimpleDocTemplate(
+        str(path),
+        pagesize=A4,
+        rightMargin=16 * mm,
+        leftMargin=16 * mm,
+        topMargin=14 * mm,
+        bottomMargin=14 * mm,
+    )
     story = [
         Paragraph("Analysis Data Reviewer's Guide - Portfolio Submission Handoff", title),
         Paragraph(f"Study: <b>{study_id}</b> &nbsp;&nbsp; Package version: <b>v0.28.0</b>", body),
@@ -96,57 +132,65 @@ def _make_adrg_pdf(path: Path, study_id: str, dataset_rows: dict[str, int], p21:
     ]
     table_data = [["Dataset", "Rows", "Transport", "Writer"]]
     for dataset in ["ADSL", "ADAE", "ADQS", "ADTTE"]:
-        table_data.append([dataset, str(dataset_rows.get(dataset, 0)), f"{dataset.lower()}.xpt", "SAS LIBNAME XPORT v5"])
+        table_data.append(
+            [dataset, str(dataset_rows.get(dataset, 0)), f"{dataset.lower()}.xpt", "SAS LIBNAME XPORT v5"]
+        )
     table = Table(table_data, colWidths=[32 * mm, 24 * mm, 42 * mm, 65 * mm], repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    story.extend([
-        table,
-        Spacer(1, 4 * mm),
-        Paragraph("3. Define-XML and Pinnacle 21 validation", h1),
-        Paragraph(
-            f"Define-XML 2.1 metadata is supplied as <b>define.xml</b>. Pinnacle 21 Community "
-            f"{p21.get('pinnacle21_community_version', '4.2.0')} executed on the same controlled package lineage and reported "
-            f"<b>{p21.get('reported_occurrences', 'unknown')}</b> finding occurrences. The validator environment warning, if present, "
-            "is retained in the evidence package rather than suppressed.",
-            body,
-        ),
-        Paragraph("4. Programming and analysis traceability", h1),
-        Paragraph(
-            "The portfolio retains programming specifications, analysis-dataset review, SAP-to-TLF traceability, independent Python/R reconstruction, "
-            "and real SAS OnDemand execution/reconciliation evidence. Selected TFL and QC outputs are placed outside the submission-like Module 5 folder "
-            "under portfolio_evidence so the regulatory-style folder is not confused with a true submission sequence.",
-            body,
-        ),
-        Paragraph("5. XPORT production and QC", h1),
-        Paragraph(
-            f"Four XPORT v5 files were written by {xpt.get('xport_writer', 'SAS LIBNAME XPORT')} in "
-            f"{xpt.get('sas_runtime', 'SAS OnDemand for Academics')} and independently read back on the GitHub runner. "
-            f"Round-trip dataset gates passed: <b>{xpt.get('datasets_roundtrip_passed', 'unknown')}/{xpt.get('datasets_exported', 'unknown')}</b>.",
-            body,
-        ),
-        Paragraph("6. Incoming transfer and release control", h1),
-        Paragraph(
-            "A deterministic public-data transfer fixture demonstrates receipt control: a deliberately defective v1 transfer is rejected and quarantined; "
-            "the corrected v2 transfer must pass the same checks before release. This is workflow evidence, not a claim of an actual external vendor transfer.",
-            body,
-        ),
-        Paragraph("7. Known limitations", h1),
-        Paragraph(EVIDENCE_BOUNDARY, body),
-        Paragraph(
-            "Pinnacle 21 Community is executed on a GitHub-hosted Windows Server runner and its unsupported-OS environment warning is retained. "
-            "The package is not transmitted through FDA ESG/eCTD infrastructure and has not undergone agency review.",
-            body,
-        ),
-    ]
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    story.extend(
+        [
+            table,
+            Spacer(1, 4 * mm),
+            Paragraph("3. Define-XML and Pinnacle 21 validation", h1),
+            Paragraph(
+                f"Define-XML 2.1 metadata is supplied as <b>define.xml</b>. Pinnacle 21 Community "
+                f"{p21.get('pinnacle21_community_version', '4.2.0')} executed on the same controlled package lineage and reported "
+                f"<b>{p21.get('reported_occurrences', 'unknown')}</b> finding occurrences. The validator environment warning, if present, "
+                "is retained in the evidence package rather than suppressed.",
+                body,
+            ),
+            Paragraph("4. Programming and analysis traceability", h1),
+            Paragraph(
+                "The portfolio retains programming specifications, analysis-dataset review, SAP-to-TLF traceability, independent Python/R reconstruction, "
+                "and real SAS OnDemand execution/reconciliation evidence. Selected TFL and QC outputs are placed outside the submission-like Module 5 folder "
+                "under portfolio_evidence so the regulatory-style folder is not confused with a true submission sequence.",
+                body,
+            ),
+            Paragraph("5. XPORT production and QC", h1),
+            Paragraph(
+                f"Four XPORT v5 files were written by {xpt.get('xport_writer', 'SAS LIBNAME XPORT')} in "
+                f"{xpt.get('sas_runtime', 'SAS OnDemand for Academics')} and independently read back on the GitHub runner. "
+                f"Round-trip dataset gates passed: <b>{xpt.get('datasets_roundtrip_passed', 'unknown')}/{xpt.get('datasets_exported', 'unknown')}</b>.",
+                body,
+            ),
+            Paragraph("6. Incoming transfer and release control", h1),
+            Paragraph(
+                "A deterministic public-data transfer fixture demonstrates receipt control: a deliberately defective v1 transfer is rejected and quarantined; "
+                "the corrected v2 transfer must pass the same checks before release. This is workflow evidence, not a claim of an actual external vendor transfer.",
+                body,
+            ),
+            Paragraph("7. Known limitations", h1),
+            Paragraph(EVIDENCE_BOUNDARY, body),
+            Paragraph(
+                "Pinnacle 21 Community is executed on a GitHub-hosted Windows Server runner and its unsupported-OS environment warning is retained. "
+                "The package is not transmitted through FDA ESG/eCTD infrastructure and has not undergone agency review.",
+                body,
+            ),
+        ]
+    )
     doc.build(story)
 
 
@@ -198,9 +242,17 @@ def main() -> None:
         xpt = _find(sas, f"{dataset.lower()}.xpt")
         shutil.copy2(xpt, adam_dir / f"{dataset.lower()}.xpt")
 
-    define_source = _find(p21, "define_xml_candidate_v0_27_round4.xml")
+    projected_define = next(p21.rglob("define_xml_candidate_v0_28_submission.xml"), None)
+    define_source = projected_define or _find(p21, "define_xml_candidate_v0_27_round4.xml")
     shutil.copy2(define_source, adam_dir / "define.xml")
-    _make_adrg_pdf(adam_dir / "adrg.pdf", study_id, dataset_rows, p21_metrics, xpt_metrics, args.target_sha)
+    _make_adrg_pdf(
+        adam_dir / "adrg.pdf",
+        study_id,
+        dataset_rows,
+        p21_metrics,
+        xpt_metrics,
+        args.target_sha,
+    )
     adrg_md = (
         "# Analysis Data Reviewer's Guide - Portfolio Submission Handoff\n\n"
         f"- Study: `{study_id}`\n"
@@ -248,12 +300,42 @@ def main() -> None:
     (package / "PROGRAMMING_HANDOFF.md").write_text(handoff, encoding="utf-8")
 
     qc_rows = [
-        {"check": "pinnacle21_clean_report", "passed": p21_clean, "required": True, "detail": f"reported_occurrences={p21_metrics.get('reported_occurrences')}"},
-        {"check": "four_sas_xport_v5_roundtrips", "passed": xpt_clean, "required": True, "detail": f"passed={xpt_metrics.get('datasets_roundtrip_passed')}/{xpt_metrics.get('datasets_exported')}"},
-        {"check": "define_xml_present", "passed": (adam_dir / "define.xml").exists(), "required": True, "detail": "Define-XML 2.1 portfolio candidate"},
-        {"check": "adrg_pdf_present", "passed": (adam_dir / "adrg.pdf").exists() and (adam_dir / "adrg.pdf").stat().st_size > 0, "required": True, "detail": "ADRG-style PDF generated"},
-        {"check": "vendor_receipt_reject_then_release", "passed": transfer_clean, "required": True, "detail": f"v1={transfer_metrics.get('v1_decision')}; v2={transfer_metrics.get('v2_decision')}"},
-        {"check": "exact_head_recorded", "passed": len(args.target_sha) == 40, "required": True, "detail": args.target_sha},
+        {
+            "check": "pinnacle21_clean_report",
+            "passed": p21_clean,
+            "required": True,
+            "detail": f"reported_occurrences={p21_metrics.get('reported_occurrences')}",
+        },
+        {
+            "check": "four_sas_xport_v5_roundtrips",
+            "passed": xpt_clean,
+            "required": True,
+            "detail": f"passed={xpt_metrics.get('datasets_roundtrip_passed')}/{xpt_metrics.get('datasets_exported')}",
+        },
+        {
+            "check": "define_xml_present",
+            "passed": (adam_dir / "define.xml").exists(),
+            "required": True,
+            "detail": "Define-XML 2.1 portfolio candidate",
+        },
+        {
+            "check": "adrg_pdf_present",
+            "passed": (adam_dir / "adrg.pdf").exists() and (adam_dir / "adrg.pdf").stat().st_size > 0,
+            "required": True,
+            "detail": "ADRG-style PDF generated",
+        },
+        {
+            "check": "vendor_receipt_reject_then_release",
+            "passed": transfer_clean,
+            "required": True,
+            "detail": f"v1={transfer_metrics.get('v1_decision')}; v2={transfer_metrics.get('v2_decision')}",
+        },
+        {
+            "check": "exact_head_recorded",
+            "passed": len(args.target_sha) == 40,
+            "required": True,
+            "detail": args.target_sha,
+        },
     ]
     qc = pd.DataFrame(qc_rows)
     qc.to_csv(evidence_qc / "submission_handoff_v0_28_qc.csv", index=False)
@@ -262,11 +344,20 @@ def main() -> None:
     manifest_rows: list[dict[str, object]] = []
     for path in sorted(p for p in package.rglob("*") if p.is_file()):
         rel = path.relative_to(package).as_posix()
-        category = rel.split("/", 1)[0]
-        manifest_rows.append({"relative_path": rel, "category": category, "bytes": path.stat().st_size, "sha256": _sha256(path)})
+        manifest_rows.append(
+            {
+                "relative_path": rel,
+                "category": rel.split("/", 1)[0],
+                "bytes": path.stat().st_size,
+                "sha256": _sha256(path),
+            }
+        )
     manifest_path = manifest_dir / "sha256_manifest.csv"
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["relative_path", "category", "bytes", "sha256"])
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["relative_path", "category", "bytes", "sha256"],
+        )
         writer.writeheader()
         writer.writerows(manifest_rows)
 
@@ -285,7 +376,10 @@ def main() -> None:
         "controlled_claim": CONTROLLED_CLAIM if all_required else None,
         "evidence_boundary": EVIDENCE_BOUNDARY,
     }
-    (package / "submission_handoff_metrics.json").write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (package / "submission_handoff_metrics.json").write_text(
+        json.dumps(metrics, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     release = (
         "# v0.28 submission-style handoff release decision\n\n"
         f"- Required gates: **{metrics['required_passed']}/{metrics['required_checks']}**\n"
@@ -299,10 +393,16 @@ def main() -> None:
 
     archive_base = output / "submission_package_v0_28"
     shutil.make_archive(str(archive_base), "zip", root_dir=package)
-    (output / "submission_package_v0_28.zip.sha256").write_text(_sha256(output / "submission_package_v0_28.zip") + "  submission_package_v0_28.zip\n", encoding="utf-8")
+    zip_path = output / "submission_package_v0_28.zip"
+    (output / "submission_package_v0_28.zip.sha256").write_text(
+        _sha256(zip_path) + "  submission_package_v0_28.zip\n",
+        encoding="utf-8",
+    )
     print(json.dumps(metrics, indent=2, sort_keys=True))
     if not all_required:
-        raise SystemExit("v0.28 submission handoff gate failed; inspect portfolio_evidence/qc/submission_handoff_v0_28_qc.csv")
+        raise SystemExit(
+            "v0.28 submission handoff gate failed; inspect portfolio_evidence/qc/submission_handoff_v0_28_qc.csv"
+        )
 
 
 if __name__ == "__main__":
