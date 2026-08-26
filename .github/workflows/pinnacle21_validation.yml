@@ -70,10 +70,9 @@ jobs:
           "upstream_run_id=$runId`nupstream_head_sha=$env:TARGET_SHA" | Set-Content -Encoding UTF8 upstream_artifact/upstream_ci_identity.txt
 
       - name: Remediate Define-XML 2.1 candidate from real P21 findings
-        run: >-
-          python scripts/remediate_define_xml_v0_27.py
-          --artifact-dir upstream_artifact
-          --output-dir outputs/pinnacle21_v0_27
+        run: |
+          python scripts/remediate_define_xml_v0_27.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
+          python scripts/remediate_define_xml_v0_27_round3.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
 
       - name: Execute Pinnacle 21 Community 4.2.0 and review findings
         shell: pwsh
@@ -87,6 +86,10 @@ jobs:
           if (Test-Path outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json) {
             Write-Host '--- Define-XML remediation manifest ---'
             Get-Content outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json
+          }
+          if (Test-Path outputs/pinnacle21_v0_27/define_xml_round3_manifest.json) {
+            Write-Host '--- Define-XML round-3 manifest ---'
+            Get-Content outputs/pinnacle21_v0_27/define_xml_round3_manifest.json
           }
           if (Test-Path outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md) {
             Get-Content outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md
