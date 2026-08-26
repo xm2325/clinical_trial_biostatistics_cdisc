@@ -23,8 +23,12 @@ def run_qc(adsl: pd.DataFrame, adae: pd.DataFrame) -> pd.DataFrame:
     bad_saf = sorted(set(adsl["SAFFL"].dropna()) - {"Y", "N"})
     add("SAFFL valid values", not bad_saf, f"invalid={bad_saf}")
 
-    bad_te = sorted(set(adae["TRTEMFL"].dropna()) - {"Y", "N"})
-    add("TRTEMFL valid values", not bad_te, f"invalid={bad_te}")
+    # TRTEMFL is an ADaM single-value analysis flag: qualifying records are Y and
+    # non-qualifying records are blank. Explicit N is therefore not an accepted
+    # controlled value for this portfolio derivation.
+    trtemfl_values = set(adae["TRTEMFL"].fillna("").astype(str).str.strip())
+    bad_te = sorted(trtemfl_values - {"Y", ""})
+    add("TRTEMFL valid Y/blank values", not bad_te, f"invalid={bad_te}; observed={sorted(trtemfl_values)}")
 
     safety_without_ex = int((adsl["SAFFL"].eq("Y") & adsl["EXN"].fillna(0).le(0)).sum())
     add("Safety population has observed exposure", safety_without_ex == 0, f"subjects={safety_without_ex}")
