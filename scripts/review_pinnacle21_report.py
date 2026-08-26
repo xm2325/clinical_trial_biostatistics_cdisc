@@ -16,62 +16,69 @@ def _norm(value: Any) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _slug(value: Any) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", _norm(value).lower()).strip("_")
-
-
-def _find_header(raw: pd.DataFrame) -> int | None:
-    tokens = {"rule_id", "ruleid", "severity", "message", "description", "dataset", "domain", "variable"}
-    best: tuple[int, int] | None = None
+def _header_row(raw: pd.DataFrame, required: set[str]) -> int:
     for idx in range(min(len(raw), 80)):
-        row_tokens = {_slug(value) for value in raw.iloc[idx].tolist() if _norm(value)}
-        score = len(tokens & row_tokens)
-        if score >= 2 and (best is None or score > best[1]):
-            best = (idx, score)
-    return None if best is None else best[0]
+        values = {_norm(value) for value in raw.iloc[idx].tolist() if _norm(value)}
+        if required.issubset(values):
+            return idx
+    raise ValueError(f"Could not find header with required columns {sorted(required)}")
 
 
-def _sheet_findings(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _read_issue_summary(path: Path) -> pd.DataFrame:
+    raw = pd.read_excel(path, sheet_name="Issue Summary", header=None, engine="openpyxl")
+    idx = _header_row(raw, {"Pinnacle 21 ID", "Message", "Found"})
+    header = [_norm(v) or f"column_{i+1}" for i, v in enumerate(raw.iloc[idx].tolist())]
+    body = raw.iloc[idx + 1 :].copy()
+    body.columns = header
+    body = body.dropna(how="all")
+    body["Pinnacle 21 ID"] = body["Pinnacle 21 ID"].map(_norm)
+    body["Message"] = body["Message"].map(_norm)
+    body["Severity"] = body.get("Severity", pd.Series(index=body.index, dtype=object)).map(_norm)
+    body["Found"] = pd.to_numeric(body["Found"], errors="coerce")
+    body = body[body["Pinnacle 21 ID"].str.match(r"^[A-Z]{2}\d{4}$", na=False) & body["Found"].notna()].copy()
+    body["Found"] = body["Found"].astype(int)
+    return body[[c for c in ["Source", "Pinnacle 21 ID", "Message", "Severity", "Found"] if c in body.columns]]
+
+
+def _read_details(path: Path) -> pd.DataFrame:
+    raw = pd.read_excel(path, sheet_name="Details", header=None, engine="openpyxl")
+    idx = _header_row(raw, {"Pinnacle 21 ID", "Message", "Variables", "Values"})
+    header = [_norm(v) or f"column_{i+1}" for i, v in enumerate(raw.iloc[idx].tolist())]
+    body = raw.iloc[idx + 1 :].copy()
+    body.columns = header
+    body = body.dropna(how="all")
+    for col in ["Domain", "Variables", "Values", "Pinnacle 21 ID", "Message", "Severity"]:
+        if col not in body:
+            body[col] = ""
+        body[col] = body[col].map(_norm)
+    body = body[body["Pinnacle 21 ID"].str.match(r"^[A-Z]{2}\d{4}$", na=False)].copy()
+    body = body.rename(
+        columns={
+            "Domain": "source",
+            "Variables": "variables",
+            "Values": "values",
+            "Pinnacle 21 ID": "rule_id",
+            "Message": "message",
+            "Severity": "severity",
+        }
+    )
+    body["review_disposition"] = "REVIEW_REQUIRED"
+    body["review_rationale"] = (
+        "Captured from the Pinnacle 21 Details sheet; remediation/disposition is tracked in the v0.27 findings cycle."
+    )
+    return body[[
+        "source", "rule_id", "message", "severity", "variables", "values",
+        "review_disposition", "review_rationale",
+    ]]
+
+
+def _inventory(path: Path) -> pd.DataFrame:
     book = pd.ExcelFile(path, engine="openpyxl")
-    findings: list[dict[str, Any]] = []
-    sheets: list[dict[str, Any]] = []
+    rows = []
     for sheet in book.sheet_names:
         raw = pd.read_excel(path, sheet_name=sheet, header=None, engine="openpyxl")
-        header_idx = _find_header(raw)
-        sheets.append({"sheet": sheet, "rows": int(len(raw)), "header_row": header_idx if header_idx is not None else -1})
-        if header_idx is None:
-            continue
-        header = [_slug(value) or f"column_{i+1}" for i, value in enumerate(raw.iloc[header_idx].tolist())]
-        seen: dict[str, int] = {}
-        unique_header: list[str] = []
-        for name in header:
-            seen[name] = seen.get(name, 0) + 1
-            unique_header.append(name if seen[name] == 1 else f"{name}_{seen[name]}")
-        body = raw.iloc[header_idx + 1 :].copy()
-        body.columns = unique_header
-        body = body.dropna(how="all")
-        for _, row in body.iterrows():
-            record = {key: _norm(value) for key, value in row.to_dict().items()}
-            populated = [value for value in record.values() if value]
-            if not populated:
-                continue
-            rule = record.get("rule_id") or record.get("ruleid") or record.get("rule") or record.get("id") or ""
-            severity = record.get("severity") or record.get("level") or ""
-            message = record.get("message") or record.get("description") or record.get("issue") or ""
-            if not (rule or severity or message):
-                continue
-            findings.append({
-                "sheet": sheet,
-                "rule_id": rule,
-                "severity": severity,
-                "message": message,
-                "dataset": record.get("dataset") or record.get("domain") or "",
-                "variable": record.get("variable") or "",
-                "value": record.get("value") or "",
-                "review_disposition": "REVIEW_REQUIRED",
-                "review_rationale": "Initial machine-readable capture; remediation/disposition is performed in the v0.27 findings-review cycle.",
-            })
-    return findings, sheets
+        rows.append({"sheet": sheet, "rows": int(len(raw)), "columns": int(len(raw.columns))})
+    return pd.DataFrame(rows)
 
 
 def main() -> None:
@@ -91,17 +98,37 @@ def main() -> None:
         tail = log.read_text(encoding="utf-8", errors="replace")[-6000:] if log.exists() else "missing log"
         raise SystemExit(f"Pinnacle 21 execution did not produce a report: {report}\n{tail}")
 
-    findings, sheets = _sheet_findings(report)
-    findings_df = pd.DataFrame(findings, columns=[
-        "sheet", "rule_id", "severity", "message", "dataset", "variable", "value",
-        "review_disposition", "review_rationale",
-    ])
-    findings_df.to_csv(out / "pinnacle21_findings_review.csv", index=False)
-    pd.DataFrame(sheets).to_csv(out / "pinnacle21_report_inventory.csv", index=False)
+    issue_summary = _read_issue_summary(report)
+    findings = _read_details(report)
+    inventory = _inventory(report)
+
+    issue_summary.rename(
+        columns={
+            "Source": "source",
+            "Pinnacle 21 ID": "rule_id",
+            "Message": "message",
+            "Severity": "severity",
+            "Found": "occurrences",
+        }
+    ).to_csv(out / "pinnacle21_issue_summary.csv", index=False)
+    findings.to_csv(out / "pinnacle21_findings_review.csv", index=False)
+    inventory.to_csv(out / "pinnacle21_report_inventory.csv", index=False)
+
+    reported_occurrences = int(issue_summary["Found"].sum())
+    detail_occurrences = int(len(findings))
+    if reported_occurrences != detail_occurrences:
+        accounting = "REPORT_CUTOFF_OR_DETAIL_MISMATCH"
+    else:
+        accounting = "ISSUE_SUMMARY_MATCHES_DETAILS"
 
     severity_counts: dict[str, int] = {}
-    for severity, count in findings_df.get("severity", pd.Series(dtype=str)).fillna("").value_counts().items():
-        severity_counts[str(severity) or "UNSPECIFIED"] = int(count)
+    for _, row in issue_summary.iterrows():
+        severity = _norm(row.get("Severity")) or "UNSPECIFIED"
+        severity_counts[severity] = severity_counts.get(severity, 0) + int(row["Found"])
+
+    validation_raw = pd.read_excel(report, sheet_name="Validation Summary", header=None, engine="openpyxl")
+    validation_text = "\n".join(_norm(v) for v in validation_raw.to_numpy().ravel() if _norm(v))
+    unsupported_os = "Unsupported OS used" in validation_text
 
     metrics = {
         "version": "0.27.0",
@@ -109,10 +136,14 @@ def main() -> None:
         "runtime_executed": True,
         "report_generated": True,
         "report_bytes": int(report.stat().st_size),
-        "report_sheets": len(sheets),
-        "machine_readable_findings": int(len(findings_df)),
+        "report_sheets": int(len(inventory)),
+        "issue_classes": int(len(issue_summary)),
+        "reported_occurrences": reported_occurrences,
+        "machine_readable_findings": detail_occurrences,
+        "finding_accounting": accounting,
         "severity_counts": severity_counts,
-        "review_required": int(len(findings_df)),
+        "review_required": detail_occurrences,
+        "validator_environment_warning": "UNSUPPORTED_OS" if unsupported_os else "NONE_DETECTED",
         "controlled_claim": CLAIM,
         "conformance_claim": "NOT_ASSESSED",
         "submission_readiness_claim": "NOT_CLAIMED",
@@ -129,20 +160,20 @@ def main() -> None:
         f"- Community version: **{args.community_version}**",
         "- Runtime executed: **yes**",
         f"- Report: `{report.name}` ({report.stat().st_size:,} bytes)",
-        f"- Workbook sheets inventoried: **{len(sheets)}**",
-        f"- Machine-readable findings captured: **{len(findings_df)}**",
+        f"- P21 issue classes: **{len(issue_summary)}**",
+        f"- P21 reported occurrences: **{reported_occurrences}**",
+        f"- Detail rows captured for review: **{detail_occurrences}**",
+        f"- Finding accounting: **{accounting}**",
+        f"- Validator environment warning: **{'UNSUPPORTED_OS' if unsupported_os else 'NONE_DETECTED'}**",
         f"- Controlled claim: `{CLAIM}`",
         "- Formal ADaM conformance: **NOT_ASSESSED**",
         "- Regulatory submission readiness: **NOT_CLAIMED**",
         "",
-        "## Initial findings disposition",
+        "## Findings disposition",
         "",
-        "All captured findings are initially `REVIEW_REQUIRED`. The next v0.27 step classifies each finding as fixable, explainable portfolio boundary, or tool/configuration limitation and reruns Pinnacle 21 after remediation.",
+        "Only the `Details` sheet is counted as finding occurrences; the `Rules` sheet is a rule catalogue and is not counted as findings. All detail rows remain `REVIEW_REQUIRED` until the remediation cycle classifies or eliminates them.",
     ]
-    if severity_counts:
-        lines += ["", "## Severity counts", ""] + [f"- {key or 'UNSPECIFIED'}: **{value}**" for key, value in sorted(severity_counts.items())]
     (out / "pinnacle21_validation_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
     print(json.dumps(metrics, indent=2))
 
 
