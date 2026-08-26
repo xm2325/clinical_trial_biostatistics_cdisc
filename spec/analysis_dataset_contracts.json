@@ -20,10 +20,10 @@
       "file": "adae_style.csv",
       "key": ["STUDYID", "USUBJID", "AESEQ"],
       "required_columns": ["STUDYID", "USUBJID", "AESEQ", "AEDECOD", "TRT01A", "TRTSDT", "TRTEDT", "SAFFL", "TRTEMFL", "RELFL", "MODSEVFL"],
-      "non_missing": ["STUDYID", "USUBJID", "AESEQ", "AEDECOD", "TRT01A", "SAFFL", "TRTEMFL", "RELFL", "MODSEVFL"],
+      "non_missing": ["STUDYID", "USUBJID", "AESEQ", "AEDECOD", "TRT01A", "SAFFL", "RELFL", "MODSEVFL"],
       "controlled_values": {
         "SAFFL": {"values": ["Y", "N"], "allow_blank": false},
-        "TRTEMFL": {"values": ["Y", "N"], "allow_blank": false},
+        "TRTEMFL": {"values": ["Y"], "allow_blank": true},
         "RELFL": {"values": ["Y", "N"], "allow_blank": false},
         "MODSEVFL": {"values": ["Y", "N"], "allow_blank": false}
       }
