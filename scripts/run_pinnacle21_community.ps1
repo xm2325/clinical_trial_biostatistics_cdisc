@@ -113,7 +113,7 @@ try {
         "--engine.version=$engineVersion",
         '--standard=adam',
         "--standard.version=$adamVersion",
-        "--define.standard=$defineVersion",
+        "--source.define.standard=$defineVersion",
         "--source.define=$($define.FullName)",
         "--report=$reportPath"
     )
