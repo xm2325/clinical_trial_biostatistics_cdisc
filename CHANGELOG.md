@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.26.1 — 2026-08-26
+
+- Add a trusted-push SAS ODA workflow using SASPy Remote IOM, encrypted/ephemeral ODA client JAR installation and repository secrets; the credential-free PR workflow remains separate.
+- Execute real SAS analysis-dataset and statistical programs in SAS OnDemand for Academics, returning generated datasets and ODS outputs to the GitHub-hosted runner for machine-readable reconciliation.
+- Reconcile SAS ADSL (**306 rows**) and ADAE (**1,191 rows**) against Python references, including exact treatment/population/date fields, unique keys and numeric derivations.
+- Reconcile subject-level TEAE `PROC FREQ` outputs for both active-vs-placebo comparisons, including arm denominators/risks, risk differences and Fisher exact p-values.
+- Reconcile the SAS `PROC MIXED` observed-data MMRM against the existing R `mmrm` reference on **451 analysis rows**; Week 24 estimate/SE absolute differences remain below the predeclared **0.0005** tolerance without loosening the model or tolerance.
+- Final trusted-push run **#6 / 32913069051** on `f09f403eafff23dcbaa7e2168245aba0310f4cc2` passes **45/45** required checks and issues `PORTFOLIO_SAS_ODA_EXECUTION_RECONCILED`. Artifact **9587271667**, digest `sha256:c9f59a22613992285612237ccf007673f8f97feede4eacf743ccb3f1713518d7`.
+- Standard credential-free PR CI **#749 / 32913073831** also passes on the same head. Evidence remains bounded to public-data portfolio execution; no sponsor/CRO production, validated GxP, formal second-programmer sign-off, formal ADaM conformance, submission readiness or Pinnacle 21 execution is claimed.
+
+## 0.25.0 — 2026-08-25
+
+- Add a controlled clinical-programming workflow over seven representative packages: four analysis datasets (ADSL-/ADAE-/ADQS-/ADTTE-style) and three TFL/statistical outputs.
+- Require declared source domains/analysis inputs, output existence, required variables, unique keys, linked QC/re-programming evidence, statistical change control, SAP-to-TLF traceability and SHA256 release identities.
+- Reuse the existing cross-language R/Python reconstruction and MMRM cross-package evidence instead of relabelling ordinary unit tests as independent programming QC.
+- Actions **#738 / run 32890489713** passes **65/65** required checks and issues `PORTFOLIO_CLINICAL_PROGRAMMING_WORKFLOW_READY`; artifact **9579472254**, digest `sha256:725d3f07eaa2addb6cd52a464cf6c7afd89e5087e28df827e49505c69ade5eff`.
+- Evidence remains independent public-data portfolio work, not sponsor/CRO production, formal second-programmer sign-off, formal ADaM conformance, validated GxP programming or regulatory-submission readiness.
+
 ## 0.24.0 — 2026-08-25
 
 - Add a three-part Study Statistician decision suite while retaining the v0.23 primary MMRM, multiplicity decision, T01–T25 registry and controlled evidence closure unchanged.

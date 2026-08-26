@@ -22,7 +22,6 @@ def main() -> None:
         f"blocking_open={closure['readiness_blocking_open_issues']}; "
         f"passed={closure['all_passed']}"
     )
-
     interpretation = write_csr_interpretation_outputs(ROOT)
     extension = write_csr_interpretation_extension_outputs(ROOT)
     print(
@@ -31,11 +30,9 @@ def main() -> None:
         f"sensitivity_mcse={interpretation['reference_based_mcse_passed']}/{interpretation['reference_based_rows']}; "
         f"base_rows={interpretation['conclusion_rows']}; "
         f"fixed_delta_rows={extension['fixed_delta_conclusion_rows']}; "
-        f"checks={interpretation['required_checks_passed']}/{interpretation['required_checks']}+"
-        f"{extension['required_checks_passed']}/{extension['required_checks']}; "
+        f"checks={interpretation['required_checks_passed']}/{interpretation['required_checks']}+{extension['required_checks_passed']}/{extension['required_checks']}; "
         f"passed={interpretation['all_passed'] and extension['all_passed']}"
     )
-
     review = write_statistical_review_query_outputs(ROOT)
     print(
         "Statistical review responses: "
@@ -45,14 +42,8 @@ def main() -> None:
         f"checks={review['required_checks_passed']}/{review['required_checks']}; "
         f"passed={review['all_passed']}"
     )
-
-    # v0.25 clinical-programming release gate. This runs after the existing
-    # change-control and SAP-to-TLF traceability steps, so it can require those
-    # controlled release signals as part of the programming package.
-    subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "run_clinical_programming_workflow.py")],
-        check=True,
-    )
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "run_clinical_programming_workflow.py")], check=True)
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "run_bms_statistical_programming.py")], check=True)
 
 
 if __name__ == "__main__":

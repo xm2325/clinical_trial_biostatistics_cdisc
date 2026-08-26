@@ -1,0 +1,50 @@
+{
+  "version": "0.26.0",
+  "target_role": "Bristol Myers Squibb Senior Statistical Programmer",
+  "sas_runtime_status": "NOT_EXECUTED_NO_SAS_RUNTIME",
+  "pinnacle21_status": "NOT_EXECUTED_NO_PINNACLE21_RUNTIME",
+  "evidence_claim": "PORTFOLIO_BMS_STATISTICAL_PROGRAMMING_EVIDENCE_READY",
+  "evidence_boundary": "Independent public-data portfolio evidence only: no sponsor/CRO employment claim, no executed SAS output in this CI, no Pinnacle 21 execution, no formal ADaM conformance, no validated GxP environment, and not submission-ready.",
+  "prohibited_claim_fragments": [
+    "sas runtime success",
+    "sas execution passed",
+    "pinnacle 21 passed",
+    "submission ready",
+    "submission-ready",
+    "production sas validated",
+    "formal adam conformance"
+  ],
+  "source_inputs": [
+    {"id":"DM","path":"cache/dm.csv","required_columns":["STUDYID","USUBJID","ARM","ACTARM","RFXSTDTC","RFXENDTC"]},
+    {"id":"EX","path":"cache/ex.csv","required_columns":["STUDYID","USUBJID","EXSEQ","EXTRT","EXDOSE","EXSTDTC","EXENDTC"]},
+    {"id":"DS","path":"cache/ds.csv","required_columns":["STUDYID","USUBJID","DSSEQ","DSDECOD","DSCAT","DSSTDTC"]},
+    {"id":"AE","path":"cache/ae.csv","required_columns":["STUDYID","USUBJID","AESEQ","AEDECOD","AESTDTC","AESER"]}
+  ],
+  "sas_programs": [
+    {"id":"SAS-QC-01","path":"sas/macros/qc_contract.sas","role":"BASE_SAS_MACRO_QC_UTILITY","required_fragments":["not_executed_no_sas_runtime","%macro assert_vars","%sysfunc(open(","%sysfunc(varnum(","%abort cancel","%mend assert_vars"],"forbidden_fragments":[]},
+    {"id":"SAS-ADAM-01","path":"sas/derive_adsl_adae.sas","role":"DERIVED_ANALYSIS_DATASET_STATIC_TRANSLATION","translation_basis":"src/cdisc_portfolio/derive.py","required_fragments":["not_executed_no_sas_runtime","%include \"sas/macros/qc_contract.sas\"","cache/dm.csv","cache/ex.csv","cache/ds.csv","cache/ae.csv","proc sql","data work.adsl","trt01p=arm","trt01a=actarm","randfl=ifc","saffl=ifc","data work.adae","trtemfl=\"y\"","relfl=\"y\"","modsevfl=\"y\"","sas_external_adsl_style.csv","sas_external_adae_style.csv"],"forbidden_fragments":["submission-ready sas=true","formal adam conformance=true"]},
+    {"id":"SAS-TFL-01","path":"sas/teae_risk_difference.sas","role":"SAFETY_TFL_STATIC_TRANSLATION","translation_basis":"src/cdisc_portfolio/analysis.py","required_fragments":["not_executed_no_sas_runtime","%include \"sas/macros/qc_contract.sas\"","outputs/adsl_style.csv","outputs/adae_style.csv","saffl","trtemfl","%macro teae_rd","proc freq","riskdiff(cl=wald)","exact fisher","sas_external_teae_rd_low.csv","sas_external_teae_rd_high.csv"],"forbidden_fragments":["odds ratio as risk difference","sas execution passed"]},
+    {"id":"SAS-MMRM-01","path":"sas/actot_mmrm_primary.sas","role":"MMRM_TFL_STATIC_TRANSLATION","translation_basis":"R/mmrm_analysis.R","required_fragments":["not_executed_no_sas_runtime","%include \"sas/macros/qc_contract.sas\"","outputs/adqs_actot_style.csv","proc mixed","method=reml","ddfm=satterth","trt01a*avisitn","base*avisitn","repeated avisitn / subject=usubjid type=un","lsmeans trt01a*avisitn / diff cl","sas_external_mmrm_diffs.csv"],"forbidden_fragments":["last observation carried forward","sas execution passed"]}
+  ],
+  "analysis_datasets": [
+    {"id":"ADSL","label":"ADSL-style subject-level analysis dataset","path":"outputs/adsl_style.csv","key":["STUDYID","USUBJID"],"repeating":"No","required_columns":["STUDYID","USUBJID","TRT01P","TRT01A","TRTSDT","TRTEDT","RANDFL","SAFFL","COMPLFL","DCSFL"]},
+    {"id":"ADAE","label":"ADAE-style adverse-event analysis dataset","path":"outputs/adae_style.csv","key":["STUDYID","USUBJID","AESEQ"],"repeating":"Yes","required_columns":["STUDYID","USUBJID","AESEQ","AEDECOD","TRT01A","TRTSDT","TRTEDT","SAFFL","TRTEMFL","RELFL","MODSEVFL"]},
+    {"id":"ADQS","label":"ADQS-style ACTOT efficacy analysis dataset","path":"outputs/adqs_actot_style.csv","key":["STUDYID","USUBJID","QSSEQ"],"repeating":"Yes","required_columns":["STUDYID","USUBJID","QSSEQ","TRT01A","PARAMCD","AVISIT","AVAL","BASE","CHG","ABLFL","EFFFL"]},
+    {"id":"ADTTE","label":"ADTTE-style retention analysis dataset","path":"outputs/adtte_retention_style.csv","key":["STUDYID","USUBJID"],"repeating":"No","required_columns":["STUDYID","USUBJID","TRT01P","TRT01A","ANLTRT","PARAM","PARAMCD","STARTDT","ADT","AVAL","CNSR","EVNTDESC","ANL01FL","SRCDOM","SRCVAR"]}
+  ],
+  "external_sas_reconciliation": [
+    {"program_id":"SAS-ADAM-01","deliverable":"ADSL-style dataset","expected_external_output":"outputs/sas_external_adsl_style.csv","reference_output":"outputs/adsl_style.csv","comparison_contract":"row count; key uniqueness; key set; required variables; selected derived values"},
+    {"program_id":"SAS-ADAM-01","deliverable":"ADAE-style dataset","expected_external_output":"outputs/sas_external_adae_style.csv","reference_output":"outputs/adae_style.csv","comparison_contract":"row count; key uniqueness; key set; required variables; TRTEMFL/RELFL/MODSEVFL"},
+    {"program_id":"SAS-TFL-01","deliverable":"TEAE risk difference low-dose ODS","expected_external_output":"outputs/sas_external_teae_rd_low.csv","reference_output":"outputs/table7_teae_risk_difference.csv","comparison_contract":"arm denominators; risk difference; confidence limits"},
+    {"program_id":"SAS-TFL-01","deliverable":"TEAE risk difference high-dose ODS","expected_external_output":"outputs/sas_external_teae_rd_high.csv","reference_output":"outputs/table7_teae_risk_difference.csv","comparison_contract":"arm denominators; risk difference; confidence limits"},
+    {"program_id":"SAS-TFL-01","deliverable":"TEAE Fisher exact low-dose ODS","expected_external_output":"outputs/sas_external_teae_fisher_low.csv","reference_output":"outputs/table7_teae_risk_difference.csv","comparison_contract":"Fisher exact p-value"},
+    {"program_id":"SAS-TFL-01","deliverable":"TEAE Fisher exact high-dose ODS","expected_external_output":"outputs/sas_external_teae_fisher_high.csv","reference_output":"outputs/table7_teae_risk_difference.csv","comparison_contract":"Fisher exact p-value"},
+    {"program_id":"SAS-MMRM-01","deliverable":"MMRM treatment differences ODS","expected_external_output":"outputs/sas_external_mmrm_diffs.csv","reference_output":"outputs/mmrm_treatment_contrasts.csv","comparison_contract":"population; Week 24 treatment contrasts; covariance/inference contract"}
+  ],
+  "pinnacle21_handoff": [
+    {"package_id":"P21-ADSL","dataset":"ADSL","input":"outputs/adsl_style.csv","metadata":"outputs/define_xml_candidate_v0_26.xml","status":"NOT_EXECUTED_NO_PINNACLE21_RUNTIME"},
+    {"package_id":"P21-ADAE","dataset":"ADAE","input":"outputs/adae_style.csv","metadata":"outputs/define_xml_candidate_v0_26.xml","status":"NOT_EXECUTED_NO_PINNACLE21_RUNTIME"},
+    {"package_id":"P21-ADQS","dataset":"ADQS","input":"outputs/adqs_actot_style.csv","metadata":"outputs/define_xml_candidate_v0_26.xml","status":"NOT_EXECUTED_NO_PINNACLE21_RUNTIME"},
+    {"package_id":"P21-ADTTE","dataset":"ADTTE","input":"outputs/adtte_retention_style.csv","metadata":"outputs/define_xml_candidate_v0_26.xml","status":"NOT_EXECUTED_NO_PINNACLE21_RUNTIME"}
+  ]
+}

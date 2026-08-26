@@ -1,0 +1,129 @@
+name: SAS ODA validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/v0.26-bms-statistical-programming
+    paths:
+      - ".github/workflows/sas_oda_validation.yml"
+      - "ci/vendor/**"
+      - "sas/**"
+      - "scripts/configure_sas_oda_ci.py"
+      - "scripts/install_sas_oda_encryption_jars.py"
+      - "scripts/run_sas_oda_probe.py"
+      - "scripts/run_sas_oda_validation.py"
+      - "scripts/run_sas_oda_validation_canonical.py"
+      - "requirements.txt"
+      - "spec/**"
+      - "src/cdisc_portfolio/**"
+      - "R/mmrm_analysis.R"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sas-oda-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sas-oda-validation:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SAS_ODA_USER: ${{ secrets.SAS_ODA_USER }}
+      SAS_ODA_PASSWORD: ${{ secrets.SAS_ODA_PASSWORD }}
+      SAS_ODA_JARS_PASSPHRASE: ${{ secrets.SAS_ODA_JARS_PASSPHRASE }}
+      SAS_ODA_REGION: ${{ vars.SAS_ODA_REGION }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Verify ODA secrets and encrypted client bundle
+        shell: bash
+        run: |
+          if [ -z "$SAS_ODA_USER" ]; then
+            echo "::error::Repository secret SAS_ODA_USER is missing"
+            exit 1
+          fi
+          if [ -z "$SAS_ODA_PASSWORD" ]; then
+            echo "::error::Repository secret SAS_ODA_PASSWORD is missing"
+            exit 1
+          fi
+          if [ -z "$SAS_ODA_JARS_PASSPHRASE" ]; then
+            echo "::error::Repository secret SAS_ODA_JARS_PASSPHRASE is missing"
+            exit 1
+          fi
+          if [ ! -f ci/vendor/SAS-ODA-JarFiles.zip.gpg ]; then
+            echo "::error::Encrypted SAS ODA client bundle is missing at ci/vendor/SAS-ODA-JarFiles.zip.gpg"
+            exit 1
+          fi
+
+      - name: Install Python and SASPy dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install "saspy==5.108.0"
+
+      - name: Decrypt and install SAS ODA encryption JARs
+        shell: bash
+        run: |
+          set -euo pipefail
+          decrypted="$RUNNER_TEMP/SAS-ODA-JarFiles.zip"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$SAS_ODA_JARS_PASSPHRASE" \
+            --output "$decrypted" \
+            --decrypt ci/vendor/SAS-ODA-JarFiles.zip.gpg
+          python scripts/install_sas_oda_encryption_jars.py "$decrypted"
+          rm -f "$decrypted"
+
+      - name: Configure ephemeral SAS ODA connection
+        id: oda_config
+        run: python scripts/configure_sas_oda_ci.py
+
+      - name: Execute SAS ODA connectivity probe
+        env:
+          SASPY_CFGFILE: ${{ steps.oda_config.outputs.cfgfile }}
+        run: python scripts/run_sas_oda_probe.py
+
+      - name: Generate validated Python clinical-programming references
+        run: python scripts/run_all.py
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.6.1"
+          use-public-rspm: true
+
+      - name: Install R MMRM reference dependencies
+        run: Rscript -e 'install.packages(c("jsonlite", "mmrm", "emmeans"))'
+
+      - name: Generate validated R MMRM reference
+        run: Rscript R/mmrm_analysis.R
+
+      - name: Execute and reconcile BMS SAS programs on ODA
+        env:
+          SASPY_CFGFILE: ${{ steps.oda_config.outputs.cfgfile }}
+        run: python scripts/run_sas_oda_validation_canonical.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sas-oda-validation-${{ github.run_id }}
+          path: |
+            outputs/sas_oda_*
+            outputs/mmrm_treatment_contrasts.csv
+            outputs/mmrm_analysis_dataset.csv
+            outputs/table7_teae_risk_difference.csv
+          if-no-files-found: warn
+          retention-days: 30
