@@ -43,25 +43,33 @@ if (-not $roots) {
     throw 'Pinnacle 21 Community installation directory was not found after silent install.'
 }
 
-$inventory = foreach ($root in $roots) {
-    "ROOT=$root"
-    Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match 'p21-client.*\.jar$|java\.exe$|\.xml$' } |
-        Select-Object -ExpandProperty FullName
-}
+$inventory = @(
+    foreach ($root in $roots) {
+        "ROOT=$root"
+        Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match 'p21-client.*\.jar$|java\.exe$|\.xml$' } |
+            Select-Object -ExpandProperty FullName
+    }
+)
 $inventory | Set-Content -Encoding UTF8 $installLog
 
-$jar = foreach ($root in $roots) {
-    Get-ChildItem -Path $root -Recurse -File -Filter 'p21-client*.jar' -ErrorAction SilentlyContinue
-} | Sort-Object FullName | Select-Object -Last 1
+$jarCandidates = @(
+    foreach ($root in $roots) {
+        Get-ChildItem -Path $root -Recurse -File -Filter 'p21-client*.jar' -ErrorAction SilentlyContinue
+    }
+)
+$jar = $jarCandidates | Sort-Object FullName | Select-Object -Last 1
 if (-not $jar) {
     throw 'Pinnacle 21 Community CLI p21-client JAR was not found after install.'
 }
 
-$java = foreach ($root in $roots) {
-    Get-ChildItem -Path $root -Recurse -File -Filter 'java.exe' -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match 'components\\java64\\bin\\java\.exe$' }
-} | Select-Object -First 1
+$javaCandidates = @(
+    foreach ($root in $roots) {
+        Get-ChildItem -Path $root -Recurse -File -Filter 'java.exe' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'components\\java64\\bin\\java\.exe$' }
+    }
+)
+$java = $javaCandidates | Select-Object -First 1
 if (-not $java) {
     throw 'Bundled Pinnacle 21 Java 8 runtime was not found.'
 }
