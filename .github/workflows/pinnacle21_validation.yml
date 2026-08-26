@@ -71,42 +71,42 @@ jobs:
 
       - name: Remediate Define-XML 2.1 candidate from real P21 findings
         run: |
-          python scripts/remediate_define_xml_v0_27.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
-          python scripts/remediate_define_xml_v0_27_round3.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
-          python scripts/remediate_define_xml_v0_27_round4.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
+          python scripts/remediate_define_xml_v0_27.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_28
+          python scripts/remediate_define_xml_v0_27_round3.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_28
+          python scripts/remediate_define_xml_v0_27_round4.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_28
 
-      - name: Execute Pinnacle 21 Community 4.2.0 and review findings
+      - name: Build FDA XPORT v5-compatible v0.28 submission projection
+        run: |
+          python scripts/build_submission_projection_v0_28.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_28
+
+      - name: Execute Pinnacle 21 Community 4.2.0 on projected Define and review findings
         shell: pwsh
         run: |
-          ./scripts/run_pinnacle21_community.ps1 -ArtifactDir upstream_artifact -OutputDir outputs/pinnacle21_v0_27
+          ./scripts/run_pinnacle21_community.ps1 -ArtifactDir upstream_artifact -OutputDir outputs/pinnacle21_v0_28
 
       - name: Show Pinnacle 21 evidence summary
         if: always()
         shell: pwsh
         run: |
-          if (Test-Path outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json) {
-            Write-Host '--- Define-XML remediation manifest ---'
-            Get-Content outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json
+          if (Test-Path outputs/pinnacle21_v0_28/submission_projection_v0_28_manifest.json) {
+            Write-Host '--- v0.28 submission projection manifest ---'
+            Get-Content outputs/pinnacle21_v0_28/submission_projection_v0_28_manifest.json
           }
-          if (Test-Path outputs/pinnacle21_v0_27/define_xml_round3_manifest.json) {
-            Write-Host '--- Define-XML round-3 manifest ---'
-            Get-Content outputs/pinnacle21_v0_27/define_xml_round3_manifest.json
+          if (Test-Path outputs/pinnacle21_v0_28/define_xml_round4_manifest.json) {
+            Write-Host '--- Define-XML round-4 remediation manifest ---'
+            Get-Content outputs/pinnacle21_v0_28/define_xml_round4_manifest.json
           }
-          if (Test-Path outputs/pinnacle21_v0_27/define_xml_round4_manifest.json) {
-            Write-Host '--- Define-XML round-4 manifest ---'
-            Get-Content outputs/pinnacle21_v0_27/define_xml_round4_manifest.json
+          if (Test-Path outputs/pinnacle21_v0_28/pinnacle21_validation_summary.md) {
+            Get-Content outputs/pinnacle21_v0_28/pinnacle21_validation_summary.md
           }
-          if (Test-Path outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md) {
-            Get-Content outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md
-          }
-          if (Test-Path outputs/pinnacle21_v0_27/pinnacle21_cli.log) {
+          if (Test-Path outputs/pinnacle21_v0_28/pinnacle21_cli.log) {
             Write-Host '--- Pinnacle 21 CLI log tail ---'
-            Get-Content outputs/pinnacle21_v0_27/pinnacle21_cli.log -Tail 120
+            Get-Content outputs/pinnacle21_v0_28/pinnacle21_cli.log -Tail 120
           }
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pinnacle21-community-v0.27-${{ github.run_id }}
-          path: outputs/pinnacle21_v0_27/
+          name: pinnacle21-community-v0.28-${{ github.run_id }}
+          path: outputs/pinnacle21_v0_28/
           if-no-files-found: warn
