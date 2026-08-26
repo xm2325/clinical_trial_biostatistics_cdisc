@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - feature/v0.26-bms-statistical-programming
+      - feature/v0.27-pinnacle21-validation
     paths:
       - ".github/workflows/sas_oda_validation.yml"
       - "ci/vendor/**"
