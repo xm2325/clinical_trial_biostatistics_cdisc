@@ -141,7 +141,10 @@ def derive_adae_style(ae: pd.DataFrame, adsl: pd.DataFrame, followup_days: int =
     lower_ok = out["ASTDT"].notna() & out["TRTSDT"].notna() & (out["ASTDT"] >= out["TRTSDT"])
     upper_bound = out["TRTEDT"] + pd.to_timedelta(followup_days, unit="D")
     upper_ok = out["TRTEDT"].isna() | (out["ASTDT"] <= upper_bound)
-    out["TRTEMFL"] = np.where(lower_ok & upper_ok & out["SAFFL"].eq("Y"), "Y", "N")
+    # ADaM single-value analysis flags are populated with Y for qualifying records
+    # and left blank otherwise. This preserves an unambiguous TEAE subset while
+    # avoiding a non-standard explicit N value for TRTEMFL.
+    out["TRTEMFL"] = np.where(lower_ok & upper_ok & out["SAFFL"].eq("Y"), "Y", "")
 
     if "AESTDY" in out.columns:
         out["ASTDY"] = pd.to_numeric(out["AESTDY"], errors="coerce")

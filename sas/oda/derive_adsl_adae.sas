@@ -119,7 +119,7 @@ data work.adae;
      and (missing(TRTEDT) or ASTDT<=TRTEDT+30)
      and SAFFL="Y"
     then TRTEMFL="Y";
-  else TRTEMFL="N";
+  else TRTEMFL="";
 
   if not missing(AESTDY) then ASTDY=input(strip(vvalue(AESTDY)), best32.);
   else if not missing(ASTDT) and not missing(TRTSDT) then do;

@@ -1,0 +1,112 @@
+name: Pinnacle 21 Community validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pinnacle21-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  pinnacle21-community-validation:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Java 8 required by Pinnacle 21 Community CLI
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Install report-review dependencies
+        run: python -m pip install pandas==2.2.3 openpyxl==3.1.5
+
+      - name: Wait for credential-free CI and download controlled outputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path upstream_artifact | Out-Null
+          $runId = $null
+          for ($i = 0; $i -lt 80; $i++) {
+            $response = gh api -X GET "repos/${env:GITHUB_REPOSITORY}/actions/workflows/run.yml/runs" -f head_sha="$env:TARGET_SHA" -f per_page=20 | ConvertFrom-Json
+            $candidate = $response.workflow_runs |
+              Where-Object { $_.head_sha -eq $env:TARGET_SHA } |
+              Sort-Object created_at -Descending |
+              Select-Object -First 1
+            if ($candidate) {
+              Write-Host "Upstream CI run $($candidate.id): status=$($candidate.status), conclusion=$($candidate.conclusion)"
+              if ($candidate.status -eq 'completed') {
+                if ($candidate.conclusion -ne 'success') {
+                  throw "Credential-free upstream CI did not pass: run $($candidate.id) conclusion=$($candidate.conclusion)"
+                }
+                $runId = $candidate.id
+                break
+              }
+            } else {
+              Write-Host "No upstream run for $env:TARGET_SHA yet."
+            }
+            Start-Sleep -Seconds 15
+          }
+          if (-not $runId) { throw 'Timed out waiting for credential-free upstream CI.' }
+          gh run download $runId --repo $env:GITHUB_REPOSITORY --name clinical-biostatistics-cdisc-outputs --dir upstream_artifact
+          "upstream_run_id=$runId`nupstream_head_sha=$env:TARGET_SHA" | Set-Content -Encoding UTF8 upstream_artifact/upstream_ci_identity.txt
+
+      - name: Remediate Define-XML 2.1 candidate from real P21 findings
+        run: |
+          python scripts/remediate_define_xml_v0_27.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
+          python scripts/remediate_define_xml_v0_27_round3.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
+          python scripts/remediate_define_xml_v0_27_round4.py --artifact-dir upstream_artifact --output-dir outputs/pinnacle21_v0_27
+
+      - name: Execute Pinnacle 21 Community 4.2.0 and review findings
+        shell: pwsh
+        run: |
+          ./scripts/run_pinnacle21_community.ps1 -ArtifactDir upstream_artifact -OutputDir outputs/pinnacle21_v0_27
+
+      - name: Show Pinnacle 21 evidence summary
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json) {
+            Write-Host '--- Define-XML remediation manifest ---'
+            Get-Content outputs/pinnacle21_v0_27/define_xml_remediation_manifest.json
+          }
+          if (Test-Path outputs/pinnacle21_v0_27/define_xml_round3_manifest.json) {
+            Write-Host '--- Define-XML round-3 manifest ---'
+            Get-Content outputs/pinnacle21_v0_27/define_xml_round3_manifest.json
+          }
+          if (Test-Path outputs/pinnacle21_v0_27/define_xml_round4_manifest.json) {
+            Write-Host '--- Define-XML round-4 manifest ---'
+            Get-Content outputs/pinnacle21_v0_27/define_xml_round4_manifest.json
+          }
+          if (Test-Path outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md) {
+            Get-Content outputs/pinnacle21_v0_27/pinnacle21_validation_summary.md
+          }
+          if (Test-Path outputs/pinnacle21_v0_27/pinnacle21_cli.log) {
+            Write-Host '--- Pinnacle 21 CLI log tail ---'
+            Get-Content outputs/pinnacle21_v0_27/pinnacle21_cli.log -Tail 120
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pinnacle21-community-v0.27-${{ github.run_id }}
+          path: outputs/pinnacle21_v0_27/
+          if-no-files-found: warn

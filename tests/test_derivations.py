@@ -56,11 +56,12 @@ def test_adae_teae_window_and_flags():
         {"STUDYID":"S","USUBJID":"1","AESEQ":3,"AETERM":"late","AEDECOD":"NAUSEA","AEBODSYS":"GI","AESEV":"SEVERE","AESER":"Y","AEREL":"PROBABLE","AEOUT":"RECOVERED","AESTDTC":"2020-02-10","AEENDTC":"2020-02-11"},
     ])
     adae = derive_adae_style(ae, adsl).set_index("AESEQ")
-    assert adae.loc[1, "TRTEMFL"] == "N"
+    assert adae.loc[1, "TRTEMFL"] == ""
     assert adae.loc[2, "TRTEMFL"] == "Y"
     assert adae.loc[2, "RELFL"] == "Y"
     assert adae.loc[2, "MODSEVFL"] == "Y"
-    assert adae.loc[3, "TRTEMFL"] == "N"
+    assert adae.loc[3, "TRTEMFL"] == ""
+    assert set(adae["TRTEMFL"].unique()).issubset({"Y", ""})
 
 
 def test_missing_exposure_end_uses_disposition_date_with_flag():
