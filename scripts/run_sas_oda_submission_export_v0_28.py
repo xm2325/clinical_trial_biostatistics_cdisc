@@ -20,6 +20,7 @@ KEYS = {
     "ADQS": ["STUDYID", "USUBJID", "QSSEQ"],
     "ADTTE": ["STUDYID", "USUBJID", "PARAMCD"],
 }
+NUMERIC_KEYS = {"AESEQ", "QSSEQ"}
 CONTROLLED_CLAIM = "PORTFOLIO_SAS_ODA_XPORT_V5_HANDOFF_RECONCILED"
 EVIDENCE_BOUNDARY = (
     "SAS XPORT v5 files were written by SAS OnDemand for Academics from an explicit FDA-compatible projection of controlled "
@@ -39,9 +40,22 @@ def _read_csv(path: Path) -> pd.DataFrame:
 
 
 def _norm(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Normalise keys by transport semantics without weakening character identifiers.
+
+    SAS XPORT stores AESEQ/QSSEQ as SAS numerics, so integer-valued source keys can
+    legitimately round-trip through pyreadstat as floats (for example 1 -> 1.0).
+    Character identifiers remain exact trimmed strings; only the explicitly known
+    numeric sequence keys receive numeric-semantic normalisation.
+    """
     out = frame.loc[:, columns].copy()
     for col in columns:
-        out[col] = out[col].fillna("").astype(str).str.strip()
+        if col in NUMERIC_KEYS:
+            numeric = pd.to_numeric(out[col], errors="raise")
+            out[col] = numeric.map(
+                lambda value: "" if pd.isna(value) else format(float(value), ".15g")
+            )
+        else:
+            out[col] = out[col].fillna("").astype(str).str.strip()
     return out
 
 
@@ -88,7 +102,12 @@ def _upload(sas: saspy.SASsession, frame: pd.DataFrame, table: str) -> None:
         raise RuntimeError(f"WORK.{table} was not created on SAS ODA")
 
 
-def _export_one(sas: saspy.SASsession, dataset: str, frame: pd.DataFrame, projection: dict[str, object]) -> tuple[Path, dict[str, object]]:
+def _export_one(
+    sas: saspy.SASsession,
+    dataset: str,
+    frame: pd.DataFrame,
+    projection: dict[str, object],
+) -> tuple[Path, dict[str, object]]:
     _upload(sas, frame, dataset)
     remote = f"{sas.workpath}{dataset.lower()}.xpt"
     code = f'''
@@ -123,7 +142,10 @@ libname _xpt clear;
         left = _norm(frame, keys)
         right = _norm(roundtrip, keys)
         duplicate_count = int(right.duplicated(keys).sum())
-        key_ok = set(map(tuple, left.to_numpy())) == set(map(tuple, right.to_numpy())) and duplicate_count == 0
+        key_ok = (
+            set(map(tuple, left.to_numpy())) == set(map(tuple, right.to_numpy()))
+            and duplicate_count == 0
+        )
 
     qc = {
         "dataset": dataset,
@@ -199,12 +221,16 @@ def main() -> None:
         "projection_policy": spec["policy"],
         "datasets_exported": int(len(qc)),
         "datasets_roundtrip_passed": int(qc["required_pass"].sum()),
-        "excluded_audit_helper_variables": int(sum(len(cfg["exclude_from_submission"]) for cfg in dataset_specs.values())),
+        "excluded_audit_helper_variables": int(
+            sum(len(cfg["exclude_from_submission"]) for cfg in dataset_specs.values())
+        ),
         "all_required_passed": all_passed,
         "controlled_claim": CONTROLLED_CLAIM if all_passed else None,
         "evidence_boundary": EVIDENCE_BOUNDARY,
     }
-    (OUT / "submission_xpt_v0_28_metrics.json").write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (OUT / "submission_xpt_v0_28_metrics.json").write_text(
+        json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     summary = (
         "# v0.28 SAS XPORT v5 export\n\n"
         f"- SAS runtime: **{metrics['sas_runtime']}**\n"
@@ -219,7 +245,9 @@ def main() -> None:
     (OUT / "submission_xpt_v0_28_summary.md").write_text(summary, encoding="utf-8")
     print(json.dumps(metrics, indent=2, sort_keys=True))
     if not all_passed:
-        raise SystemExit("SAS XPORT v5 handoff gate failed; inspect outputs/submission_xpt_v0_28_qc.csv")
+        raise SystemExit(
+            "SAS XPORT v5 handoff gate failed; inspect outputs/submission_xpt_v0_28_qc.csv"
+        )
 
 
 if __name__ == "__main__":
