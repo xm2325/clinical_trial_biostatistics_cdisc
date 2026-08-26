@@ -1,0 +1,58 @@
+name: v0.26 release documentation patch
+
+on:
+  push:
+    branches:
+      - feature/v0.26-bms-statistical-programming
+    paths:
+      - .github/workflows/v026_release_docs_patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-release-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v0.26-bms-statistical-programming
+          fetch-depth: 0
+
+      - name: Patch README and CHANGELOG from validated evidence
+        shell: python
+        run: |
+          from pathlib import Path
+
+          readme = Path("README.md")
+          text = readme.read_text()
+          if "## Current milestone: v0.26.1" not in text:
+              marker = "## Current milestone: v0.24 — Study Statistician design, safety and governance decision suite"
+              if marker not in text:
+                  raise SystemExit("README v0.24 milestone marker not found")
+              section = '''## Current milestone: v0.26.1 — executed SAS clinical-programming reconciliation\n\nv0.26.1 extends the v0.25 controlled clinical-programming workflow and the v0.26 BMS-focused SAS source/metadata layer with **real SAS execution**. A trusted GitHub Actions workflow connects to **SAS OnDemand for Academics via SASPy Remote IOM**, executes the SAS analysis-dataset and statistical programs, returns the generated SAS datasets/ODS results to the runner, and reconciles them against independently generated Python/R references.\n\nValidated trusted-push Actions run **#6 / run 32913069051** on exact head `f09f403eafff23dcbaa7e2168245aba0310f4cc2` completed **SUCCESS**. The run produced **45/45 required reconciliation checks PASS**, including exact/key-controlled ADSL and ADAE reconciliation, subject-level TEAE `PROC FREQ` outputs, and Week 24 `PROC MIXED` MMRM estimate/SE agreement against the existing R `mmrm` reference. The run executed **1 SAS analysis-dataset program + 2 SAS TFL/statistical programs**, returned **306 ADSL rows, 1,191 ADAE rows, 254 TEAE subject rows, 451 MMRM analysis rows and 36 ODS Diffs rows**, and issued controlled claim `PORTFOLIO_SAS_ODA_EXECUTION_RECONCILED`. Artifact `sas-oda-validation-32913069051`, ID **9587271667**, digest `sha256:c9f59a22613992285612237ccf007673f8f97feede4eacf743ccb3f1713518d7`.\n\nThe public PR workflow remains credential-free and independently passed Actions **#749 / run 32913073831** on the same head. SAS credentials and the encrypted ODA client bundle are only available to the trusted push workflow. This is public-data portfolio execution evidence, **not** sponsor/CRO production, a validated GxP environment, formal second-programmer sign-off, formal ADaM conformance, or a regulatory submission package. Pinnacle 21 remains explicitly **not executed**.\n\n### v0.25 controlled clinical-programming workflow retained under v0.26\n\nv0.25 added seven controlled programming packages spanning four analysis datasets (ADSL-/ADAE-/ADQS-/ADTTE-style) and three representative TFLs, with declared programming specifications, required-variable/key checks, linked cross-language QC, SAP-to-TLF traceability, statistical change control and SHA256 release identities. Actions **#738 / run 32890489713** passed **65/65 required checks** and issued `PORTFOLIO_CLINICAL_PROGRAMMING_WORKFLOW_READY`.\n\nSee `docs/clinical_programming_workflow_v0_25.md` and `docs/bms_statistical_programming_v0_26.md`.\n\n'''
+              text = text.replace(marker, section + "## v0.24 baseline retained under v0.26 — Study Statistician design, safety and governance decision suite", 1)
+              boundary = "> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable."
+              if boundary in text:
+                  replacement = boundary + " The portfolio does include automated SAS execution in SAS OnDemand for Academics for the bounded v0.26.1 public-data reconciliation workflow; that execution is not represented as sponsor/CRO or production SAS experience."
+                  text = text.replace(boundary, replacement, 1)
+              readme.write_text(text)
+
+          changelog = Path("CHANGELOG.md")
+          ctext = changelog.read_text()
+          if "## 0.26.1 — 2026-08-26" not in ctext:
+              marker = "## 0.24.0 — 2026-08-25"
+              if marker not in ctext:
+                  raise SystemExit("CHANGELOG v0.24 marker not found")
+              entries = '''## 0.26.1 — 2026-08-26\n\n- Add a trusted-push SAS ODA workflow using SASPy Remote IOM, encrypted/ephemeral ODA client JAR installation and repository secrets; the credential-free PR workflow remains separate.\n- Execute real SAS analysis-dataset and statistical programs in SAS OnDemand for Academics, returning generated datasets and ODS outputs to the GitHub-hosted runner for machine-readable reconciliation.\n- Reconcile SAS ADSL (**306 rows**) and ADAE (**1,191 rows**) against Python references, including exact treatment/population/date fields, unique keys and numeric derivations.\n- Reconcile subject-level TEAE `PROC FREQ` outputs for both active-vs-placebo comparisons, including arm denominators/risks, risk differences and Fisher exact p-values.\n- Reconcile the SAS `PROC MIXED` observed-data MMRM against the existing R `mmrm` reference on **451 analysis rows**; Week 24 estimate/SE absolute differences remain below the predeclared **0.0005** tolerance without loosening the model or tolerance.\n- Final trusted-push run **#6 / 32913069051** on `f09f403eafff23dcbaa7e2168245aba0310f4cc2` passes **45/45** required checks and issues `PORTFOLIO_SAS_ODA_EXECUTION_RECONCILED`. Artifact **9587271667**, digest `sha256:c9f59a22613992285612237ccf007673f8f97feede4eacf743ccb3f1713518d7`.\n- Standard credential-free PR CI **#749 / 32913073831** also passes on the same head. Evidence remains bounded to public-data portfolio execution; no sponsor/CRO production, validated GxP, formal second-programmer sign-off, formal ADaM conformance, submission readiness or Pinnacle 21 execution is claimed.\n\n## 0.25.0 — 2026-08-25\n\n- Add a controlled clinical-programming workflow over seven representative packages: four analysis datasets (ADSL-/ADAE-/ADQS-/ADTTE-style) and three TFL/statistical outputs.\n- Require declared source domains/analysis inputs, output existence, required variables, unique keys, linked QC/re-programming evidence, statistical change control, SAP-to-TLF traceability and SHA256 release identities.\n- Reuse the existing cross-language R/Python reconstruction and MMRM cross-package evidence instead of relabelling ordinary unit tests as independent programming QC.\n- Actions **#738 / run 32890489713** passes **65/65** required checks and issues `PORTFOLIO_CLINICAL_PROGRAMMING_WORKFLOW_READY`; artifact **9579472254**, digest `sha256:725d3f07eaa2addb6cd52a464cf6c7afd89e5087e28df827e49505c69ade5eff`.\n- Evidence remains independent public-data portfolio work, not sponsor/CRO production, formal second-programmer sign-off, formal ADaM conformance, validated GxP programming or regulatory-submission readiness.\n\n'''
+              ctext = ctext.replace(marker, entries + marker, 1)
+              changelog.write_text(ctext)
+
+      - name: Remove one-shot workflow and commit documentation
+        run: |
+          rm .github/workflows/v026_release_docs_patch.yml
+          git config user.name "Xiaomei Mi"
+          git config user.email "135629372+xm2325@users.noreply.github.com"
+          git add README.md CHANGELOG.md .github/workflows/v026_release_docs_patch.yml
+          git commit -m "Document v0.25-v0.26 SAS ODA release evidence"
+          git push origin HEAD:feature/v0.26-bms-statistical-programming
