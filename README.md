@@ -2,9 +2,23 @@
 
 A reproducible public-data work sample for clinical-trial biostatistics and statistical programming. The repository combines study-design QC, source-to-analysis derivation, safety/efficacy analyses, longitudinal modelling, estimands, missing-data sensitivity, survival analysis, machine-readable analysis metadata, official exchange-schema validation, executable QC, statistical change control, SAP-to-TLF traceability, study-statistician analysis readiness, controlled CSR-style statistical interpretation and machine-validated statistical reviewer responses.
 
-> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable.
+> **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable. The portfolio does include automated SAS execution in SAS OnDemand for Academics for the bounded v0.26.1 public-data reconciliation workflow; that execution is not represented as sponsor/CRO or production SAS experience.
 
-## Current milestone: v0.24 — Study Statistician design, safety and governance decision suite
+## Current milestone: v0.26.1 — executed SAS clinical-programming reconciliation
+
+v0.26.1 extends the v0.25 controlled clinical-programming workflow and the v0.26 BMS-focused SAS source/metadata layer with **real SAS execution**. A trusted GitHub Actions workflow connects to **SAS OnDemand for Academics via SASPy Remote IOM**, executes the SAS analysis-dataset and statistical programs, returns the generated SAS datasets/ODS results to the runner, and reconciles them against independently generated Python/R references.
+
+Validated trusted-push Actions run **#6 / run 32913069051** on exact head `f09f403eafff23dcbaa7e2168245aba0310f4cc2` completed **SUCCESS**. The run produced **45/45 required reconciliation checks PASS**, including exact/key-controlled ADSL and ADAE reconciliation, subject-level TEAE `PROC FREQ` outputs, and Week 24 `PROC MIXED` MMRM estimate/SE agreement against the existing R `mmrm` reference. The run executed **1 SAS analysis-dataset program + 2 SAS TFL/statistical programs**, returned **306 ADSL rows, 1,191 ADAE rows, 254 TEAE subject rows, 451 MMRM analysis rows and 36 ODS Diffs rows**, and issued controlled claim `PORTFOLIO_SAS_ODA_EXECUTION_RECONCILED`. Artifact `sas-oda-validation-32913069051`, ID **9587271667**, digest `sha256:c9f59a22613992285612237ccf007673f8f97feede4eacf743ccb3f1713518d7`.
+
+The public PR workflow remains credential-free and independently passed Actions **#749 / run 32913073831** on the same head. SAS credentials and the encrypted ODA client bundle are only available to the trusted push workflow. This is public-data portfolio execution evidence, **not** sponsor/CRO production, a validated GxP environment, formal second-programmer sign-off, formal ADaM conformance, or a regulatory submission package. Pinnacle 21 remains explicitly **not executed**.
+
+### v0.25 controlled clinical-programming workflow retained under v0.26
+
+v0.25 added seven controlled programming packages spanning four analysis datasets (ADSL-/ADAE-/ADQS-/ADTTE-style) and three representative TFLs, with declared programming specifications, required-variable/key checks, linked cross-language QC, SAP-to-TLF traceability, statistical change control and SHA256 release identities. Actions **#738 / run 32890489713** passed **65/65 required checks** and issued `PORTFOLIO_CLINICAL_PROGRAMMING_WORKFLOW_READY`.
+
+See `docs/clinical_programming_workflow_v0_25.md` and `docs/bms_statistical_programming_v0_26.md`.
+
+## v0.24 baseline retained under v0.26 — Study Statistician design, safety and governance decision suite
 
 v0.24 is an **additive Study Statistician decision layer** on the validated v0.23 analysis package. It does not replace the primary MMRM, add T26, or convert supportive sensitivity analyses into confirmatory analyses. It closes three distinct gaps: prospective design operating characteristics, purpose-specific safety treatment assignment, and a controlled post-data-review primary-analysis change decision.
 
