@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.24.0 — 2026-08-25
+
+- Add a three-part Study Statistician decision suite while retaining the v0.23 primary MMRM, multiplicity decision, T01–T25 registry and controlled evidence closure unchanged.
+- Add prospective operating-characteristics stress testing with the controlled 86/84/84 allocation, correlated longitudinal outcome generation, Bonferroni two-comparison family, five MAR/adverse-MNAR dropout scenarios and 2,000 alternative plus 2,000 null replicates per scenario.
+- Under the hypothetical -3 ACTOT-point planning alternative, observed Week 24 N decreases **202.9 -> 165.1 -> 126.9** and probability of at least one primary rejection decreases **65.5% -> 53.2% -> 45.1%** across 20%/35%/50% MAR dropout; the largest simulated null FWER is **0.065** and the design QC gate passes **11/11**.
+- Keep the design claim bounded: this is a public-portfolio planning stress test using a Week 24 baseline-adjusted approximation, not a sponsor protocol power calculation or a full `mmrm` operating-characteristics engine.
+- Add a safety-population assignment audit that deliberately contrasts with v0.23 efficacy MI: this exposure-based safety question uses actual treatment (`TRT01A`), while randomised efficacy missing-data grouping continues to use planned treatment (`TRT01P`).
+- Reconcile **254** unique safety subjects, **217** subjects with >=1 TEAE and **1,116** TEAE records; separate subject incidence from event count and verify ADAE-style treatment labels against ADSL-style actual treatment. A diagnostic planned-treatment substitution would shift an arm denominator by up to **12** and any-TEAE risk by up to **0.0516**; safety QC passes **6/6**.
+- Add controlled post-data-review decision `SCD-001`: despite **138/254 (54.3%)** Week 24 missingness and complete **8/8** MAR/JR/CR/CIR MCSE-pass evidence, reject replacing the primary MMRM with reference-based MI after data review. Retain the original MMRM/multiplicity family with **0/2** primary rejections and keep RBMI supportive; governance QC passes **7/7**.
+- Add suite-level claim `PORTFOLIO_STUDY_STATISTICIAN_DECISION_SUITE_READY`, requiring the design, safety and post-data-review decision claims plus inherited v0.23 evidence closure to pass together.
+- First full live implementation Actions **#727 / run 32874178501** on head `6fefbca6aec511133cec330b3d7110d482bdcedb` passes the complete legacy and v0.24 workflow. Artifact **9573449472**, digest `sha256:c42bbd9a7f6e77d61067f388d5da08676131c7686a79179fd853a3fb8e4e4af5`.
+- Add `docs/study_statistician_design_safety_governance_v0_24.md`. Evidence remains public-data portfolio evidence only, not a sponsor-approved protocol power calculation, SAP amendment, safety convention for every protocol, health-authority decision or formal ADaM conformance claim.
+
 ## 0.23.0 — 2026-08-25
 
 - Repair a material efficacy missing-data treatment-assignment inconsistency found by a subject-level population audit: **12/254 randomised subjects** have `TRT01P != TRT01A`, all planned High Dose -> actual Low Dose.
