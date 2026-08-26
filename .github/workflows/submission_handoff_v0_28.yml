@@ -1,0 +1,125 @@
+name: v0.28 submission handoff
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: submission-handoff-v028-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-submission-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install handoff build dependencies
+        run: python -m pip install pandas==2.2.3 reportlab==4.4.3
+
+      - name: Wait for exact-head clinical, P21 and SAS ODA evidence
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upstream_clinical upstream_p21 upstream_sas
+
+          wait_for_workflow() {
+            local workflow="$1"
+            local label="$2"
+            local run_id=""
+            for i in $(seq 1 120); do
+              response=$(gh api -X GET "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs" -f head_sha="${TARGET_SHA}" -f per_page=20)
+              run_id=$(python -c 'import json,sys; d=json.load(sys.stdin); runs=[r for r in d.get("workflow_runs",[]) if r.get("head_sha")==sys.argv[1]]; runs=sorted(runs,key=lambda r:r.get("created_at", ""), reverse=True); print(runs[0]["id"] if runs else "")' "${TARGET_SHA}" <<<"$response")
+              if [ -n "$run_id" ]; then
+                status=$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json status,conclusion --jq '.status + "|" + (.conclusion // "")')
+                echo "$label run $run_id: $status"
+                if [[ "$status" == completed* ]]; then
+                  conclusion=${status#*|}
+                  if [ "$conclusion" != "success" ]; then
+                    echo "::error::$label exact-head run $run_id concluded $conclusion"
+                    exit 1
+                  fi
+                  echo "$run_id"
+                  return 0
+                fi
+              else
+                echo "$label: no exact-head run yet for ${TARGET_SHA}"
+              fi
+              sleep 15
+            done
+            echo "::error::Timed out waiting for $label exact-head run"
+            exit 1
+          }
+
+          clinical_run=$(wait_for_workflow "run.yml" "clinical CI" | tail -n 1)
+          p21_run=$(wait_for_workflow "pinnacle21_validation.yml" "Pinnacle 21" | tail -n 1)
+          sas_run=$(wait_for_workflow "sas_oda_validation.yml" "SAS ODA" | tail -n 1)
+
+          gh run download "$clinical_run" --repo "$GITHUB_REPOSITORY" --name clinical-biostatistics-cdisc-outputs --dir upstream_clinical
+          gh run download "$p21_run" --repo "$GITHUB_REPOSITORY" --dir upstream_p21
+          gh run download "$sas_run" --repo "$GITHUB_REPOSITORY" --dir upstream_sas
+
+          {
+            echo "clinical_run_id=$clinical_run"
+            echo "p21_run_id=$p21_run"
+            echo "sas_oda_run_id=$sas_run"
+            echo "target_sha=$TARGET_SHA"
+          } | tee upstream_identity.txt
+
+      - name: Exercise vendor-transfer receipt and release gate
+        run: |
+          python scripts/vendor_transfer_qc_v0_28.py \
+            --clinical-dir upstream_clinical \
+            --output-dir outputs/vendor_transfer_v0_28
+
+      - name: Build submission-style Module 5 handoff package
+        run: |
+          python scripts/build_submission_handoff_v0_28.py \
+            --clinical-dir upstream_clinical \
+            --p21-dir upstream_p21 \
+            --sas-dir upstream_sas \
+            --transfer-dir outputs/vendor_transfer_v0_28 \
+            --output-dir outputs/submission_handoff_v0_28 \
+            --target-sha "$TARGET_SHA"
+          cp upstream_identity.txt outputs/submission_handoff_v0_28/submission_package_v0_28/manifest/upstream_identity.txt
+
+      - name: Verify ADRG PDF and release package inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          adrg=$(find outputs/submission_handoff_v0_28/submission_package_v0_28 -name adrg.pdf -print -quit)
+          test -n "$adrg"
+          test -s "$adrg"
+          head -c 4 "$adrg" | grep -q '%PDF'
+          test -s outputs/submission_handoff_v0_28/submission_package_v0_28.zip
+          test -s outputs/submission_handoff_v0_28/submission_package_v0_28.zip.sha256
+          cat outputs/submission_handoff_v0_28/submission_package_v0_28/RELEASE_DECISION.md
+          cat outputs/submission_handoff_v0_28/submission_package_v0_28/submission_handoff_metrics.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: submission-handoff-v0.28-${{ github.run_id }}
+          path: |
+            outputs/submission_handoff_v0_28/
+            outputs/vendor_transfer_v0_28/
+            upstream_identity.txt
+          if-no-files-found: error
+          retention-days: 90
