@@ -1,0 +1,34 @@
+{
+  "version": "0.28.0",
+  "purpose": "FDA XPORT v5-compatible portfolio submission projection",
+  "policy": "Retain the controlled analysis dataset for programming/QC evidence, but exclude non-submission audit/helper variables whose names exceed the FDA XPORT v5 8-character variable-name limit. Do not silently truncate or alias analysis-variable names.",
+  "datasets": {
+    "ADSL": {
+      "source_file": "adsl_style.csv",
+      "exclude_from_submission": [
+        "TRTSDTSRC",
+        "TRTEDTSRC",
+        "TRTSDT_DM",
+        "TRTEDT_DM",
+        "EXDURN_RAW",
+        "EXDOSE_MAX",
+        "EXDOSE_MEAN"
+      ]
+    },
+    "ADAE": {
+      "source_file": "adae_style.csv",
+      "exclude_from_submission": []
+    },
+    "ADQS": {
+      "source_file": "adqs_actot_style.csv",
+      "exclude_from_submission": []
+    },
+    "ADTTE": {
+      "source_file": "adtte_retention_style.csv",
+      "exclude_from_submission": [
+        "ANLTRTSRC"
+      ]
+    }
+  },
+  "evidence_boundary": "This is a deterministic public-data portfolio projection for XPORT v5 compatibility; it is not sponsor/CRO production, formal ADaM conformance, or an FDA submission."
+}
