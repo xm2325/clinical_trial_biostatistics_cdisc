@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -43,6 +44,14 @@ def main() -> None:
         f"mismatches={review['planned_actual_treatment_mismatches']}; "
         f"checks={review['required_checks_passed']}/{review['required_checks']}; "
         f"passed={review['all_passed']}"
+    )
+
+    # v0.25 clinical-programming release gate. This runs after the existing
+    # change-control and SAP-to-TLF traceability steps, so it can require those
+    # controlled release signals as part of the programming package.
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "run_clinical_programming_workflow.py")],
+        check=True,
     )
 
 
