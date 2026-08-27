@@ -1,8 +1,10 @@
 # Clinical Outcomes & Longitudinal Methods Workbench
 
-Current version: **v0.4**.
+Current version: **v0.5**.
 
-This subproject uses the public PSYCHE-D release plus official NHS Talking Therapies aggregate statistics to demonstrate clinical-data-science reasoning for research-oriented mental-health work: longitudinal outcomes, clinically meaningful change, prediction-time control, forward-time validation, calibration and uncertainty, trajectory analysis, service benchmarking and causal-readiness checks.
+This subproject uses the public PSYCHE-D release plus official NHS Talking Therapies aggregate statistics to demonstrate clinical-data-science reasoning for research-oriented mental-health work: longitudinal outcomes, clinically meaningful change, prediction-time control, forward-time validation, calibration and uncertainty, trajectory analysis, service benchmarking, causal-readiness checks and denominator-aware Bayesian partial pooling.
+
+The project is designed as public-data evidence for a Clinical Data Scientist application. It does **not** use Clinical Partners patient data and does **not** claim that any model here is currently used by Clinical Partners.
 
 ## Data and source boundaries
 
@@ -10,7 +12,8 @@ This subproject uses the public PSYCHE-D release plus official NHS Talking Thera
 - Published paper: Makhmutova M, Kainkaryam R, Ferreira M, Min J, Jaggi M, Clay I. *Predicting Changes in Depression Severity Using the PSYCHE-D (Prediction of Severity Change-Depression) Model Involving Person-Generated Health Data: Longitudinal Case-Control Observational Study.* JMIR mHealth and uHealth. 2022;10(3):e34148. DOI `10.2196/34148`.
 - Original code: `evidation-opensource/PSYCHE-D`.
 - Released dataset licence: CC BY-NC 4.0.
-- NHS service benchmark: NHS Talking Therapies Monthly Time Series for Key Measures, June 2025-June 2026, publication dated 13 August 2026.
+- NHS time-series service benchmark: NHS Talking Therapies Monthly Time Series for Key Measures, June 2025-June 2026, publication dated 13 August 2026.
+- NHS count-level service benchmark for v0.5: NHS Talking Therapies June 2026 Monthly Activity Data File.
 
 Raw source files are downloaded at run time and are not committed to this repository. The real-data PSYCHE-D run contains 35,694 rows and 4,948 participants; 10,866 three-month intervals from 4,036 participants have paired start/end PHQ-9 scores.
 
@@ -182,47 +185,107 @@ The target-trial module therefore records the desired eligibility criteria, stra
 
 A real emulation would require treatment start timestamps, PHQ-9 measurement timestamps, pre-treatment confounders, indication information, censoring/follow-up data and a prespecified rule for treatment changes after time zero.
 
-## What v0.4 changes scientifically
+## v0.5: hierarchical Bayesian partial pooling for sparse service outcomes
 
-The project now separates five questions that are often mixed together:
+v0.5 adds an actual service-level Bayesian model using the official NHS Talking Therapies June 2026 Monthly Activity Data File. This file is used because it contains count numerators and denominators rather than only percentages.
+
+The real source audit finds:
+
+- 290,472 rows and 228 measure names;
+- 130 provider codes;
+- 123 providers with complete `Count_FinishedCourseTreatment` and `Count_ReliableImprovement` pairs usable in the model;
+- 7 provider rows excluded because the count pair is suppressed or missing;
+- England `39,769 / 58,029 = 68.53%`, consistent with the published rounded reliable-improvement percentage of 68.5%.
+
+### Model
+
+For provider j:
+
+```text
+y_j ~ Binomial(n_j, theta_j)
+theta_j ~ Beta(alpha, beta)
+alpha = m * kappa
+beta  = (1 - m) * kappa
+```
+
+The hyperparameters `m` and `kappa` are estimated jointly from the provider count pairs on a numerical posterior grid. The primary prior is specified on `logit(m)` and `log(kappa)`, and a broader prior is run as a sensitivity analysis.
+
+Primary posterior result:
+
+| Quantity | Result |
+|---|---:|
+| Provider-population mean `m` | **68.35%** |
+| 95% credible interval for `m` | **67.40%-69.10%** |
+| Posterior mean `kappa` | **127.7** |
+| 95% credible interval for `kappa` | **86.0-183.7** |
+| Median absolute provider shrinkage | **0.68 percentage points** |
+| 90th percentile absolute shrinkage | **5.72 percentage points** |
+| Maximum posterior-mean change under broader prior | **0.103 percentage points** |
+| Median posterior-mean change under broader prior | **0.010 percentage points** |
+
+The denominator effect is visible in the real data. A provider with `5/5` reliable improvements has a raw rate of 100%, but its posterior mean is about 69.6% with a much wider posterior interval. A provider with `10/10` is similarly pulled toward the provider population. The model therefore does not treat a 100% rate based on 5 people as equally precise to a rate based on hundreds or thousands of people.
+
+This is the service-level analogue of the Clinical Partners JD requirement for partial pooling across services, clinicians and cohorts. It is **not** a provider quality ranking and it is **not** a Clinical Partners model. The public NHS aggregate data do not contain patient-level case mix, clinician hierarchy, treatment assignment or repeated item-level outcomes. A production implementation would extend the hierarchy to patients, clinicians and services, with prespecified case-mix adjustment and clinically reviewed endpoints.
+
+### Prior sensitivity
+
+The broader hyperprior changes provider posterior means by at most 0.103 percentage points and by a median of 0.010 percentage points. The main provider posterior means are therefore not materially driven by the two tested hyperprior specifications. This does not replace posterior predictive checking or sensitivity to model structure.
+
+## What v0.5 changes scientifically
+
+The project now separates six questions that are often mixed together:
 
 1. **Description:** how PHQ-9 changes over observed follow-up.
 2. **Prediction:** who has higher probability of reliable deterioration at a defined prediction time.
 3. **Validation:** whether that probability model survives a later study-time window and different participants.
 4. **Phenotyping:** whether repeated outcome patterns support stable exploratory groups.
 5. **Causal inference:** whether treatment timing and confounding data are sufficient to define and estimate a target-trial contrast.
+6. **Service estimation:** whether service-level outcome rates should be pooled according to their count information and uncertainty rather than compared as equally precise percentages.
 
-The most important v0.4 findings are limitations rather than higher headline scores: forward-time AUC falls to 0.593, calibration is uncertain, and trajectory classes are sensitive to modelling choices. Those findings are retained because they are exactly the checks needed before clinical use.
+The most useful results include limitations rather than higher headline scores: forward-time AUC falls to 0.593, calibration is uncertain, trajectory classes are sensitive to modelling choices, the medication causal estimate is withheld, and sparse provider percentages can change substantially after partial pooling.
 
 ## Reproducibility and CI
 
-GitHub Actions downloads the real PSYCHE-D files and official NHS key-measures CSV, verifies the published PSYCHE-D MD5 hashes, runs unit tests, executes v0.1-v0.4 analyses, checks participant separation and source-scale invariants, verifies that the target-trial timing gate withholds the unsupported causal estimate, and uploads the complete real-data evidence package.
+GitHub Actions downloads the real PSYCHE-D files and official NHS data, verifies the published PSYCHE-D MD5 hashes, runs unit tests, executes the longitudinal/prediction/validation analyses, checks participant separation and source-scale invariants, verifies that the target-trial timing gate withholds the unsupported causal estimate, and uploads real-data evidence packages.
 
-Current v0.4 CI includes **14 passing tests** plus real-data invariants.
+v0.5 adds a dedicated Bayesian CI workflow that:
 
-Key v0.4 outputs include:
+1. downloads the official June 2026 Monthly Activity Data File;
+2. audits the real schema and required outcome count measures;
+3. runs 3/3 v0.5 unit tests;
+4. reproduces the England count ratio before modelling;
+5. fits the hierarchical Beta-Binomial model;
+6. runs the broader-prior sensitivity analysis; and
+7. uploads the provider posterior table, prior-sensitivity table, JSON summary and model report.
+
+Key v0.5 outputs include:
 
 ```text
-v04_temporal_heldout_predictions.csv
-v04_temporal_metrics_by_month.csv
-v04_temporal_cluster_bootstrap_replicates.csv
-v04_temporal_cluster_bootstrap_ci.csv
-v04_temporal_decision_curve.csv
-v04_temporal_decision_curve.png
-v04_trajectory_sensitivity.csv
-v04_trajectory_sensitivity_summary.json
-v04_target_trial_exposure_timing_audit.csv
-v04_target_trial_specification.json
-v04_summary.json
-V04_VALIDATION_CAUSAL_REPORT.md
+v05_nhs_activity_schema_summary.json
+v05_nhs_activity_measure_names.csv
+v05_nhs_activity_target_row_sample.csv
+v05_provider_partial_pooling.csv
+v05_prior_sensitivity.csv
+v05_bayesian_partial_pooling_summary.json
+V05_BAYESIAN_PARTIAL_POOLING_REPORT.md
 ```
 
 ## Interview use
 
-A concise evidence-based explanation is:
+A concise evidence-based explanation of v0.1-v0.4 is:
 
 > I treated the project as a sequence of clinical research questions rather than one prediction benchmark. I reconstructed repeated PHQ-9 outcomes, separated reliable score change from caseness crossing, froze predictors at a defined time zero, and then moved from random participant hold-out to a forward-time participant-disjoint test. The stricter test reduced AUC from about 0.62 to 0.59, so I reported the temporal weakness and participant-bootstrap uncertainty instead of tuning it away. I also stress-tested the trajectory clusters and found that they were not stable enough for a clinical-subtype claim. Finally, I wrote a target-trial specification for medication initiation but refused to estimate the effect because the released medication-change variable is only labelled as occurring in the past month and cannot be aligned safely to time zero.
 
-## Next evidence after v0.4
+A concise explanation of the new Bayesian component is:
 
-The strongest next additions are external or service-linked rather than more complex classifiers: uncertainty-aware decision curves, prespecified recalibration, external temporal validation on another patient-level mental-health dataset, and a causal analysis only when treatment timestamps support a valid time-zero definition. Bayesian partial pooling becomes useful when a real service/clinician hierarchy is available.
+> I then used the NHS count-level activity file to address a different problem: service estimates have very different denominators. I fitted a Beta-Binomial hierarchical model so small services are partially pooled toward the provider population while large services are driven more strongly by their own data. The provider-population posterior mean was about 68.35%, and prior sensitivity was small. The useful part is not the national benchmark itself; it is the statistical design for producing stable estimates when service or clinician samples are sparse. I would extend the same logic to a genuine patient-clinician-service hierarchy only when patient-level case mix and clinician identifiers are available.
+
+## Next evidence after v0.5
+
+The next additions should remain data-driven rather than adding methods for keyword coverage. The highest-value extensions are:
+
+- patient-level service/clinician hierarchical longitudinal modelling when a genuine hierarchy is available;
+- item-level psychometric modelling, measurement invariance or IRT only with a suitable public item-level mental-health dataset;
+- referral-to-assessment/treatment survival and competing-risk analysis only with valid event timestamps;
+- external temporal validation on another patient-level mental-health dataset;
+- causal estimation only when treatment assignment time zero and pre-treatment confounding data are defensible.
