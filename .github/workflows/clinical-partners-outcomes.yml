@@ -51,15 +51,15 @@ jobs:
           fi
           echo '2dfadab7595b972b9102fbf7903bb27a  data/psyche_d/feature_explanations.tsv' | md5sum -c -
 
-      - name: Download NHS Talking Therapies official time series
+      - name: Download NHS Talking Therapies latest published official time series
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p data/nhs_talking_therapies
           curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
-            'https://files.digital.nhs.uk/FD/8C6D46/nhstalkingtherapies_time_series_apr_2025_apr_2026_key_measures.csv' \
-            -o data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv
-          test -s data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv
+            'https://files.digital.nhs.uk/7D/406C32/nhstalkingtherapies_time_series_jun_2025_jun_2026_key_measures.csv' \
+            -o data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv
+          test -s data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv
 
       - name: Run unit tests
         working-directory: projects/clinical_partners_outcomes
@@ -88,7 +88,7 @@ jobs:
       - name: Audit NHS Talking Therapies time-series schema
         run: |
           python projects/clinical_partners_outcomes/v03_nhs_schema_audit.py \
-            --data data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv \
+            --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
             --out outputs/clinical_partners_outcomes
 
       - name: Validate source-scale, prediction-time and trajectory invariants
