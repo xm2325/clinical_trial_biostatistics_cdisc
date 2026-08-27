@@ -1,10 +1,12 @@
 import numpy as np
+import pandas as pd
 
 from v06_phq9_psychometrics import (
     aggregate_patterns,
     bh_fdr,
     category_probabilities,
     item_information,
+    normalize_xport_numeric,
     unpack_item_block,
     weighted_cronbach_alpha,
 )
@@ -63,3 +65,14 @@ def test_weighted_alpha_pattern_aggregation_and_fdr():
     assert np.isclose(pattern_weights.sum(), weights.sum())
     assert np.all((q >= 0) & (q <= 1))
     assert q[0] <= q[1] <= q[2] <= q[3]
+
+
+def test_sas_xport_near_zero_is_restored_to_phq_response_zero():
+    xport_zero = 5.397605346934028e-79
+    raw = pd.Series([xport_zero, 1.0, 2.0, 3.0, 7.0, 9.0, np.nan])
+    normalized = normalize_xport_numeric(raw)
+    assert normalized.iloc[0] == 0.0
+    assert normalized.iloc[1:4].tolist() == [1.0, 2.0, 3.0]
+    assert normalized.iloc[4] == 7.0
+    assert normalized.iloc[5] == 9.0
+    assert np.isnan(normalized.iloc[6])
