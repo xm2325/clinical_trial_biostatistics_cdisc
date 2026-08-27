@@ -10,6 +10,8 @@ import pandas as pd
 from v03_nhs_schema_audit import read_csv_flex
 from v05_bayesian_partial_pooling import PRIMARY_PRIOR, extract_provider_counts, fit_hyperposterior
 
+PPC_FLAG_THRESHOLD = 0.05
+
 
 def discrepancy_statistics(rates: np.ndarray) -> dict[str, float]:
     rates = np.asarray(rates, dtype=float)
@@ -76,6 +78,7 @@ def posterior_predictive_checks(
             }
         )
     checks = pd.DataFrame(check_rows)
+    checks["ppc_flag"] = checks["bayesian_p_two_sided"] < PPC_FLAG_THRESHOLD
 
     provider_intervals = providers[["ORG_CODE2", "ORG_NAME2", "n", "y", "raw_rate"]].copy()
     provider_intervals = provider_intervals.rename(
@@ -89,6 +92,7 @@ def posterior_predictive_checks(
         & (provider_intervals["raw_rate"] <= provider_intervals["predictive_q975"])
     )
 
+    flagged_statistics = checks.loc[checks["ppc_flag"], "statistic"].astype(str).tolist()
     summary = {
         "n_providers": int(len(providers)),
         "n_posterior_predictive_replicates": int(n_replicates),
@@ -97,12 +101,15 @@ def posterior_predictive_checks(
         ),
         "minimum_two_sided_bayesian_p": float(checks["bayesian_p_two_sided"].min()),
         "maximum_two_sided_bayesian_p": float(checks["bayesian_p_two_sided"].max()),
+        "ppc_flag_threshold": PPC_FLAG_THRESHOLD,
+        "flagged_statistics": flagged_statistics,
+        "model_adequacy_gate": "PASS" if not flagged_statistics else "FAIL",
     }
     return checks, provider_intervals, summary
 
 
 def write_report(outdir: Path, checks: pd.DataFrame, summary: dict) -> None:
-    flagged = checks[checks["bayesian_p_two_sided"] < 0.05]
+    flagged = checks[checks["ppc_flag"]]
     if flagged.empty:
         interpretation = (
             "None of the prespecified aggregate discrepancy statistics has a two-sided Bayesian "
@@ -112,15 +119,19 @@ def write_report(outdir: Path, checks: pd.DataFrame, summary: dict) -> None:
     else:
         names = ", ".join(flagged["statistic"].astype(str))
         interpretation = (
-            f"The following discrepancy statistics have two-sided Bayesian posterior-predictive p-values below 0.05: {names}. "
-            "The Beta-Binomial hierarchy should therefore not be treated as an adequate final service model without investigating this mismatch."
+            f"The model-adequacy gate is FAIL because the following discrepancy statistics have two-sided Bayesian "
+            f"posterior-predictive p-values below 0.05: {names}. The Beta-Binomial hierarchy should not be treated "
+            "as an adequate final service model. The next analysis should investigate provider/service composition, "
+            "case mix, time effects or a richer hierarchical structure rather than tuning the current model only to pass the check."
         )
 
     report = f"""# v0.5 posterior predictive checks
 
 The posterior predictive checks use the same provider denominators as the observed June 2026 NHS Talking Therapies data. For each replicate, hyperparameters are drawn from the fitted hyperposterior, a provider probability is drawn from the Beta population distribution, and a new reliable-improvement count is drawn from the Binomial observation model.
 
-The checks are intended to test whether the fitted hierarchy can reproduce broad features of the observed provider-rate distribution. They are not a test of Clinical Partners data and they do not validate provider quality comparisons.
+The checks test whether the fitted hierarchy can reproduce broad features of the observed provider-rate distribution. They are not a test of Clinical Partners data and they do not validate provider quality comparisons.
+
+**Model-adequacy gate: {summary['model_adequacy_gate']}**
 
 Provider population-predictive 95% interval coverage: **{100 * summary['provider_95pct_population_predictive_coverage']:.1f}%**.
 
@@ -132,7 +143,7 @@ Minimum two-sided Bayesian posterior-predictive p-value across the prespecified 
 
 {interpretation}
 
-A satisfactory aggregate PPC does not address omitted case mix, time trends, clinician effects, outcome-definition differences, suppression mechanisms or patient-level dependence. Those require richer data and a more detailed model.
+Even a passing aggregate PPC would not address omitted case mix, time trends, clinician effects, outcome-definition differences, suppression mechanisms or patient-level dependence. Those require richer data and a more detailed model.
 """
     (outdir / "V05_POSTERIOR_PREDICTIVE_CHECKS.md").write_text(report)
 
