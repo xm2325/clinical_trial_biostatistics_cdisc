@@ -62,7 +62,7 @@ def main(path: Path, outdir: Path) -> None:
         "rows": int(len(df)),
         "columns": int(df.shape[1]),
         "keyword_hit_columns": int(len(hits)),
-        "source": "NHS Talking Therapies Monthly Time Series for Key Measures, April 2025-April 2026",
+        "source": "NHS Talking Therapies Monthly Time Series for Key Measures, June 2025-June 2026; publication dated 13 August 2026",
         "interpretation_boundary": "This file contains published aggregate statistics. It supports provider/service benchmarking and temporal monitoring, not patient-level causal inference.",
     }
     (outdir / "nhs_time_series_schema_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
