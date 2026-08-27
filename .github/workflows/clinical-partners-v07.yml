@@ -55,7 +55,7 @@ jobs:
       - name: Run v0.7 real-data purification and sensitivity analyses
         working-directory: projects/clinical_partners_outcomes
         run: |
-          python v07_phq9_anchor_purification.py \
+          python v07_phq9_anchor_purification_cached.py \
             --dpq ../../data/nhanes_2021_2023/DPQ_L.xpt \
             --demo ../../data/nhanes_2021_2023/DEMO_L.xpt \
             --out ../../outputs/clinical_partners_outcomes \
