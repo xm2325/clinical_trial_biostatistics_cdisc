@@ -17,7 +17,7 @@ on:
 jobs:
   real-data-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -97,11 +97,19 @@ jobs:
             --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
             --out outputs/clinical_partners_outcomes
 
-      - name: Validate v0.3 real-data invariants
+      - name: Run v0.4 validation uncertainty and causal-readiness analyses
+        run: |
+          python projects/clinical_partners_outcomes/v04_validation_causal.py \
+            --data data/psyche_d/anon_processed_df.parquet \
+            --feature-dictionary data/psyche_d/feature_explanations.tsv \
+            --out outputs/clinical_partners_outcomes
+
+      - name: Validate v0.4 real-data invariants
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
+          import pandas as pd
 
           out = Path('outputs/clinical_partners_outcomes')
           cohort = json.loads((out / 'cohort_flow.json').read_text())
@@ -110,8 +118,12 @@ jobs:
           score = json.loads((out / 'phq9_score_change_summary.json').read_text())
           availability = json.loads((out / 'phq_endpoint_availability_model.json').read_text())
           v03 = json.loads((out / 'v03_summary.json').read_text())
+          v04 = json.loads((out / 'v04_summary.json').read_text())
           nhs = json.loads((out / 'nhs_time_series_schema_summary.json').read_text())
           benchmark = json.loads((out / 'nhs_provider_benchmark_summary.json').read_text())
+          tt = json.loads((out / 'v04_target_trial_specification.json').read_text())
+          ci = pd.read_csv(out / 'v04_temporal_cluster_bootstrap_ci.csv')
+          sens = pd.read_csv(out / 'v04_trajectory_sensitivity.csv')
 
           assert cohort['raw_rows'] == 35694, cohort
           assert cohort['analysis_rows_with_start_and_end'] == 10866, cohort
@@ -128,15 +140,30 @@ jobs:
           assert benchmark['provider_count_any_month'] > 100, benchmark
           assert benchmark['latest_percentage_measures_benchmarked'] == 6, benchmark
           assert 'M351' not in benchmark['measures_used'], benchmark
-          print('v0.3 prospective:', v03['prospective'])
-          print('v0.3 trajectory:', v03['trajectory'])
-          print('NHS provider benchmark:', benchmark)
+
+          temporal = v04['temporal_validation']
+          assert v04['version'] == '0.4', v04
+          assert temporal['participant_overlap'] == 0, temporal
+          assert temporal['train_endpoint_months'] == [3, 6], temporal
+          assert temporal['test_endpoint_months'] == [9, 12], temporal
+          assert temporal['test_rows'] > 500, temporal
+          assert temporal['test_participants'] > 300, temporal
+          assert len(ci) == 5 and (ci['bootstrap_replicates_finite'] >= 250).all(), ci
+          assert len(sens) >= 2 and (sens['ari_vs_v03_primary'].between(-1, 1)).all(), sens
+          assert tt['estimation_status'] == 'withheld', tt
+          assert 'past month' in tt['reason_estimation_withheld'], tt
+
+          print('v0.4 temporal:', temporal)
+          print('v0.4 bootstrap:', v04['cluster_bootstrap_300'])
+          print('v0.4 decision curve:', v04['decision_curve'])
+          print('v0.4 trajectory sensitivity:', v04['trajectory_sensitivity'])
+          print('v0.4 target trial:', v04['target_trial'])
           PY
 
-      - name: Upload v0.3 real-data evidence
+      - name: Upload v0.4 real-data evidence
         uses: actions/upload-artifact@v4
         with:
-          name: clinical-partners-v03-real-data
+          name: clinical-partners-v04-real-data
           path: outputs/clinical_partners_outcomes
           if-no-files-found: error
           retention-days: 30
