@@ -1,0 +1,51 @@
+name: Clinical Partners v0.5 Bayesian service model
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v05.yml'
+  workflow_dispatch:
+
+jobs:
+  nhs-activity-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install lightweight dependencies
+        run: python -m pip install 'pandas>=2.2,<3'
+
+      - name: Download NHS Talking Therapies June 2026 Monthly Activity Data File
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/nhs_talking_therapies outputs/clinical_partners_outcomes
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://files.digital.nhs.uk/4D/BDC3D4/nhstalkingtherapies_month_jun_2026_activity_performance.csv' \
+            -o data/nhs_talking_therapies/monthly_activity_jun2026.csv
+          test -s data/nhs_talking_therapies/monthly_activity_jun2026.csv
+
+      - name: Audit outcome-count schema
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v05_nhs_activity_schema.py \
+            --data ../../data/nhs_talking_therapies/monthly_activity_jun2026.csv \
+            --out ../../outputs/clinical_partners_outcomes
+
+      - name: Upload v0.5 schema evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v05-nhs-activity-schema
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
