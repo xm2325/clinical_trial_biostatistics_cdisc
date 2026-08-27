@@ -187,7 +187,7 @@ A real emulation would require treatment start timestamps, PHQ-9 measurement tim
 
 ## v0.5: hierarchical Bayesian partial pooling for sparse service outcomes
 
-v0.5 adds an actual service-level Bayesian model using the official NHS Talking Therapies June 2026 Monthly Activity Data File. This file is used because it contains count numerators and denominators rather than only percentages.
+v0.5 adds a service-level Bayesian model using the official NHS Talking Therapies June 2026 Monthly Activity Data File. This file is used because it contains count numerators and denominators rather than only percentages.
 
 The real source audit finds:
 
@@ -229,7 +229,25 @@ This is the service-level analogue of the Clinical Partners JD requirement for p
 
 ### Prior sensitivity
 
-The broader hyperprior changes provider posterior means by at most 0.103 percentage points and by a median of 0.010 percentage points. The main provider posterior means are therefore not materially driven by the two tested hyperprior specifications. This does not replace posterior predictive checking or sensitivity to model structure.
+The broader hyperprior changes provider posterior means by at most 0.103 percentage points and by a median of 0.010 percentage points. The main provider posterior means are therefore not materially driven by the two tested hyperprior specifications. Prior sensitivity does not establish model adequacy.
+
+### Posterior predictive model-adequacy gate
+
+v0.5 next generates 2,000 replicated provider panels from the fitted hierarchy while preserving every observed provider denominator. The aim is to test whether the simple exchangeable Beta population can reproduce features of the real provider distribution.
+
+| Discrepancy | Observed | Predictive mean | 95% predictive interval | Two-sided Bayesian p |
+|---|---:|---:|---:|---:|
+| Provider rate SD | 0.0762 | 0.0623 | 0.0505-0.0782 | 0.070 |
+| Provider rate IQR | 0.0574 | 0.0697 | 0.0534-0.0881 | 0.153 |
+| Providers <=50% | **7** | **1.36** | **0-4** | **0.000** |
+| Providers >=85% | 2 | 1.24 | 0-4 | 0.717 |
+| Maximum absolute deviation from provider median | 0.3077 | 0.2721 | 0.1510-0.4870 | 0.574 |
+
+The 95% provider population-predictive interval coverage is 94.3%, but the lower-tail check fails strongly: the observed data contain 7 providers at or below 50% reliable improvement, while the replicated 97.5% upper bound is 4.
+
+**Model-adequacy gate: FAIL.**
+
+This is treated as a scientific result, not a software failure. The simple Beta-Binomial hierarchy is useful for demonstrating denominator-aware partial pooling, but it is not an adequate final service model. The next analysis should investigate provider/service composition, patient case mix, time effects, suppression and a richer hierarchy. The model is not made more complex merely to force the PPC to pass on aggregate data.
 
 ## What v0.5 changes scientifically
 
@@ -242,7 +260,18 @@ The project now separates six questions that are often mixed together:
 5. **Causal inference:** whether treatment timing and confounding data are sufficient to define and estimate a target-trial contrast.
 6. **Service estimation:** whether service-level outcome rates should be pooled according to their count information and uncertainty rather than compared as equally precise percentages.
 
-The most useful results include limitations rather than higher headline scores: forward-time AUC falls to 0.593, calibration is uncertain, trajectory classes are sensitive to modelling choices, the medication causal estimate is withheld, and sparse provider percentages can change substantially after partial pooling.
+The useful results include limitations rather than higher headline scores: forward-time AUC falls to 0.593, calibration is uncertain, trajectory classes are sensitive to modelling choices, the medication causal estimate is withheld, and the first Bayesian service hierarchy fails a lower-tail posterior predictive check.
+
+## Clinical Partners-specific public research agenda
+
+`CLINICAL_PARTNERS_PUBLIC_RESEARCH_AGENDA.md` maps current public Clinical Partners pathway information to candidate studies without claiming access to private data. It covers:
+
+- patient-clinician-service hierarchical outcome models;
+- referral-to-assessment/treatment survival and multi-state analysis;
+- psychometric and IRT questions around instruments publicly listed in the pathways;
+- quasi-experimental evaluation of service-capacity changes, with explicit causal assumptions;
+- clinical NLP with negation, temporality and clinician review;
+- a proposed first-90-day scientific sequence.
 
 ## Reproducibility and CI
 
@@ -252,11 +281,14 @@ v0.5 adds a dedicated Bayesian CI workflow that:
 
 1. downloads the official June 2026 Monthly Activity Data File;
 2. audits the real schema and required outcome count measures;
-3. runs 3/3 v0.5 unit tests;
+3. runs **4/4 v0.5 unit tests**;
 4. reproduces the England count ratio before modelling;
 5. fits the hierarchical Beta-Binomial model;
-6. runs the broader-prior sensitivity analysis; and
-7. uploads the provider posterior table, prior-sensitivity table, JSON summary and model report.
+6. runs the broader-prior sensitivity analysis;
+7. runs 2,000 posterior predictive provider panels and records the model-adequacy gate; and
+8. uploads the model and diagnostic evidence.
+
+The software workflow passes when the code and data checks execute correctly even when a scientific gate fails. This keeps computational correctness separate from evidence strength.
 
 Key v0.5 outputs include:
 
@@ -268,6 +300,10 @@ v05_provider_partial_pooling.csv
 v05_prior_sensitivity.csv
 v05_bayesian_partial_pooling_summary.json
 V05_BAYESIAN_PARTIAL_POOLING_REPORT.md
+v05_posterior_predictive_discrepancies.csv
+v05_provider_population_predictive_intervals.csv
+v05_posterior_predictive_summary.json
+V05_POSTERIOR_PREDICTIVE_CHECKS.md
 ```
 
 ## Interview use
@@ -276,9 +312,9 @@ A concise evidence-based explanation of v0.1-v0.4 is:
 
 > I treated the project as a sequence of clinical research questions rather than one prediction benchmark. I reconstructed repeated PHQ-9 outcomes, separated reliable score change from caseness crossing, froze predictors at a defined time zero, and then moved from random participant hold-out to a forward-time participant-disjoint test. The stricter test reduced AUC from about 0.62 to 0.59, so I reported the temporal weakness and participant-bootstrap uncertainty instead of tuning it away. I also stress-tested the trajectory clusters and found that they were not stable enough for a clinical-subtype claim. Finally, I wrote a target-trial specification for medication initiation but refused to estimate the effect because the released medication-change variable is only labelled as occurring in the past month and cannot be aligned safely to time zero.
 
-A concise explanation of the new Bayesian component is:
+A concise explanation of the Bayesian component is:
 
-> I then used the NHS count-level activity file to address a different problem: service estimates have very different denominators. I fitted a Beta-Binomial hierarchical model so small services are partially pooled toward the provider population while large services are driven more strongly by their own data. The provider-population posterior mean was about 68.35%, and prior sensitivity was small. The useful part is not the national benchmark itself; it is the statistical design for producing stable estimates when service or clinician samples are sparse. I would extend the same logic to a genuine patient-clinician-service hierarchy only when patient-level case mix and clinician identifiers are available.
+> I used the NHS count-level activity file to study unequal service denominators. A Beta-Binomial hierarchy gives small services stronger partial pooling and wider uncertainty than large services; the provider-population posterior mean was about 68.35% and the tested prior sensitivity was small. I then ran posterior predictive checks rather than stopping at a plausible posterior. The simple hierarchy under-predicted the lower tail: seven observed providers were at or below 50% reliable improvement, while the 97.5% replicated upper bound was four. I therefore marked the model-adequacy gate as failed. For a production Clinical Partners model, I would next investigate case mix, service type, time and a genuine patient-clinician-service hierarchy rather than presenting one exchangeable provider distribution as final.
 
 ## Next evidence after v0.5
 
@@ -288,4 +324,5 @@ The next additions should remain data-driven rather than adding methods for keyw
 - item-level psychometric modelling, measurement invariance or IRT only with a suitable public item-level mental-health dataset;
 - referral-to-assessment/treatment survival and competing-risk analysis only with valid event timestamps;
 - external temporal validation on another patient-level mental-health dataset;
-- causal estimation only when treatment assignment time zero and pre-treatment confounding data are defensible.
+- causal estimation only when treatment assignment time zero and pre-treatment confounding data are defensible;
+- for the NHS service model, investigate whether provider type, case mix or temporal structure explains the lower-tail PPC failure before considering a richer random-effect distribution.
