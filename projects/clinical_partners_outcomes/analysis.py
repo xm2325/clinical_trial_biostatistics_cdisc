@@ -72,12 +72,12 @@ SAFE_CANDIDATES = [
 def parse_index(df: pd.DataFrame) -> pd.DataFrame:
     """Recover participant and study month from the released participant_month index."""
     out = df.copy()
-    idx = out.index.astype(str)
-    split = idx.str.rsplit("_", n=1, expand=True)
-    if split.shape[1] != 2:
+    values = out.index.astype(str).tolist()
+    parts = [value.rsplit("_", 1) for value in values]
+    if any(len(part) != 2 or not part[0] or not part[1] for part in parts):
         raise ValueError("Expected PSYCHE-D index in participant_month form")
-    out["participant_id"] = split.get_level_values(0).astype(str)
-    out["study_month"] = pd.to_numeric(split.get_level_values(1), errors="raise").astype(int)
+    out["participant_id"] = [part[0] for part in parts]
+    out["study_month"] = pd.to_numeric([part[1] for part in parts], errors="raise").astype(int)
     return out
 
 
@@ -143,6 +143,8 @@ def split_by_participant(df: pd.DataFrame, test_size: float = 0.25) -> tuple[np.
 
 
 def calibration_intercept_slope(y: np.ndarray, p: np.ndarray) -> tuple[float, float]:
+    if len(np.unique(y)) < 2:
+        return float("nan"), float("nan")
     p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
     logit = np.log(p / (1 - p)).reshape(-1, 1)
     model = LogisticRegression(C=1e6, solver="lbfgs", max_iter=2000)
@@ -282,7 +284,9 @@ def main(data_path: Path, outdir: Path) -> None:
         "analysis_participants": int(analysis_df["participant_id"].nunique()),
         "deterioration_prevalence": float(analysis_df["deterioration"].mean()),
         "n_safe_predictors": int(len(features)),
-        "raw_phq_total_score_detected": bool(any("score" in c.lower() and "phq" in c.lower() for c in phq_cols)),
+        "raw_phq_total_score_detected": bool(
+            any("score" in c.lower() and "phq" in c.lower() for c in phq_cols)
+        ),
         "note": "Deterioration follows the released PSYCHE-D definition: end PHQ-9 category greater than start category.",
     }
     (outdir / "cohort_flow.json").write_text(json.dumps(cohort, indent=2) + "\n")
@@ -317,7 +321,37 @@ def main(data_path: Path, outdir: Path) -> None:
     missingness = endpoint_missingness_audit(df, features, outdir)
     (outdir / "missingness_audit.json").write_text(json.dumps(missingness, indent=2) + "\n")
 
-    report = f"""# Clinical outcomes real-data audit — PSYCHE-D\n\n## Cohort\n\n- Rows in release: {cohort['raw_rows']:,}\n- Unique participants: {cohort['participants']:,}\n- Rows with observed start/end PHQ-9 category: {cohort['analysis_rows_with_start_and_end']:,}\n- Participants in modelling cohort: {cohort['analysis_participants']:,}\n- Deterioration prevalence: {cohort['deterioration_prevalence']:.3f}\n- Safe predictors used: {cohort['n_safe_predictors']}\n\n## Participant-held-out deterioration model\n\n- ROC-AUC: {predictive['roc_auc']:.3f}\n- Average precision: {predictive['average_precision']:.3f}\n- Brier score: {predictive['brier']:.3f}\n- Calibration intercept: {predictive['calibration_intercept']:.3f}\n- Calibration slope: {predictive['calibration_slope']:.3f}\n- Train/test participant overlap: {predictive['participant_overlap']}\n\n## Missingness\n\n- Endpoint observation model ROC-AUC: {missingness.get('roc_auc', float('nan')):.3f}\n- Overall endpoint-observed rate among rows with baseline category: {missingness.get('observed_rate_all', missingness.get('observed_rate', float('nan'))):.3f}\n\nThe missingness model is a diagnostic: predictability of observation status is evidence against assuming MCAR without investigation. It does not identify MAR versus MNAR.\n\n## Clinical interpretation boundary\n\nThis stage reproduces a category-based deterioration target supported by the released PSYCHE-D schema. It does **not** claim treatment effectiveness, diagnosis, reliable change, MCID, or causal effects. Reliable-change analysis will only be added if a valid raw PHQ-9 total/item score is present in the public release or another licensed open dataset is linked.\n"""
+    report = f"""# Clinical outcomes real-data audit — PSYCHE-D
+
+## Cohort
+
+- Rows in release: {cohort['raw_rows']:,}
+- Unique participants: {cohort['participants']:,}
+- Rows with observed start/end PHQ-9 category: {cohort['analysis_rows_with_start_and_end']:,}
+- Participants in modelling cohort: {cohort['analysis_participants']:,}
+- Deterioration prevalence: {cohort['deterioration_prevalence']:.3f}
+- Safe predictors used: {cohort['n_safe_predictors']}
+
+## Participant-held-out deterioration model
+
+- ROC-AUC: {predictive['roc_auc']:.3f}
+- Average precision: {predictive['average_precision']:.3f}
+- Brier score: {predictive['brier']:.3f}
+- Calibration intercept: {predictive['calibration_intercept']:.3f}
+- Calibration slope: {predictive['calibration_slope']:.3f}
+- Train/test participant overlap: {predictive['participant_overlap']}
+
+## Missingness
+
+- Endpoint observation model ROC-AUC: {missingness.get('roc_auc', float('nan')):.3f}
+- Overall endpoint-observed rate among rows with baseline category: {missingness.get('observed_rate_all', missingness.get('observed_rate', float('nan'))):.3f}
+
+The missingness model is a diagnostic: predictability of observation status is evidence against assuming MCAR without investigation. It does not identify MAR versus MNAR.
+
+## Clinical interpretation boundary
+
+This stage reproduces a category-based deterioration target supported by the released PSYCHE-D schema. It does **not** claim treatment effectiveness, diagnosis, reliable change, MCID, or causal effects. Reliable-change analysis will only be added if a valid raw PHQ-9 total/item score is present in the public release or another licensed open dataset is linked.
+"""
     (outdir / "REAL_DATA_REPORT.md").write_text(report)
     print(report)
 
