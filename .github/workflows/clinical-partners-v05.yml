@@ -54,6 +54,14 @@ jobs:
             --data ../../data/nhs_talking_therapies/monthly_activity_jun2026.csv \
             --out ../../outputs/clinical_partners_outcomes
 
+      - name: Run posterior predictive checks
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v05_posterior_predictive_checks.py \
+            --data ../../data/nhs_talking_therapies/monthly_activity_jun2026.csv \
+            --out ../../outputs/clinical_partners_outcomes \
+            --replicates 2000
+
       - name: Upload v0.5 evidence
         uses: actions/upload-artifact@v4
         with:
