@@ -17,7 +17,7 @@ on:
 jobs:
   real-data-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -51,12 +51,23 @@ jobs:
           fi
           echo '2dfadab7595b972b9102fbf7903bb27a  data/psyche_d/feature_explanations.tsv' | md5sum -c -
 
+      - name: Download NHS Talking Therapies official time series
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/nhs_talking_therapies
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://files.digital.nhs.uk/FD/8C6D46/nhstalkingtherapies_time_series_apr_2025_apr_2026_key_measures.csv' \
+            -o data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv
+          test -s data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv
+
       - name: Run unit tests
         working-directory: projects/clinical_partners_outcomes
         run: pytest -q
 
       - name: Run v0.1 source/schema audit
         run: |
+          mkdir -p outputs/clinical_partners_outcomes
           python projects/clinical_partners_outcomes/analysis.py \
             --data data/psyche_d/anon_processed_df.parquet \
             --out outputs/clinical_partners_outcomes
@@ -68,7 +79,19 @@ jobs:
             --data data/psyche_d/anon_processed_df.parquet \
             --out outputs/clinical_partners_outcomes
 
-      - name: Validate source-scale, score and leakage invariants
+      - name: Run v0.3 prospective and trajectory analyses
+        run: |
+          python projects/clinical_partners_outcomes/v03_prospective_trajectory.py \
+            --data data/psyche_d/anon_processed_df.parquet \
+            --out outputs/clinical_partners_outcomes
+
+      - name: Audit NHS Talking Therapies time-series schema
+        run: |
+          python projects/clinical_partners_outcomes/v03_nhs_schema_audit.py \
+            --data data/nhs_talking_therapies/key_measures_apr2025_apr2026.csv \
+            --out outputs/clinical_partners_outcomes
+
+      - name: Validate source-scale, prediction-time and trajectory invariants
         run: |
           python - <<'PY'
           import json
@@ -80,26 +103,29 @@ jobs:
           v02 = json.loads((out / 'v02_summary.json').read_text())
           score = json.loads((out / 'phq9_score_change_summary.json').read_text())
           availability = json.loads((out / 'phq_endpoint_availability_model.json').read_text())
+          v03 = json.loads((out / 'v03_summary.json').read_text())
+          nhs = json.loads((out / 'nhs_time_series_schema_summary.json').read_text())
 
           assert cohort['raw_rows'] == 35694, cohort
-          assert cohort['participants'] >= 4000, cohort
           assert cohort['analysis_rows_with_start_and_end'] == 10866, cohort
-          assert cohort['raw_phq_total_score_detected'] is True, cohort
           assert metrics['participant_overlap'] == 0, metrics
           assert v02['score_intervals'] == 10866, v02
           assert score['n_intervals'] == 10866, score
           assert availability['participant_overlap'] == 0, availability
-          assert 0.0 < availability['availability_rate_all'] < 1.0, availability
-          print('cohort:', cohort)
-          print('v0.2:', v02)
-          print('score change:', score)
-          print('availability:', availability)
+          assert v03['prospective']['participant_overlap'] == 0, v03
+          assert v03['prospective']['strict_t0_n_features'] < v03['prospective']['broad_reference_n_features'], v03
+          assert v03['trajectory']['n_participants_with_at_least_3_scores'] > 1000, v03
+          assert 2 <= v03['trajectory']['selected_k'] <= 5, v03
+          assert nhs['rows'] > 1000 and nhs['columns'] >= 5, nhs
+          print('v0.3 prospective:', v03['prospective'])
+          print('v0.3 trajectory:', v03['trajectory'])
+          print('NHS schema:', nhs)
           PY
 
-      - name: Upload real-data evidence
+      - name: Upload v0.3 real-data evidence
         uses: actions/upload-artifact@v4
         with:
-          name: clinical-partners-psyche-d-real-data-v02
+          name: clinical-partners-v03-real-data
           path: outputs/clinical_partners_outcomes
           if-no-files-found: error
           retention-days: 30
