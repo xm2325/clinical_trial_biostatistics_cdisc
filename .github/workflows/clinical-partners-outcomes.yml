@@ -91,7 +91,13 @@ jobs:
             --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
             --out outputs/clinical_partners_outcomes
 
-      - name: Validate source-scale, prediction-time and trajectory invariants
+      - name: Run NHS provider benchmark
+        run: |
+          python projects/clinical_partners_outcomes/v03_nhs_provider_benchmark.py \
+            --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
+            --out outputs/clinical_partners_outcomes
+
+      - name: Validate v0.3 real-data invariants
         run: |
           python - <<'PY'
           import json
@@ -105,6 +111,7 @@ jobs:
           availability = json.loads((out / 'phq_endpoint_availability_model.json').read_text())
           v03 = json.loads((out / 'v03_summary.json').read_text())
           nhs = json.loads((out / 'nhs_time_series_schema_summary.json').read_text())
+          benchmark = json.loads((out / 'nhs_provider_benchmark_summary.json').read_text())
 
           assert cohort['raw_rows'] == 35694, cohort
           assert cohort['analysis_rows_with_start_and_end'] == 10866, cohort
@@ -116,10 +123,14 @@ jobs:
           assert v03['prospective']['strict_t0_n_features'] < v03['prospective']['broad_reference_n_features'], v03
           assert v03['trajectory']['n_participants_with_at_least_3_scores'] > 1000, v03
           assert 2 <= v03['trajectory']['selected_k'] <= 5, v03
-          assert nhs['rows'] > 1000 and nhs['columns'] >= 5, nhs
+          assert nhs['rows'] == 182512 and nhs['columns'] == 10, nhs
+          assert benchmark['latest_month'] == '2026-06-01', benchmark
+          assert benchmark['provider_count_any_month'] > 100, benchmark
+          assert benchmark['latest_percentage_measures_benchmarked'] == 6, benchmark
+          assert 'M351' not in benchmark['measures_used'], benchmark
           print('v0.3 prospective:', v03['prospective'])
           print('v0.3 trajectory:', v03['trajectory'])
-          print('NHS schema:', nhs)
+          print('NHS provider benchmark:', benchmark)
           PY
 
       - name: Upload v0.3 real-data evidence
