@@ -56,7 +56,8 @@ def main(path: Path, outdir: Path) -> None:
     for col in df.select_dtypes(include=["object"]).columns:
         vals = df[col].dropna().astype(str).drop_duplicates().head(30).tolist()
         object_samples.append({"column": col, "examples": " || ".join(vals)})
-    pd.DataFrame(object_samples).to_csv(outdir / "nhs_time_series_object_samples.csv", index=False)
+    object_samples_df = pd.DataFrame(object_samples)
+    object_samples_df.to_csv(outdir / "nhs_time_series_object_samples.csv", index=False)
 
     summary = {
         "rows": int(len(df)),
@@ -66,6 +67,13 @@ def main(path: Path, outdir: Path) -> None:
         "interpretation_boundary": "This file contains published aggregate statistics. It supports provider/service benchmarking and temporal monitoring, not patient-level causal inference.",
     }
     (outdir / "nhs_time_series_schema_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+
+    # CI-visible compact schema trace so benchmark code is built from the real NHS file,
+    # not from assumptions about a historical release schema.
+    print("NHS_COLUMNS:", json.dumps(list(df.columns)))
+    print("NHS_SCHEMA:\n", schema.to_string(index=False))
+    print("NHS_KEYWORD_HITS:\n", hits.to_string(index=False))
+    print("NHS_OBJECT_SAMPLES:\n", object_samples_df.to_string(index=False))
 
 
 if __name__ == "__main__":
