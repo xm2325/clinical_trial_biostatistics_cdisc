@@ -1,0 +1,113 @@
+name: Clinical Partners v0.7 PHQ-9 DIF purification
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v07.yml'
+  workflow_dispatch:
+
+jobs:
+  nhanes-dif-purification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.6 and v0.7 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v06_phq9_psychometrics.py test_v07_phq9_anchor_purification.py
+
+      - name: Download public NHANES 2021-2023 PHQ-9 and demographics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/nhanes_2021_2023 outputs/clinical_partners_outcomes
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DPQ_L.xpt' \
+            -o data/nhanes_2021_2023/DPQ_L.xpt
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DEMO_L.xpt' \
+            -o data/nhanes_2021_2023/DEMO_L.xpt
+          test -s data/nhanes_2021_2023/DPQ_L.xpt
+          test -s data/nhanes_2021_2023/DEMO_L.xpt
+
+      - name: Run v0.7 real-data purification and sensitivity analyses
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v07_phq9_anchor_purification.py \
+            --dpq ../../data/nhanes_2021_2023/DPQ_L.xpt \
+            --demo ../../data/nhanes_2021_2023/DEMO_L.xpt \
+            --out ../../outputs/clinical_partners_outcomes \
+            --dif-maxiter 140 \
+            --purification-rounds 5
+
+      - name: Validate v0.7 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v07_anchor_purification_summary.json').read_text())
+          history = pd.read_csv(out / 'v07_sex_dif_purification_history.csv')
+          final = pd.read_csv(out / 'v07_sex_dif_purified_final.csv')
+          equal = pd.read_csv(out / 'v07_sex_dif_equal_weight_sensitivity.csv')
+          age = pd.read_csv(out / 'v07_age_dif_exploratory.csv')
+          race = pd.read_csv(out / 'v07_race_dif_exploratory.csv')
+
+          assert summary['version'] == '0.7', summary
+          assert summary['cohort_n'] > 5000, summary['cohort_n']
+          assert len(final) == 9 and len(equal) == 9 and len(age) == 9 and len(race) == 9
+          assert history['item'].nunique() == 9
+          assert history['purification_round'].max() <= 5
+          assert final['null_fit_success'].all(), final
+          assert final['alternative_fit_success'].all(), final
+          assert equal['null_fit_success'].all() and equal['alternative_fit_success'].all(), equal
+          assert age['null_fit_success'].all() and age['alternative_fit_success'].all(), age
+          assert race['null_fit_success'].all() and race['alternative_fit_success'].all(), race
+          assert ((final['q_value_bh'] >= 0) & (final['q_value_bh'] <= 1)).all(), final
+          assert summary['sex_anchor_purification']['n_final_anchors'] >= 2, summary
+
+          loo_path = out / 'v07_sex_dif_anchor_sensitivity_summary.csv'
+          if summary['sex_anchor_purification']['n_final_anchors'] > 0:
+              assert loo_path.exists(), summary
+              loo = pd.read_csv(loo_path)
+              assert len(loo) == 9, loo
+              assert ((loo['flag_fraction'] >= 0) & (loo['flag_fraction'] <= 1)).all(), loo
+
+          print('v0.7 summary:')
+          print(json.dumps(summary, indent=2))
+          print('final purified sex DIF:')
+          print(final.sort_values('q_value_bh').to_string(index=False))
+          if loo_path.exists():
+              print('leave-one-anchor-out sensitivity:')
+              print(pd.read_csv(loo_path).sort_values('flag_fraction', ascending=False).to_string(index=False))
+          print('equal-weight sensitivity:')
+          print(equal.sort_values('q_value_bh').to_string(index=False))
+          print('age exploratory DIF:')
+          print(age.sort_values('q_value_bh').to_string(index=False))
+          print('race exploratory DIF:')
+          print(race.sort_values('q_value_bh').to_string(index=False))
+          PY
+
+      - name: Upload v0.7 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v07-phq9-dif-purification
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
