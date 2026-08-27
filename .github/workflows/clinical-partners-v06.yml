@@ -1,0 +1,90 @@
+name: Clinical Partners v0.6 PHQ-9 psychometrics
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v06.yml'
+  workflow_dispatch:
+
+jobs:
+  nhanes-psychometrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.6 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v06_phq9_psychometrics.py
+
+      - name: Download public NHANES 2021-2023 PHQ-9 and demographics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/nhanes_2021_2023 outputs/clinical_partners_outcomes
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DPQ_L.xpt' \
+            -o data/nhanes_2021_2023/DPQ_L.xpt
+          curl -fL --retry 10 --retry-delay 3 --retry-all-errors \
+            'https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DEMO_L.xpt' \
+            -o data/nhanes_2021_2023/DEMO_L.xpt
+          test -s data/nhanes_2021_2023/DPQ_L.xpt
+          test -s data/nhanes_2021_2023/DEMO_L.xpt
+
+      - name: Run real item-level psychometric analysis
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v06_phq9_psychometrics.py \
+            --dpq ../../data/nhanes_2021_2023/DPQ_L.xpt \
+            --demo ../../data/nhanes_2021_2023/DEMO_L.xpt \
+            --out ../../outputs/clinical_partners_outcomes \
+            --dif-maxiter 100
+
+      - name: Validate v0.6 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v06_psychometrics_summary.json').read_text())
+          item = pd.read_csv(out / 'v06_grm_item_parameters.csv')
+          dif = pd.read_csv(out / 'v06_sex_dif_anchor_lrt.csv')
+          info = pd.read_csv(out / 'v06_test_information_reliable_change_readiness.csv')
+
+          assert summary['version'] == '0.6', summary
+          assert summary['cohort']['complete_nine_item_rows'] > 5000, summary['cohort']
+          assert len(item) == 9 and len(dif) == 9, (len(item), len(dif))
+          assert (item['discrimination_a'] > 0).all(), item
+          assert (item['threshold_b1'] < item['threshold_b2']).all(), item
+          assert (item['threshold_b2'] < item['threshold_b3']).all(), item
+          assert (info['test_information'] > 0).all(), info
+          assert (info['conditional_sem'] > 0).all(), info
+          assert summary['reliable_change_boundary']['status'] == 'readiness_only', summary
+          print('v0.6 cohort:', summary['cohort'])
+          print('v0.6 factor:', summary['ordinal_factor_structure'])
+          print('v0.6 GRM:', summary['graded_response_model'])
+          print('v0.6 invariance:', summary['sex_measurement_invariance_screen'])
+          PY
+
+      - name: Upload v0.6 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v06-nhanes-psychometrics
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
