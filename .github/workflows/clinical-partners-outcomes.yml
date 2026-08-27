@@ -17,7 +17,7 @@ on:
 jobs:
   real-data-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -55,33 +55,51 @@ jobs:
         working-directory: projects/clinical_partners_outcomes
         run: pytest -q
 
-      - name: Run real-data analysis
+      - name: Run v0.1 source/schema audit
         run: |
           python projects/clinical_partners_outcomes/analysis.py \
             --data data/psyche_d/anon_processed_df.parquet \
             --out outputs/clinical_partners_outcomes
           cp data/psyche_d/feature_explanations.tsv outputs/clinical_partners_outcomes/source_feature_explanations.tsv
 
-      - name: Validate source-scale and leakage invariants
+      - name: Run v0.2 score-level longitudinal audit
+        run: |
+          python projects/clinical_partners_outcomes/v02_score_longitudinal.py \
+            --data data/psyche_d/anon_processed_df.parquet \
+            --out outputs/clinical_partners_outcomes
+
+      - name: Validate source-scale, score and leakage invariants
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          cohort = json.loads(Path('outputs/clinical_partners_outcomes/cohort_flow.json').read_text())
-          metrics = json.loads(Path('outputs/clinical_partners_outcomes/deterioration_model_metrics.json').read_text())
+          out = Path('outputs/clinical_partners_outcomes')
+          cohort = json.loads((out / 'cohort_flow.json').read_text())
+          metrics = json.loads((out / 'deterioration_model_metrics.json').read_text())
+          v02 = json.loads((out / 'v02_summary.json').read_text())
+          score = json.loads((out / 'phq9_score_change_summary.json').read_text())
+          availability = json.loads((out / 'phq_endpoint_availability_model.json').read_text())
+
           assert cohort['raw_rows'] == 35694, cohort
           assert cohort['participants'] >= 4000, cohort
-          assert cohort['analysis_rows_with_start_and_end'] > 5000, cohort
+          assert cohort['analysis_rows_with_start_and_end'] == 10866, cohort
+          assert cohort['raw_phq_total_score_detected'] is True, cohort
           assert metrics['participant_overlap'] == 0, metrics
+          assert v02['score_intervals'] == 10866, v02
+          assert score['n_intervals'] == 10866, score
+          assert availability['participant_overlap'] == 0, availability
+          assert 0.0 < availability['availability_rate_all'] < 1.0, availability
           print('cohort:', cohort)
-          print('predictive metrics:', metrics)
+          print('v0.2:', v02)
+          print('score change:', score)
+          print('availability:', availability)
           PY
 
       - name: Upload real-data evidence
         uses: actions/upload-artifact@v4
         with:
-          name: clinical-partners-psyche-d-real-data
+          name: clinical-partners-psyche-d-real-data-v02
           path: outputs/clinical_partners_outcomes
           if-no-files-found: error
           retention-days: 30
