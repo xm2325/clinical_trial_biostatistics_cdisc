@@ -8,6 +8,7 @@ from v05_bayesian_partial_pooling import (
     fit_hyperposterior,
     summarise_hyperposterior,
 )
+from v05_posterior_predictive_checks import posterior_predictive_checks
 
 
 def _activity_rows():
@@ -65,3 +66,16 @@ def test_hyperposterior_is_normalised_and_finite():
     summary = summarise_hyperposterior(fit)
     assert 0.0 < summary["m_q025"] < summary["m_q975"] < 1.0
     assert 0.0 < summary["kappa_q025"] < summary["kappa_q975"]
+
+
+def test_posterior_predictive_checks_return_finite_prespecified_diagnostics():
+    providers, _ = extract_provider_counts(_activity_rows())
+    fit = fit_hyperposterior(providers["y"].to_numpy(), providers["n"].to_numpy(), PRIMARY_PRIOR)
+    checks, intervals, summary = posterior_predictive_checks(
+        providers, fit, n_replicates=250, seed=1234
+    )
+    assert len(checks) == 5
+    assert len(intervals) == len(providers)
+    assert np.all(np.isfinite(checks["bayesian_p_two_sided"]))
+    assert checks["bayesian_p_two_sided"].between(0.0, 1.0).all()
+    assert 0.0 <= summary["provider_95pct_population_predictive_coverage"] <= 1.0
