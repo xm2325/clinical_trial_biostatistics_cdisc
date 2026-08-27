@@ -44,33 +44,6 @@ jobs:
           test -s data/nhanes_2021_2023/DPQ_L.xpt
           test -s data/nhanes_2021_2023/DEMO_L.xpt
 
-      - name: Diagnose NHANES XPT parsing and merge
-        run: |
-          python - <<'PY'
-          import pandas as pd
-
-          items = [f'DPQ{i:03d}' for i in range(10, 100, 10)]
-          dpq = pd.read_sas('data/nhanes_2021_2023/DPQ_L.xpt', format='xport')
-          demo = pd.read_sas('data/nhanes_2021_2023/DEMO_L.xpt', format='xport')
-          merged = dpq[['SEQN'] + items].merge(
-              demo[['SEQN', 'RIAGENDR', 'RIDAGEYR', 'WTMEC2YR', 'WTINT2YR']],
-              on='SEQN', how='inner', validate='one_to_one'
-          )
-          print('DPQ rows:', len(dpq), 'DEMO rows:', len(demo), 'merged:', len(merged))
-          print('DPQ dtypes:', {c: str(dpq[c].dtype) for c in items})
-          for item in items:
-              print(item, 'raw counts:', dpq[item].value_counts(dropna=False).sort_index().to_dict())
-              numeric = pd.to_numeric(merged[item], errors='coerce')
-              print(item, 'valid 0-3 after merge:', int(numeric.isin([0, 1, 2, 3]).sum()))
-          print('RIAGENDR nonmissing:', int(merged.RIAGENDR.notna().sum()))
-          print('RIDAGEYR nonmissing:', int(merged.RIDAGEYR.notna().sum()))
-          print('WTMEC2YR nonmissing:', int(merged.WTMEC2YR.notna().sum()), 'positive:', int((merged.WTMEC2YR > 0).sum()))
-          print('WTINT2YR nonmissing:', int(merged.WTINT2YR.notna().sum()), 'positive:', int((merged.WTINT2YR > 0).sum()))
-          valid_items = pd.DataFrame({item: pd.to_numeric(merged[item], errors='coerce').isin([0,1,2,3]) for item in items})
-          print('all 9 valid:', int(valid_items.all(axis=1).sum()))
-          print('all 9 valid + demographics:', int((valid_items.all(axis=1) & merged.RIAGENDR.notna() & merged.RIDAGEYR.notna() & merged.WTMEC2YR.notna()).sum()))
-          PY
-
       - name: Run real item-level psychometric analysis
         working-directory: projects/clinical_partners_outcomes
         run: |
@@ -78,9 +51,9 @@ jobs:
             --dpq ../../data/nhanes_2021_2023/DPQ_L.xpt \
             --demo ../../data/nhanes_2021_2023/DEMO_L.xpt \
             --out ../../outputs/clinical_partners_outcomes \
-            --dif-maxiter 100
+            --dif-maxiter 140
 
-      - name: Validate v0.6 real-data invariants
+      - name: Validate v0.6 source and model invariants
         run: |
           python - <<'PY'
           import json
@@ -93,19 +66,55 @@ jobs:
           dif = pd.read_csv(out / 'v06_sex_dif_anchor_lrt.csv')
           info = pd.read_csv(out / 'v06_test_information_reliable_change_readiness.csv')
 
+          expected_zero = {
+              'DPQ010': 3703,
+              'DPQ020': 3674,
+              'DPQ030': 2772,
+              'DPQ040': 2348,
+              'DPQ050': 3710,
+              'DPQ060': 3971,
+              'DPQ070': 4036,
+              'DPQ080': 4748,
+              'DPQ090': 5207,
+          }
+          expected_valid = {
+              'DPQ010': 5498,
+              'DPQ020': 5508,
+              'DPQ030': 5509,
+              'DPQ040': 5506,
+              'DPQ050': 5510,
+              'DPQ060': 5505,
+              'DPQ070': 5505,
+              'DPQ080': 5496,
+              'DPQ090': 5501,
+          }
+
           assert summary['version'] == '0.6', summary
+          counts = summary['source_item_counts_after_xport_normalization']
+          assert {k: v['zero'] for k, v in counts.items()} == expected_zero, counts
+          assert {k: v['valid_0_to_3'] for k, v in counts.items()} == expected_valid, counts
           assert summary['cohort']['complete_nine_item_rows'] > 5000, summary['cohort']
           assert len(item) == 9 and len(dif) == 9, (len(item), len(dif))
+          assert summary['graded_response_model']['fit_success'], summary['graded_response_model']
+          assert summary['sex_measurement_invariance_screen']['shared_item_fit_success'], summary['sex_measurement_invariance_screen']
+          assert dif['fit_success'].all(), dif
           assert (item['discrimination_a'] > 0).all(), item
           assert (item['threshold_b1'] < item['threshold_b2']).all(), item
           assert (item['threshold_b2'] < item['threshold_b3']).all(), item
           assert (info['test_information'] > 0).all(), info
           assert (info['conditional_sem'] > 0).all(), info
           assert summary['reliable_change_boundary']['status'] == 'readiness_only', summary
+
           print('v0.6 cohort:', summary['cohort'])
           print('v0.6 factor:', summary['ordinal_factor_structure'])
           print('v0.6 GRM:', summary['graded_response_model'])
           print('v0.6 invariance:', summary['sex_measurement_invariance_screen'])
+          print('v0.6 item parameters:')
+          print(item.to_string(index=False))
+          print('v0.6 DIF screen:')
+          print(dif.sort_values('q_value_bh').to_string(index=False))
+          print('v0.6 test information:')
+          print(info.to_string(index=False))
           PY
 
       - name: Upload v0.6 evidence
