@@ -44,6 +44,33 @@ jobs:
           test -s data/nhanes_2021_2023/DPQ_L.xpt
           test -s data/nhanes_2021_2023/DEMO_L.xpt
 
+      - name: Diagnose NHANES XPT parsing and merge
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          items = [f'DPQ{i:03d}' for i in range(10, 100, 10)]
+          dpq = pd.read_sas('data/nhanes_2021_2023/DPQ_L.xpt', format='xport')
+          demo = pd.read_sas('data/nhanes_2021_2023/DEMO_L.xpt', format='xport')
+          merged = dpq[['SEQN'] + items].merge(
+              demo[['SEQN', 'RIAGENDR', 'RIDAGEYR', 'WTMEC2YR', 'WTINT2YR']],
+              on='SEQN', how='inner', validate='one_to_one'
+          )
+          print('DPQ rows:', len(dpq), 'DEMO rows:', len(demo), 'merged:', len(merged))
+          print('DPQ dtypes:', {c: str(dpq[c].dtype) for c in items})
+          for item in items:
+              print(item, 'raw counts:', dpq[item].value_counts(dropna=False).sort_index().to_dict())
+              numeric = pd.to_numeric(merged[item], errors='coerce')
+              print(item, 'valid 0-3 after merge:', int(numeric.isin([0, 1, 2, 3]).sum()))
+          print('RIAGENDR nonmissing:', int(merged.RIAGENDR.notna().sum()))
+          print('RIDAGEYR nonmissing:', int(merged.RIDAGEYR.notna().sum()))
+          print('WTMEC2YR nonmissing:', int(merged.WTMEC2YR.notna().sum()), 'positive:', int((merged.WTMEC2YR > 0).sum()))
+          print('WTINT2YR nonmissing:', int(merged.WTINT2YR.notna().sum()), 'positive:', int((merged.WTINT2YR > 0).sum()))
+          valid_items = pd.DataFrame({item: pd.to_numeric(merged[item], errors='coerce').isin([0,1,2,3]) for item in items})
+          print('all 9 valid:', int(valid_items.all(axis=1).sum()))
+          print('all 9 valid + demographics:', int((valid_items.all(axis=1) & merged.RIAGENDR.notna() & merged.RIDAGEYR.notna() & merged.WTMEC2YR.notna()).sum()))
+          PY
+
       - name: Run real item-level psychometric analysis
         working-directory: projects/clinical_partners_outcomes
         run: |
