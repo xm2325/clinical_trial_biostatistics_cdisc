@@ -21,6 +21,21 @@ RACE_LABELS = {
     6: "Non-Hispanic Asian",
     7: "Other or multiracial",
 }
+XPORT_NEAR_ZERO_TOL = 1e-12
+
+
+def normalize_xport_numeric(series: pd.Series) -> pd.Series:
+    """Normalize the near-zero representation produced for SAS XPORT numeric zero.
+
+    In CDC NHANES DPQ_L, pandas can decode SAS numeric zero as the tiny positive
+    value 5.397605346934028e-79. The published CDC item frequencies confirm that
+    these values are the response code 0 ("Not at all"). Values whose magnitude
+    is below a conservative tolerance are therefore restored to exact zero before
+    validating the PHQ-9 0-3 response codes.
+    """
+
+    numeric = pd.to_numeric(series, errors="coerce").astype(float)
+    return numeric.mask(numeric.notna() & (numeric.abs() < XPORT_NEAR_ZERO_TOL), 0.0)
 
 
 def softplus(x: np.ndarray | float) -> np.ndarray:
@@ -73,7 +88,13 @@ def _bvncdf(x: float, y: float, rho: float) -> float:
         return float(norm.cdf(y))
     if np.isposinf(y):
         return float(norm.cdf(x))
-    return float(multivariate_normal.cdf([x, y], mean=[0.0, 0.0], cov=[[1.0, rho], [rho, 1.0]]))
+    return float(
+        multivariate_normal.cdf(
+            [x, y],
+            mean=[0.0, 0.0],
+            cov=[[1.0, rho], [rho, 1.0]],
+        )
+    )
 
 
 def polychoric_pair(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> float:
@@ -120,7 +141,7 @@ def polychoric_matrix(x: np.ndarray, weights: np.ndarray) -> np.ndarray:
             rho = polychoric_pair(x[:, i], x[:, j], weights)
             corr[i, j] = corr[j, i] = rho
 
-    # Small pairwise-estimation errors can make the matrix slightly non-PSD.
+    # Pairwise estimation can leave a very small non-PSD numerical component.
     values, vectors = np.linalg.eigh(corr)
     values = np.clip(values, 1e-6, None)
     corr_psd = (vectors * values) @ vectors.T
@@ -140,17 +161,26 @@ def one_factor_audit(corr: np.ndarray) -> dict:
         loadings = -loadings
     predicted = np.outer(loadings, loadings)
     off_diagonal = ~np.eye(len(loadings), dtype=bool)
-    residual_rms = float(np.sqrt(np.mean((corr[off_diagonal] - predicted[off_diagonal]) ** 2)))
+    residual_rms = float(
+        np.sqrt(np.mean((corr[off_diagonal] - predicted[off_diagonal]) ** 2))
+    )
     return {
         "eigenvalues": eigenvalues.tolist(),
-        "first_to_second_eigenvalue_ratio": float(eigenvalues[0] / max(eigenvalues[1], 1e-8)),
-        "first_eigenvalue_variance_fraction": float(eigenvalues[0] / eigenvalues.sum()),
+        "first_to_second_eigenvalue_ratio": float(
+            eigenvalues[0] / max(eigenvalues[1], 1e-8)
+        ),
+        "first_eigenvalue_variance_fraction": float(
+            eigenvalues[0] / eigenvalues.sum()
+        ),
         "one_factor_loadings": loadings.tolist(),
         "offdiag_residual_rms": residual_rms,
     }
 
 
-def unpack_item_block(raw: np.ndarray, n_items: int = 9) -> tuple[np.ndarray, np.ndarray]:
+def unpack_item_block(
+    raw: np.ndarray,
+    n_items: int = 9,
+) -> tuple[np.ndarray, np.ndarray]:
     raw = np.asarray(raw, dtype=float).reshape(n_items, 4)
     discrimination = np.exp(np.clip(raw[:, 0], -2.5, 2.5))
     b1 = raw[:, 1]
@@ -164,7 +194,10 @@ def pack_initial_from_data(x: np.ndarray, weights: np.ndarray) -> np.ndarray:
     x = np.asarray(x, dtype=int)
     raw = np.zeros((x.shape[1], 4), dtype=float)
     for item in range(x.shape[1]):
-        counts = np.array([weights[x[:, item] == c].sum() for c in range(4)], dtype=float)
+        counts = np.array(
+            [weights[x[:, item] == c].sum() for c in range(4)],
+            dtype=float,
+        )
         probs = counts / counts.sum()
         p_ge = np.clip(
             [1 - probs[0], 1 - probs[:2].sum(), probs[3]],
@@ -195,13 +228,27 @@ def category_probabilities(
     return np.clip(probs, 1e-12, 1.0)
 
 
-def aggregate_patterns(x: np.ndarray, weights: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def aggregate_patterns(
+    x: np.ndarray,
+    weights: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
     x = np.asarray(x, dtype=np.int8)
     weights = np.asarray(weights, dtype=float)
     frame = pd.DataFrame(x)
     frame["_weight"] = weights
-    grouped = frame.groupby(list(range(x.shape[1])), sort=False, observed=True)["_weight"].sum().reset_index()
-    return grouped.iloc[:, : x.shape[1]].to_numpy(dtype=np.int8), grouped["_weight"].to_numpy(dtype=float)
+    grouped = (
+        frame.groupby(
+            list(range(x.shape[1])),
+            sort=False,
+            observed=True,
+        )["_weight"]
+        .sum()
+        .reset_index()
+    )
+    return (
+        grouped.iloc[:, : x.shape[1]].to_numpy(dtype=np.int8),
+        grouped["_weight"].to_numpy(dtype=float),
+    )
 
 
 def gh_quadrature(n: int = 15) -> tuple[np.ndarray, np.ndarray]:
@@ -217,28 +264,51 @@ def pattern_log_likelihood(
     quadrature_weights: np.ndarray,
     replacement: tuple[int, np.ndarray] | None = None,
 ) -> float:
-    discrimination, thresholds = unpack_item_block(item_raw, patterns.shape[1])
+    discrimination, thresholds = unpack_item_block(
+        item_raw,
+        patterns.shape[1],
+    )
     if replacement is not None:
         item_index, replacement_raw = replacement
-        replacement_a, replacement_b = unpack_item_block(np.asarray(replacement_raw), 1)
+        replacement_a, replacement_b = unpack_item_block(
+            np.asarray(replacement_raw),
+            1,
+        )
         discrimination[item_index] = replacement_a[0]
         thresholds[item_index] = replacement_b[0]
 
     conditional = np.zeros((len(theta), patterns.shape[0]), dtype=float)
     for item in range(patterns.shape[1]):
-        probs = category_probabilities(discrimination[item], thresholds[item], theta)
+        probs = category_probabilities(
+            discrimination[item],
+            thresholds[item],
+            theta,
+        )
         conditional += np.log(probs)[:, patterns[:, item]]
-    marginal = logsumexp(conditional + np.log(quadrature_weights)[:, None], axis=0)
+    marginal = logsumexp(
+        conditional + np.log(quadrature_weights)[:, None],
+        axis=0,
+    )
     return float(np.dot(pattern_weights, marginal))
 
 
-def fit_pooled_grm(x: np.ndarray, weights: np.ndarray, maxiter: int = 180) -> dict:
+def fit_pooled_grm(
+    x: np.ndarray,
+    weights: np.ndarray,
+    maxiter: int = 180,
+) -> dict:
     patterns, pattern_weights = aggregate_patterns(x, weights)
     theta, quadrature_weights = gh_quadrature()
     initial = pack_initial_from_data(x, weights)
 
     def objective(raw: np.ndarray) -> float:
-        return -pattern_log_likelihood(raw, patterns, pattern_weights, theta, quadrature_weights)
+        return -pattern_log_likelihood(
+            raw,
+            patterns,
+            pattern_weights,
+            theta,
+            quadrature_weights,
+        )
 
     result = minimize(
         objective,
@@ -266,28 +336,52 @@ def fit_multigroup_invariance(
     pooled_raw: np.ndarray,
     free_item: int | None = None,
     maxiter: int = 120,
+    initial_latent_mean: float = 0.0,
+    initial_latent_sd: float = 1.0,
 ) -> dict:
     group = np.asarray(group, dtype=int)
     theta_reference, quadrature_weights = gh_quadrature()
     grouped_patterns = {}
     for group_value in (0, 1):
         mask = group == group_value
-        grouped_patterns[group_value] = aggregate_patterns(x[mask], weights[mask])
+        grouped_patterns[group_value] = aggregate_patterns(
+            x[mask],
+            weights[mask],
+        )
 
-    initial = np.r_[pooled_raw, 0.0, 0.0]
+    initial = np.r_[
+        pooled_raw,
+        initial_latent_mean,
+        np.log(max(initial_latent_sd, 1e-6)),
+    ]
     if free_item is not None:
-        initial = np.r_[initial, pooled_raw.reshape(x.shape[1], 4)[free_item]]
+        initial = np.r_[
+            initial,
+            pooled_raw.reshape(x.shape[1], 4)[free_item],
+        ]
 
     n_item_parameters = x.shape[1] * 4
 
     def objective(parameters: np.ndarray) -> float:
         item_raw = parameters[:n_item_parameters]
         comparison_mean = parameters[n_item_parameters]
-        comparison_sd = float(np.exp(np.clip(parameters[n_item_parameters + 1], -1.5, 1.5)))
+        comparison_sd = float(
+            np.exp(
+                np.clip(
+                    parameters[n_item_parameters + 1],
+                    -1.5,
+                    1.5,
+                )
+            )
+        )
         total_log_likelihood = 0.0
         for group_value in (0, 1):
             patterns, pattern_weights = grouped_patterns[group_value]
-            theta = theta_reference if group_value == 0 else comparison_mean + comparison_sd * theta_reference
+            theta = (
+                theta_reference
+                if group_value == 0
+                else comparison_mean + comparison_sd * theta_reference
+            )
             replacement = None
             if free_item is not None and group_value == 1:
                 replacement = (free_item, parameters[-4:])
@@ -313,36 +407,71 @@ def fit_multigroup_invariance(
         "loglik": float(-result.fun),
         "raw": result.x,
         "comparison_latent_mean": float(result.x[n_item_parameters]),
-        "comparison_latent_sd": float(np.exp(np.clip(result.x[n_item_parameters + 1], -1.5, 1.5))),
+        "comparison_latent_sd": float(
+            np.exp(
+                np.clip(
+                    result.x[n_item_parameters + 1],
+                    -1.5,
+                    1.5,
+                )
+            )
+        ),
         "iterations": int(result.nit),
     }
 
 
-def item_information(discrimination: np.ndarray, thresholds: np.ndarray, theta_grid: np.ndarray) -> np.ndarray:
+def item_information(
+    discrimination: np.ndarray,
+    thresholds: np.ndarray,
+    theta_grid: np.ndarray,
+) -> np.ndarray:
     theta_grid = np.asarray(theta_grid, dtype=float)
-    information = np.zeros((len(theta_grid), len(discrimination)), dtype=float)
+    information = np.zeros(
+        (len(theta_grid), len(discrimination)),
+        dtype=float,
+    )
     for item in range(len(discrimination)):
-        survival = expit(discrimination[item] * (theta_grid[:, None] - thresholds[item][None, :]))
-        derivative_survival = discrimination[item] * survival * (1 - survival)
+        survival = expit(
+            discrimination[item]
+            * (theta_grid[:, None] - thresholds[item][None, :])
+        )
+        derivative_survival = (
+            discrimination[item] * survival * (1 - survival)
+        )
         probs = np.empty((len(theta_grid), 4), dtype=float)
         derivatives = np.empty((len(theta_grid), 4), dtype=float)
         probs[:, 0] = 1 - survival[:, 0]
         derivatives[:, 0] = -derivative_survival[:, 0]
         probs[:, 1] = survival[:, 0] - survival[:, 1]
-        derivatives[:, 1] = derivative_survival[:, 0] - derivative_survival[:, 1]
+        derivatives[:, 1] = (
+            derivative_survival[:, 0] - derivative_survival[:, 1]
+        )
         probs[:, 2] = survival[:, 1] - survival[:, 2]
-        derivatives[:, 2] = derivative_survival[:, 1] - derivative_survival[:, 2]
+        derivatives[:, 2] = (
+            derivative_survival[:, 1] - derivative_survival[:, 2]
+        )
         probs[:, 3] = survival[:, 2]
         derivatives[:, 3] = derivative_survival[:, 2]
         probs = np.clip(probs, 1e-12, 1.0)
-        information[:, item] = (derivatives * derivatives / probs).sum(axis=1)
+        information[:, item] = (
+            derivatives * derivatives / probs
+        ).sum(axis=1)
     return information
 
 
-def prepare_nhanes(dpq_path: str | Path, demo_path: str | Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+def prepare_nhanes(
+    dpq_path: str | Path,
+    demo_path: str | Path,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     dpq = pd.read_sas(dpq_path, format="xport")
     demo = pd.read_sas(demo_path, format="xport")
-    demographic_columns = ["SEQN", "RIAGENDR", "RIDAGEYR", "RIDRETH3", "WTMEC2YR"]
+    demographic_columns = [
+        "SEQN",
+        "RIAGENDR",
+        "RIDAGEYR",
+        "RIDRETH3",
+        "WTMEC2YR",
+    ]
     if "INDFMPIR" in demo.columns:
         demographic_columns.append("INDFMPIR")
     merged = dpq[["SEQN"] + ITEMS].merge(
@@ -351,22 +480,33 @@ def prepare_nhanes(dpq_path: str | Path, demo_path: str | Path) -> tuple[pd.Data
         how="inner",
         validate="one_to_one",
     )
+
     for item in ITEMS:
-        numeric = pd.to_numeric(merged[item], errors="coerce")
+        numeric = normalize_xport_numeric(merged[item])
         merged[item] = numeric.where(numeric.isin([0, 1, 2, 3]))
 
-    complete = merged.dropna(subset=ITEMS + ["RIAGENDR", "RIDAGEYR", "WTMEC2YR"]).copy()
+    complete = merged.dropna(
+        subset=ITEMS + ["RIAGENDR", "RIDAGEYR", "WTMEC2YR"]
+    ).copy()
     for item in ITEMS:
         complete[item] = complete[item].astype(int)
-    complete["sex"] = complete["RIAGENDR"].map({1: "Male", 2: "Female"})
-    complete["sex_binary"] = complete["RIAGENDR"].map({1: 0, 2: 1}).astype(int)
+    complete["sex"] = complete["RIAGENDR"].map(
+        {1: "Male", 2: "Female"}
+    )
+    complete["sex_binary"] = complete["RIAGENDR"].map(
+        {1: 0, 2: 1}
+    ).astype(int)
     complete["age_group"] = pd.cut(
         complete["RIDAGEYR"],
         bins=[17, 39, 59, np.inf],
         labels=["18-39", "40-59", "60+"],
     )
-    complete["race_ethnicity"] = complete["RIDRETH3"].map(RACE_LABELS)
-    complete["analysis_weight"] = complete["WTMEC2YR"] / complete["WTMEC2YR"].mean()
+    complete["race_ethnicity"] = complete["RIDRETH3"].map(
+        RACE_LABELS
+    )
+    complete["analysis_weight"] = (
+        complete["WTMEC2YR"] / complete["WTMEC2YR"].mean()
+    )
     return merged, complete
 
 
@@ -382,13 +522,27 @@ def run_analysis(
     x = cohort[ITEMS].to_numpy(dtype=int)
     weights = cohort["analysis_weight"].to_numpy(dtype=float)
 
+    item_counts = {}
+    for item in ITEMS:
+        item_counts[item] = {
+            "zero": int((merged[item] == 0).sum()),
+            "valid_0_to_3": int(merged[item].notna().sum()),
+        }
+
     alpha = weighted_cronbach_alpha(x, weights)
     polychoric = polychoric_matrix(x, weights)
     factor = one_factor_audit(polychoric)
-    pd.DataFrame(polychoric, index=ITEMS, columns=ITEMS).to_csv(outdir / "v06_phq9_polychoric.csv")
-    pd.DataFrame({"item": ITEMS, "loading": factor["one_factor_loadings"]}).to_csv(
-        outdir / "v06_one_factor_loadings.csv", index=False
-    )
+    pd.DataFrame(
+        polychoric,
+        index=ITEMS,
+        columns=ITEMS,
+    ).to_csv(outdir / "v06_phq9_polychoric.csv")
+    pd.DataFrame(
+        {
+            "item": ITEMS,
+            "loading": factor["one_factor_loadings"],
+        }
+    ).to_csv(outdir / "v06_one_factor_loadings.csv", index=False)
 
     grm = fit_pooled_grm(x, weights)
     item_parameters = pd.DataFrame(
@@ -400,19 +554,25 @@ def run_analysis(
             "threshold_b3": grm["b"][:, 2],
         }
     )
-    item_parameters.to_csv(outdir / "v06_grm_item_parameters.csv", index=False)
+    item_parameters.to_csv(
+        outdir / "v06_grm_item_parameters.csv",
+        index=False,
+    )
 
     theta_grid = np.array([-2, -1, 0, 1, 2], dtype=float)
     information = item_information(grm["a"], grm["b"], theta_grid)
     information_table = pd.DataFrame(information, columns=ITEMS)
     information_table.insert(0, "theta", theta_grid)
     information_table["test_information"] = information.sum(axis=1)
-    information_table["conditional_sem"] = 1 / np.sqrt(information_table["test_information"])
+    information_table["conditional_sem"] = 1 / np.sqrt(
+        information_table["test_information"]
+    )
     information_table["two_measurement_95pct_change_threshold"] = (
         1.96 * np.sqrt(2) * information_table["conditional_sem"]
     )
     information_table.to_csv(
-        outdir / "v06_test_information_reliable_change_readiness.csv", index=False
+        outdir / "v06_test_information_reliable_change_readiness.csv",
+        index=False,
     )
 
     sex_group = cohort["sex_binary"].to_numpy(dtype=int)
@@ -434,8 +594,13 @@ def run_analysis(
             shared_item_raw,
             free_item=item_index,
             maxiter=dif_maxiter,
+            initial_latent_mean=invariant["comparison_latent_mean"],
+            initial_latent_sd=invariant["comparison_latent_sd"],
         )
-        statistic = max(0.0, 2 * (alternative["loglik"] - invariant["loglik"]))
+        statistic = max(
+            0.0,
+            2 * (alternative["loglik"] - invariant["loglik"]),
+        )
         p_value = float(chi2.sf(statistic, 4))
         dif_rows.append(
             {
@@ -450,11 +615,18 @@ def run_analysis(
     dif["q_value_bh"] = bh_fdr(dif["p_value"].to_numpy())
     dif["dif_flag_fdr_0_05"] = dif["q_value_bh"] < 0.05
     dif.to_csv(outdir / "v06_sex_dif_anchor_lrt.csv", index=False)
+    flagged_items = dif.loc[
+        dif["dif_flag_fdr_0_05"],
+        "item",
+    ].tolist()
 
     summary = {
         "version": "0.6",
-        "dataset": "NHANES August 2021-August 2023 public DPQ_L + DEMO_L",
+        "dataset": (
+            "NHANES August 2021-August 2023 public DPQ_L + DEMO_L"
+        ),
         "items": ITEMS,
+        "source_item_counts_after_xport_normalization": item_counts,
         "cohort": {
             "merged_rows": int(len(merged)),
             "complete_nine_item_rows": int(len(cohort)),
@@ -462,9 +634,14 @@ def run_analysis(
             "male_rows": int((cohort["sex_binary"] == 0).sum()),
             "age_min": float(cohort["RIDAGEYR"].min()),
             "age_max": float(cohort["RIDAGEYR"].max()),
-            "weight": "WTMEC2YR normalized to mean 1 for pseudo-likelihood estimation",
+            "weight": (
+                "WTMEC2YR normalized to mean 1 for pseudo-likelihood "
+                "estimation"
+            ),
         },
-        "classical_reliability": {"weighted_cronbach_alpha": alpha},
+        "classical_reliability": {
+            "weighted_cronbach_alpha": alpha,
+        },
         "ordinal_factor_structure": factor,
         "graded_response_model": {
             "fit_success": grm["success"],
@@ -476,30 +653,43 @@ def run_analysis(
         "sex_measurement_invariance_screen": {
             "reference_group": "Male",
             "comparison_group": "Female",
+            "shared_item_fit_success": invariant["success"],
             "shared_item_loglik": invariant["loglik"],
-            "comparison_latent_mean": invariant["comparison_latent_mean"],
+            "comparison_latent_mean": invariant[
+                "comparison_latent_mean"
+            ],
             "comparison_latent_sd": invariant["comparison_latent_sd"],
-            "n_items_flagged_fdr_0_05": int(dif["dif_flag_fdr_0_05"].sum()),
+            "n_items_flagged_fdr_0_05": int(
+                dif["dif_flag_fdr_0_05"].sum()
+            ),
+            "flagged_items_fdr_0_05": flagged_items,
+            "minimum_q_value": float(dif["q_value_bh"].min()),
             "method": (
-                "One-item-at-a-time anchored multi-group GRM likelihood-ratio screen; "
-                "the eight remaining PHQ-9 symptom items serve as anchors."
+                "One-item-at-a-time anchored multi-group GRM likelihood-"
+                "ratio screen; the eight remaining PHQ-9 symptom items "
+                "serve as anchors."
             ),
         },
         "reliable_change_boundary": {
             "status": "readiness_only",
             "reason": (
-                "NHANES DPQ_L is cross-sectional. Conditional test information and measurement-error "
-                "thresholds are estimated, but observed within-person reliable change is not estimable "
-                "without repeated item-level administrations."
+                "NHANES DPQ_L is cross-sectional. Conditional test "
+                "information and measurement-error thresholds are "
+                "estimated, but observed within-person reliable change "
+                "is not estimable without repeated item-level "
+                "administrations."
             ),
         },
         "interpretation_boundary": (
-            "This is a public-population psychometric audit, not a Clinical Partners instrument validation. "
-            "Survey-weighted pseudo-likelihood is used for item-parameter estimation; the workflow does not "
-            "claim full design-based standard errors."
+            "This is a public-population psychometric audit, not a "
+            "Clinical Partners instrument validation. Survey-weighted "
+            "pseudo-likelihood is used for item-parameter estimation; "
+            "the workflow does not claim full design-based standard errors."
         ),
     }
-    (outdir / "v06_psychometrics_summary.json").write_text(json.dumps(summary, indent=2))
+    (outdir / "v06_psychometrics_summary.json").write_text(
+        json.dumps(summary, indent=2)
+    )
 
     report = f"""# v0.6 NHANES PHQ-9 item-level psychometrics
 
@@ -509,6 +699,7 @@ def run_analysis(
 - Complete nine-item PHQ-9 cohort: **{len(cohort):,}** adults.
 - The analysis uses `DPQ010`-`DPQ090`; `DPQ100` functional impairment is not treated as a tenth PHQ-9 symptom item.
 - MEC examination weight `WTMEC2YR` is normalized to mean one for weighted pseudo-likelihood estimation.
+- The workflow explicitly normalizes the SAS XPORT near-zero representation back to response code 0 and checks the resulting item frequencies against the public CDC codebook.
 
 ## Ordinal factor structure
 
@@ -529,7 +720,7 @@ Fit success: **{grm['success']}**. Unique observed response patterns: **{grm['n_
 
 Sex-related item invariance is screened with anchored multi-group GRM likelihood-ratio tests. The baseline model shares all item parameters across male and female groups while allowing the female latent mean and scale to differ. Each alternative frees one item's discrimination and thresholds in the female group while the other eight items remain anchors.
 
-Items flagged after Benjamini-Hochberg FDR 0.05: **{int(dif['dif_flag_fdr_0_05'].sum())}/9**.
+Items flagged after Benjamini-Hochberg FDR 0.05: **{int(dif['dif_flag_fdr_0_05'].sum())}/9**. Flagged items: **{', '.join(flagged_items) if flagged_items else 'none'}**.
 
 A flagged item is evidence of possible DIF under this model, not evidence of bias by itself. Clinical interpretation requires item-content review and sensitivity analysis.
 
@@ -552,7 +743,12 @@ def main() -> None:
     parser.add_argument("--out", required=True)
     parser.add_argument("--dif-maxiter", type=int, default=120)
     args = parser.parse_args()
-    summary = run_analysis(args.dpq, args.demo, args.out, dif_maxiter=args.dif_maxiter)
+    summary = run_analysis(
+        args.dpq,
+        args.demo,
+        args.out,
+        dif_maxiter=args.dif_maxiter,
+    )
     print(json.dumps(summary, indent=2))
 
 
