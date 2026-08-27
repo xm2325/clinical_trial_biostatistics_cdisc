@@ -44,6 +44,14 @@ jobs:
           test -s data/nhanes_2021_2023/DPQ_L.xpt
           test -s data/nhanes_2021_2023/DEMO_L.xpt
 
+      - name: Audit NHANES masked variance structure
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v07_nhanes_design_audit.py \
+            --dpq ../../data/nhanes_2021_2023/DPQ_L.xpt \
+            --demo ../../data/nhanes_2021_2023/DEMO_L.xpt \
+            --out ../../outputs/clinical_partners_outcomes
+
       - name: Run v0.7 real-data purification and sensitivity analyses
         working-directory: projects/clinical_partners_outcomes
         run: |
@@ -63,6 +71,7 @@ jobs:
 
           out = Path('outputs/clinical_partners_outcomes')
           summary = json.loads((out / 'v07_anchor_purification_summary.json').read_text())
+          design = json.loads((out / 'v07_design_structure_summary.json').read_text())
           history = pd.read_csv(out / 'v07_sex_dif_purification_history.csv')
           final = pd.read_csv(out / 'v07_sex_dif_purified_final.csv')
           equal = pd.read_csv(out / 'v07_sex_dif_equal_weight_sensitivity.csv')
@@ -71,6 +80,9 @@ jobs:
 
           assert summary['version'] == '0.7', summary
           assert summary['cohort_n'] > 5000, summary['cohort_n']
+          assert design['version'] == '0.7', design
+          assert design['complete_case_domain_n'] == summary['cohort_n'], (design, summary)
+          assert design['masked_strata'] > 1 and design['masked_psu'] > design['masked_strata'], design
           assert len(final) == 9 and len(equal) == 9 and len(age) == 9 and len(race) == 9
           assert history['item'].nunique() == 9
           assert history['purification_round'].max() <= 5
@@ -89,6 +101,8 @@ jobs:
               assert len(loo) == 9, loo
               assert ((loo['flag_fraction'] >= 0) & (loo['flag_fraction'] <= 1)).all(), loo
 
+          print('v0.7 design audit:')
+          print(json.dumps(design, indent=2))
           print('v0.7 summary:')
           print(json.dumps(summary, indent=2))
           print('final purified sex DIF:')
