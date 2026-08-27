@@ -1,89 +1,143 @@
 # Clinical Outcomes & Longitudinal Methods Workbench
 
-This subproject uses the public PSYCHE-D release to demonstrate clinical-data-science reasoning that is directly relevant to research-oriented mental-health work: repeated outcome measurements, clinically meaningful score change, participant-level validation, outcome availability, calibration, subgroup review and reproducible evidence generation.
+This subproject uses open longitudinal mental-health data and official NHS Talking Therapies aggregate statistics to demonstrate statistical reasoning for a research-oriented Clinical Data Scientist role. It separates longitudinal description, clinically meaningful change, prospective prediction, missing outcome collection, exploratory trajectory phenotyping and service benchmarking.
 
-## Data and paper
+## Data sources
 
-- Dataset: Makhmutova et al., **PSYCHE-D dataset**, Zenodo record `5085146`, DOI `10.5281/zenodo.5085146`.
-- Published paper: Makhmutova M, Kainkaryam R, Ferreira M, Min J, Jaggi M, Clay I. *Predicting Changes in Depression Severity Using the PSYCHE-D (Prediction of Severity Change-Depression) Model Involving Person-Generated Health Data: Longitudinal Case-Control Observational Study.* JMIR mHealth and uHealth. 2022;10(3):e34148. DOI `10.2196/34148`.
+### PSYCHE-D
+
+- Dataset: Makhmutova et al., Zenodo record `5085146`, DOI `10.5281/zenodo.5085146`.
+- Paper: Makhmutova M, Kainkaryam R, Ferreira M, Min J, Jaggi M, Clay I. *Predicting Changes in Depression Severity Using the PSYCHE-D Model Involving Person-Generated Health Data.* JMIR mHealth and uHealth. 2022;10(3):e34148. DOI `10.2196/34148`.
 - Original code: `evidation-opensource/PSYCHE-D`.
-- Released dataset licence: CC BY-NC 4.0. Raw source files are downloaded at run time and are not committed to this repository.
+- Dataset licence: CC BY-NC 4.0.
 
-The release contains 35,694 rows and 154 columns. The real-data run finds 4,948 participants in the released monthly file and reproduces the source modelling cohort of 10,866 three-month samples from 4,036 participants.
+The release contains 35,694 rows and 154 columns. The real-data workflow finds 4,948 participants and reproduces 10,866 three-month score intervals from 4,036 participants.
 
-## What v0.2 adds
+### NHS Talking Therapies
 
-The public release contains both `phq9_score_start` and `phq9_score_end`. v0.2 therefore moves beyond category-only analysis and adds:
+v0.3 downloads the latest published key-measures time series available when this version was built: June 2025-June 2026, from the June 2026 NHS Talking Therapies publication dated 13 August 2026. The CSV contains 182,512 aggregate rows, 13 reporting months, five aggregation levels and 11 key measures. Provider benchmarking uses the `Provider` roll-up and does not use patient-level data.
 
-1. PHQ-9 score validation on the 0-27 scale;
-2. 10,866 paired three-month score intervals;
-3. reconstruction of 15,261 unique participant-month PHQ-9 measurements;
-4. PHQ-specific reliable improvement/deterioration using a 6-point change rule;
-5. PHQ-9 caseness-cutoff crossing at 10, reported separately from reliable change;
-6. 20% relative reduction as an MCID sensitivity analysis, not a universal threshold;
-7. a participant-random-intercept mixed model for repeated PHQ-9 scores;
-8. an expected-quarter outcome-availability grid across months 3, 6, 9 and 12;
-9. participant-held-out modelling of endpoint availability;
-10. unweighted versus class-weight-balanced deterioration probability models to show the effect of class weighting on calibration.
+## v0.2 foundation
 
-## Real v0.2 findings
+v0.2 established the score-level analysis:
 
-The score-level run uses 10,866 intervals from 4,036 participants. Mean PHQ-9 changes from 7.662 at interval start to 7.468 at interval end; median change is 0. Across intervals, 8.72% show a PHQ-9 decrease of at least 6 points and 7.24% show an increase of at least 6 points.
+- 10,866 paired three-month PHQ-9 intervals;
+- 15,261 reconstructed participant-month PHQ-9 measurements;
+- 8.72% of intervals with PHQ-9 decrease >=6 points;
+- 7.24% with PHQ-9 increase >=6 points;
+- participant-random-intercept mixed model with descriptive month coefficient -0.055 PHQ-9 points (95% CI -0.068 to -0.042);
+- expected-quarter outcome-availability grid with 19,792 opportunities and 54.9% overall analytical-file availability;
+- endpoint-availability AUC 0.623;
+- explicit comparison showing that class weighting barely changes deterioration AUC but worsens Brier score and calibration.
 
-Among intervals beginning at PHQ-9 >=10, 30.13% cross below 10, while 15.47% both improve by at least 6 points and end below 10. A 20% relative reduction is seen in 42.32% of baseline-case intervals, but that quantity is retained only as a sensitivity analysis because MCID depends on baseline severity and decision context.
+These are observational and predictive quantities. They are not treatment-effect estimates.
 
-The repeated-score reconstruction contains 15,261 unique participant-month measurements with zero conflicting score values at shared quarter boundaries. A random-intercept mixed model converges successfully. Its descriptive time coefficient is -0.055 PHQ-9 points per study month (95% CI -0.068 to -0.042). This is a population time trend in the selected observational cohort, not a treatment-effect estimate.
+## v0.3: strict prediction-time experiment
 
-## Outcome availability
+The earlier source feature set contains dynamic lifestyle, medication-change and wearable summaries that can extend into the three-month interval being predicted. v0.3 therefore creates two models on the same participant-held-out test cohort.
 
-The first version conditioned on rows with a baseline category and therefore selected a cohort where the endpoint was always present. v0.2 fixes this by constructing four expected quarterly PHQ assessment opportunities for every participant in the released monthly file: 19,792 participant-quarter opportunities in total.
+### Strict t0 model
 
-Availability in the analytical release declines by scheduled month:
-
-- month 3: 65.6%;
-- month 6: 57.2%;
-- month 9: 55.2%;
-- month 12: 41.6%.
-
-A participant-held-out logistic model using baseline variables plus scheduled month obtains ROC-AUC 0.623 and is well calibrated at the aggregate test-set level (calibration intercept -0.048; slope 1.020). This is evidence that analytical-file availability is structured rather than random. It is not enough to identify a clinical missingness mechanism because absence can reflect questionnaire non-completion, study attrition or source preprocessing.
-
-## Deterioration probability calibration
-
-The source category deterioration endpoint is:
+Endpoint:
 
 ```text
-phq9_cat_end > phq9_cat_start
+PHQ-9 increase >= 6 points over the next 3-month interval
 ```
 
-The participant-held-out baseline has only modest discrimination (AUC about 0.596). The important result is the calibration comparison:
+Allowed predictors are only:
 
-| Model | AUC | Brier | Calibration intercept | Calibration slope |
-|---|---:|---:|---:|---:|
-| Unweighted logistic | 0.596 | 0.162 | -0.720 | 0.453 |
-| Class-weight balanced logistic | 0.597 | 0.242 | -1.327 | 0.424 |
+```text
+interval-start PHQ-9 score
++ participant baseline/screener variables frozen from the first released row
+```
 
-Class balancing leaves discrimination almost unchanged but makes the Brier score much worse. This is a useful clinical-prediction lesson: class weighting should not be assumed to produce calibrated patient-level probabilities.
+Real held-out performance:
 
-## Timing boundary
+| Metric | Strict t0 model |
+|---|---:|
+| Event prevalence | 0.0724 |
+| ROC-AUC | 0.6201 |
+| Average precision | 0.1068 |
+| Brier score | 0.0621 |
+| Calibration intercept | -0.5302 |
+| Calibration slope | 0.8274 |
+| Train/test participant overlap | 0 |
 
-The original PSYCHE-D samples include dynamic lifestyle, medication and wearable measurements within the three-month interval. For that reason, this workbench describes the current task as **participant-held-out deterioration classification**, not as a deployable prospective risk forecast. A true deployment study would first fix a prediction timestamp and then exclude all information collected after it.
+### Broad interval-feature reference
 
-## Leakage control
+A second model adds the wider source candidate set, including variables whose collection can occur within the future interval. It is reported only as a leakage-risk reference:
 
-Train/test splitting is by participant. A participant can occur in training or testing, never both. The CI checks participant overlap directly. Endpoint fields and generated phase-1 probabilities are excluded from the safe candidate list used by the baseline classification audit.
+- ROC-AUC: 0.6279;
+- Brier score: 0.0619.
+
+The small discrimination gain does not justify calling the broader model prospective. v0.3 keeps it out of the deployment-safe feature set.
+
+## v0.3: trajectory phenotyping
+
+PHQ-9 trajectories are analysed separately from prospective prediction. For participants with at least three score measurements, v0.3 estimates a participant-specific linear slope and forms exploratory Gaussian-mixture phenotypes using baseline PHQ-9 and slope.
+
+Real-data result:
+
+- participants with >=3 PHQ-9 measurements: 3,107;
+- candidate classes: 2-5;
+- selection: lowest BIC among solutions where every class has at least 5% of participants;
+- selected classes: 3;
+- minimum class fraction: 23.9%;
+- mean repeated-initialisation adjusted Rand index: 0.819;
+- minimum repeated-initialisation adjusted Rand index: 0.688.
+
+These classes are model-based exploratory phenotypes. They are not labelled as validated clinical or biological subtypes.
+
+## v0.3: NHS Talking Therapies service benchmark
+
+The official time-series schema contains:
+
+```text
+REPORTING_PERIOD_START
+REPORTING_PERIOD_END
+GROUP_TYPE
+ORG_CODE1 / ORG_NAME1
+ORG_CODE2 / ORG_NAME2
+MEASURE_ID
+MEASURE_NAME
+MEASURE_VALUE
+```
+
+The provider benchmark uses six percentage outcomes:
+
+- `Percentage_AccessingServices6WeeksFinishedCourseTreatment`;
+- `Percentage_AccessingServices18WeeksFinishedCourseTreatment`;
+- `Percentage_ReliableDeterioration`;
+- `Percentage_ReliableImprovement`;
+- `Percentage_Recovery`;
+- `Percentage_ReliableRecovery`.
+
+It also retains relevant count measures for context. Suppressed values (`*`) are converted to missing rather than treated as zero.
+
+The module produces:
+
+1. England key-measure time series;
+2. provider-level key-measure panel;
+3. June 2026 provider distributions and England aggregate comparisons;
+4. favourable provider percentiles, with deterioration direction reversed;
+5. June 2025 to June 2026 provider changes where both values are observed;
+6. provider-level Spearman associations between access and outcome measures;
+7. a benchmark figure showing provider median/IQR against the England aggregate.
+
+The provider correlations are ecological descriptions only. They do not identify patient-level waiting-time effects and they do not adjust for case mix. NHS measure M351 (mean days waited between treatments), which has a current data-quality warning, is not used.
+
+## Outcome availability and missingness boundary
+
+The PSYCHE-D public analytical release supports an audit of whether scheduled PHQ-9 endpoints are present, but not the exact reason why they are absent. Missing rows can reflect questionnaire non-completion, attrition or source preprocessing. The project therefore does not claim to have identified MAR or MNAR from the public release alone.
 
 ## Reliable-change boundary
 
-The 6-point threshold is used only as a PHQ-specific reliable-change rule. A score below 10 is reported separately as a caseness-cutoff crossing. The module does not label these PHQ-only quantities as full NHS Talking Therapies reliable improvement or reliable recovery because those service outcomes can also depend on the paired anxiety measure.
+A 6-point PHQ-9 change is used for PHQ-specific reliable improvement/deterioration. A PHQ-9 score below 10 is reported separately as a caseness-cutoff crossing. These PHQ-only quantities are not called full NHS Talking Therapies reliable improvement or reliable recovery because the service definition can also depend on the paired anxiety measure.
 
 ## Run locally
 
 ```bash
 python -m pip install -r projects/clinical_partners_outcomes/requirements.txt
-mkdir -p data/psyche_d
-curl -fL --retry 8 --retry-all-errors \
-  'https://zenodo.org/records/5085146/files/anon_processed_df_parquet?download=1' \
-  -o data/psyche_d/anon_processed_df.parquet
 
 python projects/clinical_partners_outcomes/analysis.py \
   --data data/psyche_d/anon_processed_df.parquet \
@@ -91,6 +145,18 @@ python projects/clinical_partners_outcomes/analysis.py \
 
 python projects/clinical_partners_outcomes/v02_score_longitudinal.py \
   --data data/psyche_d/anon_processed_df.parquet \
+  --out outputs/clinical_partners_outcomes
+
+python projects/clinical_partners_outcomes/v03_prospective_trajectory.py \
+  --data data/psyche_d/anon_processed_df.parquet \
+  --out outputs/clinical_partners_outcomes
+
+python projects/clinical_partners_outcomes/v03_nhs_schema_audit.py \
+  --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
+  --out outputs/clinical_partners_outcomes
+
+python projects/clinical_partners_outcomes/v03_nhs_provider_benchmark.py \
+  --data data/nhs_talking_therapies/key_measures_jun2025_jun2026.csv \
   --out outputs/clinical_partners_outcomes
 ```
 
@@ -101,14 +167,12 @@ cd projects/clinical_partners_outcomes
 pytest -q
 ```
 
-GitHub Actions downloads the real Zenodo files, verifies their published MD5 checksums, runs the tests and both analysis stages, checks source-scale and participant-leakage invariants, and uploads the real-data result package.
+GitHub Actions downloads PSYCHE-D and the official NHS time series, verifies the PSYCHE-D MD5 checksums, runs all analysis stages and unit tests, checks source scale, score counts, zero participant overlap, trajectory constraints and NHS provider-benchmark invariants, then uploads the full real-data result package.
 
-## Interview use
+## Interview summary
 
-A concise explanation is:
+> I started from a public longitudinal mental-health dataset and separated four questions that are often mixed together: how symptoms change over time, whether reliable deterioration can be predicted using only information available at prediction time, whether outcome collection is selective, and how service-level outcomes vary across providers. The strict prospective model uses only interval-start PHQ-9 and frozen baseline variables, with no participant leakage. It obtained AUC 0.620 and calibration slope 0.827; adding interval-derived variables raised AUC only to 0.628, so I kept them out of the prospective model. I also identified three exploratory PHQ-9 trajectory phenotypes with repeated-initialisation ARI 0.819, and linked the project to official NHS Talking Therapies provider benchmarks while keeping aggregate benchmarking separate from patient-level causal claims.
 
-> I reproduced a public longitudinal mental-health data workflow and then tested assumptions that matter for clinical use. I reconstructed repeated PHQ-9 scores, separated reliable score change from caseness crossing, fitted a participant-level mixed model, audited outcome availability over follow-up, and compared discrimination with probability calibration. One useful result was that class weighting barely changed AUC but materially worsened Brier score. I also found that the released feature timing does not support calling my baseline a prospective clinical risk model, so I kept that claim out of the analysis.
+## Remaining high-value extensions
 
-## Next methods
-
-The strongest next additions are a prespecified prospective prediction-time analysis, uncertainty intervals for subgroup calibration, a trajectory-model comparison with stability checks, and a separate NHS Talking Therapies service-benchmarking module. Causal pathway questions should remain a separate study with an explicit exposure, time zero, estimand and identification assumptions.
+The next methods with clear additional value are temporal/external validation, bootstrap uncertainty for calibration and subgroup metrics, richer longitudinal trajectory comparison, and a separate patient-level causal study with an explicit exposure, time zero, estimand and identification assumptions. Bayesian service/clinician partial pooling also requires a dataset with a real service hierarchy rather than inventing one from PSYCHE-D.
