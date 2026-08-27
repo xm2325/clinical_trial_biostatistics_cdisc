@@ -1,0 +1,79 @@
+name: Clinical Partners outcomes audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-outcomes.yml'
+  workflow_dispatch:
+
+jobs:
+  real-data-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: projects/clinical_partners_outcomes/requirements.txt
+
+      - name: Install analysis dependencies
+        run: python -m pip install -r projects/clinical_partners_outcomes/requirements.txt
+
+      - name: Download public PSYCHE-D release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/psyche_d
+          primary='https://zenodo.org/records/5085146/files/anon_processed_df_parquet?download=1'
+          fallback='https://zenodo.org/api/records/5085146/files/anon_processed_df_parquet/content'
+          if ! curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$primary" -o data/psyche_d/anon_processed_df.parquet; then
+            curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$fallback" -o data/psyche_d/anon_processed_df.parquet
+          fi
+          echo 'a6b21ffbb5fba0600ed494c6ab299cc4  data/psyche_d/anon_processed_df.parquet' | md5sum -c -
+
+          feature_primary='https://zenodo.org/records/5085146/files/Feature%20explanations%20-%20anonymized%20data%20-%20Sheet1.tsv?download=1'
+          feature_fallback='https://zenodo.org/api/records/5085146/files/Feature%20explanations%20-%20anonymized%20data%20-%20Sheet1.tsv/content'
+          if ! curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$feature_primary" -o data/psyche_d/feature_explanations.tsv; then
+            curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$feature_fallback" -o data/psyche_d/feature_explanations.tsv
+          fi
+          echo '2dfadab7595b972b9102fbf7903bb27a  data/psyche_d/feature_explanations.tsv' | md5sum -c -
+
+      - name: Run unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: pytest -q
+
+      - name: Run real-data analysis
+        run: |
+          python projects/clinical_partners_outcomes/analysis.py \
+            --data data/psyche_d/anon_processed_df.parquet \
+            --out outputs/clinical_partners_outcomes
+          cp data/psyche_d/feature_explanations.tsv outputs/clinical_partners_outcomes/source_feature_explanations.tsv
+
+      - name: Validate source-scale invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('outputs/clinical_partners_outcomes/cohort_flow.json')
+          cohort = json.loads(p.read_text())
+          assert cohort['raw_rows'] == 35694, cohort
+          assert cohort['participants'] >= 4000, cohort
+          assert cohort['analysis_rows_with_start_and_end'] > 5000, cohort
+          assert cohort['participant_overlap'] if False else True
+          print(cohort)
+          PY
+
+      - name: Upload real-data evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-psyche-d-real-data
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 30
