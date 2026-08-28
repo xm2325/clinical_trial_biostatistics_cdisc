@@ -1,0 +1,99 @@
+name: Clinical Partners v0.8.1 robust Bayesian provider effects
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v081.yml'
+  workflow_dispatch:
+
+jobs:
+  robust-provider-effects:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.8.1 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v081_robust_bayesian_provider_effects.py
+
+      - name: Download six official NHS Talking Therapies activity files
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v08_download_nhs_activity.py \
+            --out ../../data/nhs_talking_therapies/v08
+
+      - name: Compare Normal and Student-t provider-effect hierarchies
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          mkdir -p ../../outputs/clinical_partners_outcomes
+          python v081_robust_bayesian_provider_effects.py \
+            --data-dir ../../data/nhs_talking_therapies/v08 \
+            --out ../../outputs/clinical_partners_outcomes \
+            --min-months 4 \
+            --posterior-draws 2200 \
+            --ppc-replicates 700
+
+      - name: Validate v0.8.1 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v081_robust_provider_effects_summary.json').read_text())
+          comparison = pd.read_csv(out / 'v081_family_comparison.csv')
+          ppc = pd.read_csv(out / 'v081_family_ppc.csv')
+          persistence = pd.read_csv(out / 'v081_persistence_ppc.csv')
+          months = pd.read_csv(out / 'v081_month_posterior_summary.csv')
+
+          expected = {'normal','student_t_df10','student_t_df5','student_t_df3'}
+          assert summary['version'] == '0.8.1', summary
+          assert summary['data']['n_months'] == 6, summary['data']
+          assert summary['data']['providers'] >= 100, summary['data']
+          assert set(comparison['family']) == expected, comparison
+          assert len(comparison) == 4, comparison
+          assert comparison['fit_success'].all(), comparison
+          assert (comparison['tau_mean'] > 0).all(), comparison
+          assert (comparison['hessian_eigenvalues_clipped'] == 0).all(), comparison
+          assert (comparison['n_ppc_failures_p_lt_0_05'].between(0,18)).all(), comparison
+          assert (comparison['n_tail_failures_p_lt_0_05'].between(0,12)).all(), comparison
+          assert len(ppc) == 72, ppc
+          assert set(ppc['family']) == expected, ppc
+          assert ppc['month'].nunique() == 6, ppc
+          assert ppc['two_sided_bayesian_p'].between(0,1).all(), ppc
+          assert len(persistence) == 4 and set(persistence['family']) == expected, persistence
+          assert persistence['common_providers'].min() >= 80, persistence
+          assert persistence['two_sided_bayesian_p'].between(0,1).all(), persistence
+          assert len(months) == 24 and set(months['family']) == expected, months
+          assert months['population_rate_mean'].between(0,1).all(), months
+
+          print(json.dumps(summary, indent=2))
+          print(comparison.to_string(index=False))
+          print('June PPC:')
+          print(ppc[ppc['month'].eq('2026-06')].to_string(index=False))
+          print('Persistence PPC:')
+          print(persistence.to_string(index=False))
+          PY
+
+      - name: Upload v0.8.1 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v081-robust-provider-effects
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
