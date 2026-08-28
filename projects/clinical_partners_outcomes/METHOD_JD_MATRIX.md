@@ -1,104 +1,91 @@
 # Method-to-role evidence matrix
 
-This file separates implemented evidence from planned work. A method is marked implemented only when the repository contains runnable code and a real-data output for it. v0.4 records when an implemented method fails a robustness or causal-readiness gate; v0.5 adds a real NHS provider-level hierarchical Bayesian analysis and posterior predictive checks; v0.6 adds a real public item-level PHQ-9 psychometric analysis using NHANES 2021-2023.
+Current evidence level: **v0.10**.
 
-| Scientific capability | Real-data evidence | Status | Interpretation / next evidence |
+This matrix distinguishes four states:
+
+- **Implemented** — runnable code plus a real-data result in this repository;
+- **Implemented with limiting result** — the method runs, but robustness/model-adequacy checks prevent a stronger claim;
+- **Designed only** — a defensible study design exists but the public data used here do not support estimation;
+- **Not covered here** — no claim is made from this subproject.
+
+The aim is not to maximise the number of methods marked green. A method is counted only when the available data support the scientific question.
+
+| JD / scientific capability | Real-data evidence in current project | Status | Boundary / next evidence |
 |---|---|---|---|
-| Longitudinal clinical outcomes | 15,261 unique participant-month PHQ-9 measurements reconstructed from 10,866 three-month intervals | Implemented | Repeated score structure is explicit and checked for shared-boundary conflicts |
-| Mixed-effects modelling | PHQ-9 random-intercept mixed model across 4,036 participants; converged fit | Implemented descriptive | Random slopes or nonlinear time are secondary to obtaining a service-linked hierarchy |
-| Clinically meaningful score change | PHQ-specific 6-point reliable improvement/deterioration; caseness crossing at 10 kept separate | Implemented | Full NHS Talking Therapies reliable improvement/recovery requires the paired anxiety measure |
-| MCID sensitivity | 20% relative reduction reported only as a sensitivity analysis | Implemented with boundary | No universal MCID claim |
-| Prediction-time control | Strict model uses interval-start PHQ-9 plus baseline/screener variables; dynamic interval summaries excluded | Implemented v0.3 | Broad feature model kept only as leakage-risk reference |
-| Participant-held-out prediction | Strict t0 AUC 0.620, AP 0.107, Brier 0.0621; zero participant overlap | Implemented v0.3 | Internal random participant hold-out only |
-| Forward-time validation | Train endpoint months 3/6 and test endpoint months 9/12 on different participants; AUC 0.593 on 1,183 test rows / 748 participants | Implemented v0.4 | Shows weaker later-window performance; still internal to one study |
-| Calibration | v0.4 temporal calibration intercept -0.693 and slope 0.762 | Implemented | Point calibration is not enough without uncertainty |
-| Calibration/discrimination uncertainty | 300 participant-cluster bootstrap replicates; AUC 95% CI 0.527-0.658, calibration slope 0.283-1.243 | Implemented v0.4 | Quantifies held-out sampling uncertainty; does not measure external transportability |
-| Decision-curve analysis | Net benefit evaluated over thresholds 0.02-0.20 against treat-all and treat-none | Implemented exploratory v0.4 | Point-estimate analysis only; no clinical threshold recommendation and no current net-benefit CI |
-| Outcome availability / missingness | 19,792 expected participant-quarter opportunities; availability falls from 65.6% at month 3 to 41.6% at month 12; held-out availability AUC 0.623 | Implemented diagnostic | Cannot distinguish non-response, attrition and source preprocessing without reason codes |
-| Subgroup review | Sex, race-indicator and insurance performance where sample size permits | Implemented baseline | Confidence intervals and subgroup calibration remain useful extensions |
-| Trajectory phenotyping | v0.3 selected 3 classes among 3,107 participants; repeated-initialisation mean ARI 0.819 | Implemented exploratory | Not enough by itself for subtype validity |
-| Trajectory specification sensitivity | Add residual SD ARI 0.389; diagonal covariance ARI 0.567; leave-last-out ARI 0.668 | Implemented v0.4; **fails strong stability gate** | Three-class solution is too specification-sensitive for a clinical-subtype claim |
-| NHS service benchmarking | Official June 2025-June 2026 key-measures panel plus June 2026 Monthly Activity counts; 130 provider codes in the activity file | Implemented v0.3-v0.5 | Aggregate provider statistics support benchmarking and model demonstrations, not patient-level causal effects |
-| Bayesian hierarchical modelling | June 2026 NHS provider reliable-improvement counts: 123 complete provider count pairs; Beta-Binomial hierarchy with posterior partial pooling | Implemented v0.5; **simple hierarchy fails one PPC gate** | Provider-population mean 68.35% (95% CrI 67.40%-69.10%); median absolute shrinkage 0.68 pp and p90 5.72 pp; useful partial-pooling demonstration but not an adequate final service model |
-| Bayesian prior sensitivity | Primary versus broader hyperprior changes provider posterior means by median 0.010 pp and maximum 0.103 pp | Implemented v0.5 | Provider posterior means are not materially driven by the tested hyperprior choice |
-| Bayesian posterior predictive checks | 2,000 replicated provider panels using the observed denominators; 95% population-predictive interval coverage 94.3% | Implemented v0.5; **model-adequacy gate FAIL** | Overall SD/IQR are plausible, but observed providers at or below 50% = 7 versus predictive 97.5% upper bound = 4; two-sided Bayesian p=0.000. Investigate case mix/provider type/time structure rather than tuning this aggregate model only to pass |
-| Target-trial specification | Eligibility, strategies, time zero, follow-up, outcome, contrast and identification assumptions written for medication initiation | Implemented v0.4 | Protocol can be specified even when estimation is not justified |
-| Exposure-timing causal gate | `med_start` and related variables are Dynamic / past-month features and cannot be aligned safely to the three-month interval start | Implemented v0.4; **causal estimate withheld** | Requires treatment and outcome timestamps plus pre-treatment confounding data before estimation |
-| Patient-level causal effect estimation | No effect estimate reported from timing-ambiguous treatment features | Correctly withheld | Use a dataset with well-defined treatment assignment time zero and confounding information |
-| Ordinal psychometric factor structure | NHANES 2021-2023 public PHQ-9 item data; 5,455 complete nine-item adults; survey-weighted polychoric matrix; first eigenvalue 5.699, first/second ratio 7.87, first-eigenvalue fraction 63.3%, one-factor off-diagonal residual RMS 0.066 | Implemented v0.6 | Strong dominant-factor signal in this public sample, but factor diagnostics do not by themselves establish target-population validity or strict unidimensionality |
-| Item response theory | Four-category PHQ-9 graded-response model fitted by marginal maximum likelihood on 1,616 observed response patterns; all 9 discriminations positive and ordered thresholds enforced; fit converged in 53 iterations | Implemented v0.6 | Item discrimination ranges from 1.53 to 3.41; this is a public-population item model rather than a Clinical Partners instrument calibration |
-| Measurement invariance / DIF | Anchored male-versus-female multi-group GRM allows latent mean/scale differences, then frees one item's discrimination and three thresholds at a time; BH-FDR 0.05 flags DPQ010, DPQ030, DPQ040, DPQ050, DPQ060 and DPQ090 | Implemented screening v0.6; **non-invariance signal** | Six of nine items are flagged under this screen. A flagged item is a possible DIF signal, not proof of bias; anchor sensitivity, item-content review, full survey-design inference and replication are required |
-| Conditional measurement precision | GRM test information and conditional SEM reported over latent theta = -2,-1,0,1,2; SEM falls from 1.882 at theta=-2 to 0.271 at theta=2 | Implemented v0.6 | The public item set is much less informative at the very low-symptom end; do not treat total-score precision as constant across severity |
-| Reliable-change psychometric readiness | Two-independent-measurement 95% latent-change threshold derived from conditional information: 1.10 at theta=0, 0.85 at theta=1 and 0.75 at theta=2 | Implemented readiness only | NHANES is cross-sectional, so no observed within-person reliable-change estimate is claimed. Repeated item administrations are required for longitudinal reliable change and time invariance |
-| Pathway survival / competing risks | Current public sources used here do not provide Clinical Partners patient-level referral-to-assessment/treatment event times | Planned with explicit boundary | A production analysis would define time zero, censoring and competing exits before fitting Cox/flexible-parametric or cause-specific/subdistribution models |
-| Reproducibility | Zenodo source, MD5 checks, official NHS downloads, official CDC NHANES XPT downloads, CI, unit tests, real-data invariants and uploaded evidence artifacts | Implemented | v0.6 adds 5/5 psychometric unit tests, XPORT-zero normalization, exact CDC item-frequency checks, GRM/DIF convergence checks and real-data evidence upload; scientific limitations remain separate from software CI |
-| Clinical NLP | Not required for the current core scientific question | Optional only | Add only if a suitable clinical-text question and dataset materially improves the application |
+| Longitudinal real-world outcomes | PSYCHE-D 35,694 rows / 4,948 participants; 15,261 reconstructed participant-month PHQ-9 measurements | **Implemented** | Public observational release, not a service EHR |
+| Mixed-effects modelling | Participant random-intercept PHQ-9 model across 4,036 participants | **Implemented descriptive** | Patient random slopes / nonlinear time are possible extensions; clinician/service hierarchy requires real IDs |
+| Clinically meaningful change | PHQ-9 ±6-point reliable improvement/deterioration; caseness crossing kept separate | **Implemented** | Clinical importance and statistical reliability are not treated as identical |
+| MCID sensitivity | 20% relative reduction retained only as sensitivity analysis | **Implemented with boundary** | No universal MCID claim |
+| Prediction-time control | Strict t0 model excludes dynamic interval features whose timing can overlap outcome window | **Implemented** | Broad feature model retained only as leakage-risk reference |
+| Participant-held-out prediction | AUC 0.620, AP 0.107, Brier 0.0621 | **Implemented** | Internal validation |
+| Forward-time validation | Different participants; later endpoint months; AUC 0.593, AP 0.119, Brier 0.0632 | **Implemented with limiting result** | Performance weakens later; retained rather than tuned away |
+| Calibration | Temporal intercept -0.693, slope 0.762 | **Implemented** | External calibration still needed for transportability |
+| Prediction uncertainty | 300 participant-cluster bootstraps; AUC 95% CI 0.527-0.658 | **Implemented** | Sampling uncertainty, not external transport uncertainty |
+| Decision-curve analysis | Thresholds 0.02-0.20 vs treat-all/treat-none | **Implemented exploratory** | No real intervention/harm threshold is claimed |
+| Trajectory / latent phenotyping | Three-class GMM on repeated PHQ-9 summaries | **Implemented exploratory** | Model-based phenotype, not validated subtype |
+| Trajectory robustness | ARI 0.389 / 0.567 / 0.668 under specification changes | **Implemented; strong stability gate FAIL** | Current three-class phenotype is not robust enough for clinical subtype claims |
+| Bayesian hierarchical modelling | v0.5 Beta-Binomial provider hierarchy; v0.8 repeated provider×month logit hierarchy | **Implemented** | Public aggregate providers, not patient→clinician→service |
+| Partial pooling across sparse services | v0.5 median absolute shrinkage 0.68pp; p90 5.72pp; v0.8 median provider-month shrinkage 1.61pp, p90 6.73pp | **Implemented** | Demonstrates denominator-aware service shrinkage |
+| Bayesian prior sensitivity | v0.5 broader hyperprior max provider-mean change 0.103pp; v0.8 monthly means nearly unchanged | **Implemented** | Tested priors do not materially drive reported service means |
+| Posterior predictive checks | v0.5 and v0.8/v0.8.1 provider-panel replications | **Implemented; model-adequacy failures retained** | Persistent provider effect reproduces broad Jan→Jun persistence but not extreme tails/dispersion |
+| Dynamic service hierarchy | Jan-Jun 2026, 703 provider-month rows, 119 providers; `logit(p_jt)=mu_t+u_j` | **Implemented v0.8** | Provider persistence captured; tail lack of fit remains |
+| Robust random-effect sensitivity | Normal vs variance-standardised Student-t df 10/5/3 | **Implemented v0.8.1** | Best t5 only reduces PPC failures 11/18→10/18; no candidate adequate; stop tail tuning |
+| Patient→clinician→service hierarchy | No real clinician assignment in current public sources | **Designed only** | Do not synthesize clinician IDs; require governed patient-level service data |
+| Ordinal psychometric factor structure | NHANES 5,455 complete PHQ-9 adults; weighted polychoric audit; first/second eigenvalue ratio 7.87 | **Implemented** | Dominant dimension does not prove strict unidimensionality or target-population validity |
+| Item response theory | Four-category graded-response model; 1,616 response patterns; converged fit | **Implemented** | Public NHANES calibration, not Clinical Partners calibration |
+| Conditional measurement precision | Test information / SEM by latent severity | **Implemented** | Precision is not constant across severity |
+| Measurement invariance / DIF | Multi-group GRM with latent mean/scale differences | **Implemented** | DIF signal is not proof of item bias |
+| Anchor purification | v0.7 converges in three rounds to DPQ030/040/050 | **Implemented v0.7** | Six final anchors; stable signals remain under sensitivity |
+| Anchor-set sensitivity | Stable DIF items flagged 6/6 leave-one-anchor-out runs; other items 0/6 | **Implemented v0.7** | DPQ090 appears under equal weighting and is labelled weighting-sensitive |
+| Reliable-change psychometric readiness | Conditional SEM translated to two-measurement latent-score thresholds | **Implemented readiness only** | NHANES is cross-sectional; no longitudinal item-level invariance claim |
+| Survival / time-to-event | Time to first observed reliable PHQ-9 change on 3/6/9/12 month grid | **Implemented v0.9** | Discrete observation process, not exact event time |
+| Competing risks | First reliable improvement vs first reliable deterioration, mutually exclusive first events; discrete cumulative incidence | **Implemented v0.9** | Primary analysis censors at first missing scheduled visit |
+| Cause-specific hazard modelling | Complementary-log-log models with month-specific baseline hazards and participant-cluster robust SEs | **Implemented v0.9** | Prognostic/descriptive, not causal |
+| Proportional/time-constant effect checking | Baseline severity × follow-up month diagnostic | **Implemented v0.9** | Deterioration interaction p=0.0156; pooled baseline-severity HR should not be treated as constant |
+| Referral→assessment / treatment survival | No patient-level referral timestamps in current open datasets | **Designed only** | Requires MHSDS/Talking Therapies patient-level governed data / TRE-SDE access |
+| Outcome availability / missingness diagnosis | PSYCHE-D month-12 PHQ-9 missing 49.7% in v0.9 baseline cohort | **Implemented** | Absence reason cannot be separated into non-response, attrition or release preprocessing |
+| IPCW for censoring | Pooled logistic next-visit observation model; stabilised/truncated time-varying weights; weighted competing CIF | **Implemented v0.10** | Observation model AUC 0.617; weights mild; relies on observed-history censoring model |
+| Multiple imputation under MAR | 20 stochastic chained-equation imputations with Bayesian regression; observed scores restored; Rubin pooling | **Implemented v0.10** | MAR is an assumption, not established by the release |
+| MNAR sensitivity | Delta adjustment -3 to +6 PHQ-9 points only on originally missing follow-up values | **Implemented v0.10** | Point-estimate improvement/deterioration ordering reverses at +1; +2 yields CI for I-D entirely below 0; does not identify true MNAR mechanism |
+| Tipping-point analysis | Month-12 improvement-minus-deterioration tracked over delta grid | **Implemented v0.10** | Controlled sensitivity statement, not estimate of real unobserved outcomes |
+| Target-trial specification | Eligibility, strategies, time zero, follow-up, outcome and assumptions written for medication initiation | **Implemented design** | Estimation deliberately withheld when exposure cannot be ordered before outcome window |
+| Propensity score matching / weighting | No patient-level treatment effect estimate from current timing-ambiguous PSYCHE-D treatment variables | **Not implemented here** | Use a dataset with defensible treatment assignment time zero and pre-treatment confounders |
+| Difference-in-differences / ITS | Service-capacity use cases specified in Clinical Partners public research agenda | **Designed only** | Requires credible intervention date, comparator / pre-trend structure and outcome series |
+| Instrumental variables | No credible public instrument identified | **Not covered here** | Do not create an IV example without a defensible instrument/exclusion restriction |
+| Uplift / heterogeneous treatment effects | No treatment assignment suitable for an HTE claim in current core data | **Not covered here** | Prefer real randomised/quasi-randomised treatment data before adding HTE |
+| Clinical NLP: NER / negation / temporality | Research pipeline specified, but no clinical-text dataset in this subproject | **Designed only here** | Add only with a real clinical-text question; do not duplicate weaker generic NLP for checkbox coverage |
+| Explainability / SHAP | Current core deterioration model emphasises timing/calibration rather than SHAP | **Partial gap** | Can add feature-attribution/subgroup stability if it improves a decision-relevant prediction question |
+| Fairness / subgroup performance | Baseline sex/race/insurance reviews; psychometric DIF by sex plus exploratory age/race screens | **Partially implemented** | Prediction subgroup calibration/uncertainty could be strengthened |
+| SQL | Not central to this public-file subproject | **Not evidenced here** | Demonstrate elsewhere in application / governed-data workflow rather than fabricate SQL need |
+| Reproducibility | Zenodo MD5, official NHS downloads, CDC XPT source-frequency gates, unit tests, CI, model invariants, evidence artifacts | **Implemented strongly** | Scientific failures are kept separate from software failures |
 
-## Real-data interview case
+## Current strongest Clinical Data Scientist story
 
-**Question:** You have repeated clinical outcome data and want to identify patients at risk of deterioration. What should happen before claiming clinical usefulness?
+The repository now supports a coherent answer to a research-oriented mental-health JD:
 
-**Evidence-backed answer from this repository:**
+1. **Measurement:** validate ordinal questionnaire structure, IRT precision and group comparability before treating a total score as interchangeable across severity/groups.
+2. **Longitudinal outcomes:** define clinically meaningful repeated outcomes and separate description, prediction and causal questions.
+3. **Prediction:** freeze time zero, separate participants, validate later in time, report calibration and uncertainty, and retain deterioration in performance.
+4. **Service estimation:** use count likelihoods and partial pooling for sparse providers, then reject an apparently plausible hierarchy when PPCs miss clinically relevant tails.
+5. **Survival:** treat improvement and deterioration as competing first events on the observed schedule rather than as unrelated binary endpoints.
+6. **Missing follow-up:** show how IPCW, MAR MI and MNAR delta assumptions alter the competing-risk result instead of assuming censoring is harmless.
+7. **Causal discipline:** specify target trials but refuse treatment-effect estimation when the data cannot establish time zero.
 
-1. define the outcome and clinically meaningful change rule from source-supported scores;
-2. reconstruct repeated measures and check shared-time-point consistency;
-3. freeze a prediction timestamp and exclude features collected after it;
-4. split by patient so repeated records do not cross train/test;
-5. move beyond a random hold-out to a forward-time test on different patients;
-6. report calibration, Brier score and average precision as well as ROC-AUC;
-7. quantify uncertainty with participant-level resampling rather than row-level resampling;
-8. examine whether outcome availability changes over follow-up;
-9. assess whether any phenotype or cluster survives reasonable specification changes;
-10. use decision curves only as threshold-value analysis unless a real intervention and harm/benefit trade-off are defined;
-11. define treatment, time zero and causal contrast before any causal model;
-12. refuse causal estimation when exposure timing cannot be ordered safely before the outcome window;
-13. when comparing services with different denominators, model the count likelihood and use partial pooling rather than ranking raw percentages as if their precision were equal;
-14. run posterior predictive checks and retain a model-adequacy failure when the assumed service distribution does not reproduce an important part of the observed data;
-15. when the outcome instrument is ordinal, test the item-level measurement model rather than assuming a total score has equal precision everywhere;
-16. test measurement invariance before treating group differences in a total or latent score as fully comparable.
+## Highest-value remaining gaps
 
-## What v0.6 adds to the interview story
+### 1. Actual causal estimation on defensible assignment data
 
-v0.6 turns the psychometrics part of the role into a real-data analysis. It uses the public NHANES August 2021-August 2023 PHQ-9 item responses rather than total scores or synthetic questionnaire data. A SAS XPORT reader issue initially decoded response code 0 as a tiny positive floating-point value; the workflow detected the resulting implausible 117-person complete-case cohort, restored the near-zero representation to exact zero, and now checks every item's published CDC zero and valid-response counts before accepting a run. The corrected complete nine-item cohort contains 5,455 adults.
+The current project demonstrates causal **discipline**, not a fitted patient-level treatment effect. The next useful addition should use real randomised or credible quasi-experimental mental-health/service data so that treatment assignment, time zero and pre-treatment variables are defensible. One well-designed causal study is higher value than separate PSM/IV/DiD checkbox demos.
 
-The ordinal factor audit shows a dominant first dimension: weighted Cronbach alpha is 0.857, the first polychoric eigenvalue is 5.699, the first/second eigenvalue ratio is 7.87 and the first dimension accounts for 63.3% of the polychoric variance. The project does not convert those diagnostics into a claim of strict unidimensionality.
+### 2. Patient-clinician-service multilevel structure
 
-The next layer is a four-category graded-response model. It converges on 1,616 observed response patterns; discrimination parameters range from 1.53 to 3.41. Test information is strongly severity-dependent: conditional SEM is 1.882 at theta=-2, 0.398 at theta=0, 0.306 at theta=1 and 0.271 at theta=2. This makes the measurement point concrete: the same questionnaire does not estimate the latent construct with equal precision at every point on the severity scale.
+Current public NHS files support provider-level partial pooling but not patient-to-clinician assignment. A real nested longitudinal hierarchy requires governed patient-level service data. Synthetic clinician identifiers should not be used to claim this capability.
 
-The sex invariance screen gives a useful limiting result rather than a clean pass. A multi-group GRM allows the female latent mean and variance to differ from the male reference distribution, then frees one item's discrimination and three thresholds while the other eight items act as anchors. After BH-FDR correction, six items are flagged: DPQ010, DPQ030, DPQ040, DPQ050, DPQ060 and DPQ090. The repository labels these as possible DIF signals, not proof that the items are biased. The next scientific checks would be anchor purification/sensitivity, item-content review, full survey-design inference and replication in the target clinical population.
+### 3. Real referral-pathway event data
 
-NHANES is cross-sectional in this release, so v0.6 does not claim observed longitudinal reliable change. It uses test information only to show a measurement-error readiness calculation: a two-independent-measurement 95% latent-score difference is about 1.10 at theta=0, 0.85 at theta=1 and 0.75 at theta=2. Repeated item administrations would be needed to estimate actual within-person reliable change and longitudinal invariance.
+Clinical Partners-style referral→triage→assessment→treatment time requires patient-level operational timestamps. Public MHSDS/Talking Therapies catalogues show that these concepts exist, but patient-level records are normally accessed through governed NHS environments rather than direct download.
 
-## What v0.5 adds to the interview story
+### 4. Prediction fairness / interpretability
 
-v0.5 turns the JD phrase "partial pooling across services, clinicians and cohorts" into a real-data service-level example without claiming access to Clinical Partners data. The June 2026 NHS Monthly Activity file gives both the number finishing treatment and the number showing reliable improvement, so the analysis uses a Binomial likelihood rather than treating published percentages as equally precise observations.
-
-For provider j,
-
-`y_j ~ Binomial(n_j, theta_j)`
-
-and
-
-`theta_j ~ Beta(alpha, beta)`.
-
-The population mean and concentration are estimated jointly from all providers. Small-denominator observations therefore receive stronger shrinkage and wider posterior intervals. In the real run, a 5/5 provider has a raw rate of 100% but a posterior mean of about 69.6%, while large samples remain much closer to their observed rates. The tested broader hyperprior changes provider posterior means by at most about 0.10 percentage points.
-
-The next check changes the conclusion. In 2,000 posterior predictive provider panels, the model reproduces the broad spread reasonably but does not reproduce the lower tail: the observed data contain 7 providers at or below 50% reliable improvement, while the model's 97.5% predictive upper bound is 4. The model-adequacy gate therefore fails. The correct next step is to investigate service composition, case mix, time effects or a richer hierarchy, not to present the simple Beta-Binomial model as a final service model.
-
-That negative result strengthens the interview story: the model demonstrates why partial pooling matters, while the PPC demonstrates why partial pooling alone is not enough.
-
-## What v0.4 added to the interview story
-
-The strongest v0.4 evidence is not a higher score. The stricter forward-time test reduces AUC from 0.620 to 0.593, trajectory agreement falls as low as ARI 0.389 under reasonable specification changes, and the medication target-trial estimate is withheld because treatment timing is not established at time zero.
-
-Those limiting findings show the difference between running statistical methods and deciding whether the resulting evidence is strong enough for a clinical claim.
-
-## Clinical Partners-specific public study design
-
-`CLINICAL_PARTNERS_PUBLIC_RESEARCH_AGENDA.md` uses only current public Clinical Partners service information to define candidate studies for interview discussion: patient-clinician-service partial pooling, pathway survival/competing risks, psychometrics, service-capacity quasi-experimental design and clinical NLP. It explicitly separates public pathway facts from analyses that would require governed patient-level data.
-
-## Critical appraisal link to Paul Wallang's prior work
-
-The DBT service evaluation by Webb, Girardi, Fox and Wallang used routinely collected clinical records with baseline, 6-month and 12-month outcomes and ANOVA/non-parametric comparisons. The published paper states that outcome data were not available for the whole sample and that improvements could not be attributed directly to DBT. Its patient-level data are confidential.
-
-The useful interview position is not that the earlier service evaluation is incorrect. It is that a modern analysis of the same class of routine-care question can add explicit repeated-measures models, outcome-availability analysis, clinically meaningful individual change, prediction-time control, forward-time validation, calibration uncertainty, phenotype stability tests, a target-trial time-zero gate, denominator-aware Bayesian partial pooling, posterior predictive model checks and item-level psychometric measurement checks. This repository demonstrates those additions on open data without claiming access to private Clinical Partners or St Andrew's Healthcare records.
+If application evidence still needs strengthening after causal work, extend the existing strict t0 model with subgroup calibration/bootstrapped differences and feature-attribution stability rather than adding a disconnected explainability demo.
