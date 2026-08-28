@@ -1,64 +1,30 @@
 # Clinical Partners public-data research agenda
 
-This note converts public Clinical Partners service information into candidate statistical studies for interview discussion. It is a study-design document, not an analysis of Clinical Partners patient data. No private Clinical Partners data are used or inferred.
+This note translates public Clinical Partners service information into candidate statistical studies and states which parts of the methodology are already demonstrated on real public substitute data. It is **not** an analysis of Clinical Partners patient data. No private Clinical Partners data are used or inferred.
 
-Public source pages checked in August 2026:
+Public Clinical Partners pages reviewed in August 2026 describe NHS pathways that include referral/triage, booking, pre-assessment questionnaires, diagnostic assessment, feedback/reporting and, where commissioned, medication initiation/titration. Publicly listed instruments include HADS and ASRS for adults and R-CADS, SDQ and Conners measures for children. These pathway facts motivate the study designs below; exact internal states, timestamps, instruments, clinician assignment rules and governance would require confirmation inside the organisation.
 
-- NHS service pathways: https://www.clinical-partners.co.uk/working-with-the-nhs/what-we-can-offer/current-nhs-pathways/
-- NHS working-with-us resources: https://www.clinical-partners.co.uk/working-with-the-nhs/
-- Right to Choose waiting-time/service updates: https://www.clinical-partners.co.uk/nhs-right-to-choose-assessments-and-medication/nhs-right-to-choose-wait-times-and-updates/
-- Healthcare Director Dr Paul Wallang: https://www.clinical-partners.co.uk/about-us/leadership-team/dr-paul-wallang/
+## What the public-data portfolio already demonstrates
 
-The public pathway page documents a sequence from referral/triage through booking, pre-assessment questionnaires, diagnostic assessment, feedback/reporting and, where commissioned, medication initiation and repeated titration. It also lists instruments including HADS and ASRS for adults and R-CADS, SDQ and Conners measures for children. These observations motivate the study designs below; the actual data model, endpoints and governance rules would need confirmation with Clinical Informatics and clinical leadership.
+The repository deliberately separates method evidence from target-population claims.
 
-## Study 1: stable outcome estimates across clinicians and services
+| Clinical Partners-style question | Public substitute data | Implemented evidence |
+|---|---|---|
+| Repeated outcome change / deterioration | PSYCHE-D | longitudinal PHQ-9, mixed-effects description, strict t0 prediction, temporal validation, competing first-event analysis |
+| Incomplete follow-up | PSYCHE-D | IPCW, 20-fold MAR multiple imputation, Rubin pooling, MNAR delta/tipping-point sensitivity |
+| Sparse service outcome estimates | NHS Talking Therapies aggregate provider counts | Bayesian partial pooling, dynamic provider×month hierarchy, prior sensitivity, posterior predictive checks |
+| Questionnaire measurement | NHANES PHQ-9 item responses | polychoric factor audit, graded-response IRT, test information, sex DIF, iterative anchor purification/sensitivity |
+| Causal study design | PSYCHE-D + public service scenarios | target-trial specification and explicit refusal to estimate when treatment time zero is unsafe |
 
-### Question
+The portfolio does **not** claim that these substitute datasets reproduce Clinical Partners patient mix or operational data.
 
-How much does patient outcome vary across services or clinicians after accounting for baseline case mix, and how uncertain are estimates for small groups?
+# Study 1 — referral-to-assessment / treatment pathway
 
-### Minimum data
+## Question
 
-- patient identifier;
-- service and clinician identifiers with valid assignment dates;
-- outcome instrument and item/total score;
-- assessment date;
-- baseline severity and major prespecified case-mix variables;
-- treatment/pathway stage;
-- completion/censoring reason where available.
+Where does waiting time accumulate, which transitions are slow, and which patients are at risk of remaining unassessed or untreated for a long period?
 
-### Model
-
-For a repeated continuous outcome `y_ijst` for patient `i`, clinician `j`, service `s` and time `t`:
-
-```text
-y_ijst ~ Normal(mu_ijst, sigma)
-mu_ijst = alpha + f(t) + X_i beta + b_i + u_j + v_s
-b_i ~ Normal(0, tau_patient)
-u_j ~ Normal(0, tau_clinician)
-v_s ~ Normal(0, tau_service)
-```
-
-The service and clinician effects use partial pooling. Small groups therefore receive more shrinkage and wider posterior uncertainty than large groups. The public NHS Beta-Binomial analysis in `v05_bayesian_partial_pooling.py` is a count-level demonstration of this same statistical principle; it is not a substitute for the patient-level model above.
-
-### Checks before interpretation
-
-- inspect clinician/service sample sizes and assignment rules;
-- adjust only for prespecified case-mix variables measured before the outcome window;
-- test whether residual variance and trajectories differ materially by service;
-- report posterior intervals rather than a raw league table;
-- run prior sensitivity and posterior predictive checks;
-- do not interpret clinician effects causally unless assignment and confounding assumptions support that claim.
-
-## Study 2: referral-to-assessment and referral-to-treatment time
-
-### Question
-
-Where does waiting time accumulate, which pathway transitions are slow, and which patients are at higher risk of remaining unassessed or untreated for a long period?
-
-### Public pathway state structure
-
-A useful starting multi-state representation is:
+A useful starting state structure is:
 
 ```text
 referral received
@@ -69,77 +35,150 @@ referral received
   -> feedback/report
   -> medication initiation, if relevant
   -> repeated titration
-  -> stabilised/ongoing management
+  -> stabilised / ongoing management
 ```
 
-The actual state set should be defined from operational data rather than forced to match the public web page.
+The actual state set must be derived from internal operational data rather than forced to match a public website.
 
-### Analysis
+## Minimum internal/TRE data
 
-For a simple first endpoint, define time zero as an accepted referral and event time as first diagnostic assessment. Patients still waiting at the data cut are right-censored. If there are several mutually exclusive pathway exits, define those exits from real reason codes and use a competing-risk or multi-state analysis rather than treating every exit as non-informative censoring.
+- patient identifier;
+- referral received timestamp;
+- triage and booking timestamps;
+- assessment / feedback / treatment timestamps;
+- pathway/service/team;
+- closure, rejection, transfer, withdrawal and discharge reason codes;
+- baseline patient characteristics measured before time zero;
+- censoring/data-cut date.
 
-Possible models include cause-specific Cox models, flexible parametric survival models, or Bayesian multilevel survival models with service-level effects. The model choice comes after checking the event-time process, ties, proportional-hazards assumptions and service structure.
+## Analysis
 
-### Capacity changes as time-varying context
+For a first endpoint, time zero would be accepted referral and event time first diagnostic assessment. Patients still waiting at data cut are right-censored. If mutually exclusive pathway exits exist, those exits should be modelled as competing risks or as a multi-state process rather than automatically treated as non-informative censoring.
 
-Clinical Partners publicly reported on 14 May 2026 that Greater Manchester ICB had reached the funded appointment volume for that financial year, so new booking dates and new ADHD medication titration appointments could not be scheduled until further funding, while referrals could still be accepted onto the waiting list.
+Candidate methods:
 
-This creates a useful research question about service capacity, but it is **not automatically a random natural experiment**. If patient-level and ICB-level timestamps were available, possible designs include:
+- Kaplan-Meier only when one event/censoring process is appropriate;
+- cause-specific discrete/continuous-time hazards;
+- cumulative incidence for competing exits;
+- flexible parametric survival where appropriate;
+- multi-state models for pathway transitions;
+- hierarchical survival models when service/team clustering matters.
 
-- interrupted time-series analysis around a clearly dated capacity change;
-- difference-in-differences only if a credible comparison ICB and pre-trend support exist;
-- survival models with time-varying capacity indicators;
-- queue/pathway analyses separating referral inflow from appointment capacity.
+### Existing transferable evidence
 
-Any causal interpretation would require checking concurrent policy changes, referral composition, spillovers between ICBs, seasonality and changes in data recording.
+v0.9 already implements a discrete competing-first-event analysis on real longitudinal mental-health data: first reliable PHQ-9 improvement versus first reliable deterioration, with cumulative incidence, participant bootstrap and cause-specific complementary-log-log models. That demonstrates the survival/competing-risk mechanics without pretending that PSYCHE-D contains referral events.
 
-## Study 3: psychometric validity and clinically meaningful change
+# Study 2 — incomplete follow-up and outcome availability
 
-### Public measurement context
+## Question
 
-The Clinical Partners public pathway page lists several instruments, including:
+How sensitive are conclusions about clinical outcomes to patients whose later questionnaires are not observed?
 
-- adult ADHD: AQ-10 self-report, ASRS-18 self-report/informant and HADS;
-- child/adolescent ADHD: Conners measures, SDQ and R-CADS;
-- child/adolescent autism: AQ-10, Conners-4PS, SDQ and R-CADS;
-- adult autism: AQ-10, ASRS-6 and HADS.
+Internal data should distinguish, where possible:
 
-### Questions
+- questionnaire non-response;
+- disengagement;
+- discharge after improvement;
+- transfer;
+- pathway closure;
+- administrative data loss.
 
-- Do items support the intended latent construct in this service population?
-- Are item thresholds/discrimination similar across relevant patient groups?
-- Is longitudinal score change comparable over time, or does measurement behaviour itself change?
-- What level of change is larger than expected measurement error?
-- Does a threshold used for clinical decision support retain acceptable sensitivity/specificity in the local population?
+These mechanisms should not be collapsed automatically into one generic missingness process.
 
-### Candidate models
+## Analysis sequence
 
-For ordered item responses, a graded-response item response theory model is one option:
+1. describe availability by time, service and patient characteristics;
+2. model observed follow-up / censoring using variables measured before the missing visit;
+3. use IPCW if the target estimand is a time-to-event or longitudinal observed-history analysis;
+4. run MAR multiple imputation using outcomes and auxiliary predictors;
+5. add controlled MNAR sensitivity, for example delta-adjusted pattern-mixture assumptions;
+6. state the point or interval where a clinical conclusion changes.
+
+### Existing transferable evidence
+
+v0.10 demonstrates this sequence on PSYCHE-D. In its month-0 cohort, PHQ-9 missingness reaches 49.7% by month 12. IPCW changes month-12 competing cumulative incidence only modestly, while 20-fold MAR MI leaves a small uncertain improvement-minus-deterioration difference. A +1 PHQ-9-point MNAR shift among originally missing follow-up values reverses the point-estimate ordering; at +2 points the pooled interval for improvement-minus-deterioration is entirely below zero. This is reported as assumption sensitivity, not as the true missing-data mechanism.
+
+# Study 3 — patient, clinician and service variation
+
+## Question
+
+How much does outcome vary across patients, clinicians and services after accounting for baseline case mix, and how uncertain are estimates for small groups?
+
+With genuine internal hierarchy, a repeated continuous outcome could be modelled as:
+
+```text
+y_ijst = alpha + f(t) + X_i beta + b_i + u_j + v_s + epsilon_ijst
+
+b_i ~ Normal(0, tau_patient)
+u_j ~ Normal(0, tau_clinician)
+v_s ~ Normal(0, tau_service)
+```
+
+For binary/reliable-change outcomes, use an appropriate GLMM or Bayesian likelihood rather than treating percentages as Gaussian observations.
+
+## Checks before interpretation
+
+- verify clinician/service assignment dates;
+- inspect denominator distribution and switching between clinicians/services;
+- prespecify case-mix adjustment;
+- use posterior intervals / shrinkage rather than raw league tables;
+- run prior sensitivity and posterior predictive checks;
+- do not interpret random effects as causal clinician quality effects.
+
+### Existing transferable evidence
+
+v0.5 demonstrates denominator-aware Bayesian partial pooling on real NHS provider counts. v0.8 extends this to January-June 2026 provider×month data with a persistent provider effect. The dynamic model captures broad January-to-June provider persistence but still under-predicts extreme provider outcomes. v0.8.1 compares Normal and prespecified Student-t provider-effect distributions; heavy tails improve fit only marginally and do not resolve the lower-tail failure. The correct next step is measured service/case-mix structure, not further tail tuning.
+
+A **patient→clinician→service** model is intentionally not faked because public NHS aggregate files do not contain the required assignment hierarchy.
+
+# Study 4 — psychometric validity and clinically meaningful change
+
+## Questions
+
+- Do items support the intended latent construct in the local service population?
+- Where along severity is the instrument precise or imprecise?
+- Are item thresholds/discriminations comparable across relevant groups?
+- Is score change larger than expected measurement error?
+- Is measurement behaviour stable across time, modality and pathway stage?
+
+For ordered responses a graded-response model is one option:
 
 ```text
 logit P(Y_iq >= k) = a_q * (theta_i - b_qk)
 ```
 
-where `theta_i` is latent severity, `a_q` is item discrimination and `b_qk` are ordered item thresholds.
+Measurement invariance / DIF should be assessed before assuming latent or total-score group comparisons are directly comparable.
 
-Before reporting group comparisons, test measurement invariance or differential item functioning where sample sizes permit. Reliable change and minimal clinically important difference should be treated as separate questions: statistical reliability of change does not by itself establish clinical importance.
+### Existing transferable evidence
 
-### Data boundary
+v0.6-v0.7 now implement the item-level component on real NHANES PHQ-9 responses:
 
-The current repository has PHQ-9 total-score longitudinal evidence but does not yet claim an item-level IRT analysis. A real IRT extension requires item-level responses from a suitable public dataset or governed Clinical Partners data.
+- source-format / item-frequency validation;
+- weighted polychoric factor diagnostics;
+- four-category graded-response IRT;
+- conditional test information and SEM;
+- multi-group sex-DIF screen;
+- iterative anchor purification;
+- leave-one-anchor-out sensitivity;
+- weighting sensitivity.
 
-## Study 4: treatment or pathway-change causal evaluation
+The purified sex-DIF signal is limited to DPQ030, DPQ040 and DPQ050, each stable in all leave-one-anchor-out runs. This is a public-population non-invariance signal, not a claim about Clinical Partners instruments or proof of item bias.
 
-### Question
+Longitudinal item-level reliable change and time invariance still require repeated item administrations.
 
-Does a specific pathway or treatment change improve clinical outcome, time to treatment, completion or disengagement compared with the relevant counterfactual?
+# Study 5 — treatment or pathway-change causal evaluation
 
-### Target-trial first
+## Question
 
-Before selecting propensity scores, difference-in-differences, instrumental variables or heterogeneous treatment-effect models, specify:
+Does a specific treatment, pathway redesign, booking process, commissioning change or capacity intervention improve clinical outcomes, time to treatment, completion or disengagement relative to the relevant counterfactual?
+
+## Target-trial first
+
+Before choosing propensity scores, DiD, IV or heterogeneous-treatment-effect methods, specify:
 
 - eligibility;
-- treatment strategies;
+- strategies/intervention;
+- assignment or exposure mechanism;
 - time zero;
 - follow-up;
 - outcome;
@@ -148,54 +187,72 @@ Before selecting propensity scores, difference-in-differences, instrumental vari
 - censoring/intercurrent events;
 - analysis population.
 
-The v0.4 PSYCHE-D example in this repository deliberately withholds a medication effect because the public treatment-change variable cannot be aligned safely to time zero. The same standard should apply to service data.
+The PSYCHE-D medication example deliberately withholds an effect estimate because the public `med_start` feature cannot be aligned safely to interval time zero. That is a study-validity result, not a missing software feature.
 
-### Possible service-level quasi-experimental work
+## Possible service-level quasi-experimental designs
 
-A staged operational rollout, commissioning change or capacity intervention could support an interrupted time-series or difference-in-differences design if timing, comparison groups and pre-trends are credible. A model should not be called causal just because it includes a propensity score or a treatment indicator.
+A clearly timed rollout or commissioning change could support:
 
-## Study 5: free-text clinical information
+- interrupted time series with level/slope changes and seasonality checks;
+- difference-in-differences only with a credible comparator and pre-trends;
+- event-study coefficients for pre/post dynamics;
+- survival models with time-varying capacity exposure;
+- target-trial emulation if patient-level treatment assignment/confounding data are available.
 
-The job description refers to assessment letters and clinical free text. A useful pipeline would begin with a narrow clinical question rather than generic embedding generation.
+A method should not be called causal merely because it includes a treatment indicator or propensity score.
 
-For example:
+### Remaining portfolio gap
+
+The next useful causal portfolio addition should use **real data with defensible assignment and time zero**. One credible treatment-effect study is more valuable than separate PSM, IV, DiD and uplift checkbox demonstrations.
+
+# Study 6 — free-text clinical information
+
+A Clinical Partners free-text pipeline should start with a narrow clinical question, not generic embeddings:
 
 ```text
-assessment/report text
+assessment / report text
   -> entity extraction
   -> negation
   -> temporality
-  -> experiencer/source
-  -> clinically reviewed structured variables
+  -> experiencer / source
+  -> clinician-reviewed structured variables
   -> downstream study
 ```
 
-A statement such as a past or negated risk event must not be converted into a current positive event merely because a keyword is present. Annotation guidance, clinician review, inter-rater agreement, error analysis and subgroup performance should come before production use.
+Past, negated or family-history statements must not become current positive patient events merely because a keyword is present. Annotation guidance, clinician review, inter-rater agreement, error analysis and subgroup performance should precede production use.
 
-## First 90-day scientific sequence I would propose in interview
+This subproject keeps NLP as a designed component unless a suitable clinical-text dataset is added; the core public-data evidence here focuses on statistical outcome research rather than duplicating a disconnected generic NLP demo.
 
-### 1. Reconstruct and audit the pathway
+# First 90-day scientific sequence
 
-Create a patient-level event table and repeated-outcome table with explicit timestamps, provenance and reason codes. Quantify missingness, duplicate/inconsistent events, state-transition validity and instrument completion.
+## 1. Reconstruct and audit the pathway
 
-### 2. Choose one decision-relevant outcome study
+Create patient-level event and repeated-outcome tables with explicit timestamps, provenance, reason codes, state-transition validity and instrument completion.
 
-Start with a question that has a defensible endpoint and enough data, such as referral-to-assessment time or repeated outcome change. Write a short statistical analysis plan before inspecting subgroup results.
+## 2. Choose one decision-relevant primary study
 
-### 3. Add multilevel uncertainty
+A defensible first study could be referral-to-assessment time or repeated clinical outcome change. Write the estimand and analysis plan before subgroup fishing.
 
-Estimate service/clinician variation with partial pooling and case-mix adjustment where the hierarchy and sample sizes support it. Use posterior predictive checks and sensitivity analyses.
+## 3. Make missingness part of the primary analysis
 
-### 4. Separate prediction from causal inference
+Quantify observation/closure mechanisms and prespecify IPCW/MI/MNAR sensitivity where follow-up is incomplete.
 
-A risk model for disengagement and a causal estimate of a pathway change answer different questions. Define time zero and counterfactual logic before causal estimation.
+## 4. Add multilevel uncertainty
 
-### 5. Build reusable scientific components
+Estimate service/clinician variation with partial pooling only when the hierarchy and case-mix variables are genuine. Use posterior predictive checks to decide whether the hierarchy is adequate.
 
-Turn the validated pieces into version-controlled functions for cohort construction, endpoint derivation, missingness summaries, multilevel models, calibration, subgroup review and reproducible reports.
+## 5. Separate prediction from causal evaluation
+
+A deterioration-risk model and an effect of a pathway redesign answer different questions. Prediction requires calibration/transport validation; causal inference requires counterfactual identification and defensible time zero.
+
+## 6. Validate the measurement layer
+
+Where questionnaires drive endpoints or decisions, check item structure, precision and invariance before treating score differences as directly comparable.
+
+## 7. Build reusable scientific components
+
+Version cohort construction, endpoint derivation, survival/risk-set logic, missingness summaries, hierarchical models, calibration, psychometrics, subgroup reviews and reproducible reports.
 
 ## Interview boundary statement
 
-A safe concise statement is:
-
-> I used public Clinical Partners pathway information to decide which research questions would be useful, and official NHS/public patient-level datasets to demonstrate the statistical methods. I would not claim that the public data reproduce Clinical Partners case mix or that these are the organisation's current models. The value of the exercise is the study design: clear time zero, clinically defined outcomes, multilevel uncertainty, explicit missing-data limits and a separation between prediction and causal claims.
+> I used public Clinical Partners pathway information to decide which research questions would be useful, and real public mental-health/NHS datasets to demonstrate the statistical methods. I would not claim that those datasets reproduce Clinical Partners case mix or operations. Where the open data support a method, I implemented it and stress-tested it; where referral timestamps, clinician assignments or treatment time zero are unavailable, I keep the work at the study-design level rather than synthesising the missing structure.
