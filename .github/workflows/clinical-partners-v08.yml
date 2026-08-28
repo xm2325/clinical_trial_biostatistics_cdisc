@@ -1,0 +1,97 @@
+name: Clinical Partners v0.8 dynamic Bayesian service hierarchy
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v08.yml'
+  workflow_dispatch:
+
+jobs:
+  dynamic-bayesian-provider-month:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.8 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v08_nhs_dynamic_bayesian.py
+
+      - name: Download six official NHS Talking Therapies monthly activity files
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          python v08_download_nhs_activity.py \
+            --out ../../data/nhs_talking_therapies/v08
+
+      - name: Fit dynamic Bayesian provider-month hierarchy
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          mkdir -p ../../outputs/clinical_partners_outcomes
+          python v08_nhs_dynamic_bayesian.py \
+            --data-dir ../../data/nhs_talking_therapies/v08 \
+            --out ../../outputs/clinical_partners_outcomes \
+            --min-months 4 \
+            --posterior-draws 2500 \
+            --ppc-replicates 600
+
+      - name: Validate v0.8 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v08_dynamic_bayesian_summary.json').read_text())
+          months = pd.read_csv(out / 'v08_month_posterior_summary.csv')
+          panel = pd.read_csv(out / 'v08_provider_month_counts.csv')
+          provider = pd.read_csv(out / 'v08_provider_random_effects.csv')
+          pooled = pd.read_csv(out / 'v08_provider_month_partial_pooling.csv')
+          ppc = pd.read_csv(out / 'v08_dynamic_ppc.csv')
+
+          assert summary['version'] == '0.8', summary
+          assert summary['data']['n_months'] == 6, summary['data']
+          assert summary['data']['providers'] >= 100, summary['data']
+          assert summary['data']['provider_month_rows'] >= 550, summary['data']
+          assert summary['model']['fit_success'], summary['model']
+          assert summary['model']['tau_mean'] > 0, summary['model']
+          assert len(months) == 6 and months['month'].nunique() == 6, months
+          assert months['population_rate_mean'].between(0, 1).all(), months
+          assert months['population_rate_q025'].between(0, 1).all(), months
+          assert months['population_rate_q975'].between(0, 1).all(), months
+          assert (months['population_rate_q025'] <= months['population_rate_mean']).all(), months
+          assert (months['population_rate_mean'] <= months['population_rate_q975']).all(), months
+          assert panel['month'].nunique() == 6, panel['month'].value_counts()
+          assert provider['provider_code'].nunique() == summary['data']['providers'], provider
+          assert len(pooled) == len(panel), (len(pooled), len(panel))
+          assert pooled['posterior_rate'].between(0, 1).all(), pooled
+          assert set(ppc['metric']) == {'low_tail_count_le_50','high_tail_count_ge_85','provider_rate_sd'}, ppc
+          assert len(ppc) == 18, ppc
+          assert ppc['two_sided_bayesian_p'].between(0, 1).all(), ppc
+          assert summary['provider_rate_persistence_ppc']['common_providers'] >= 80, summary
+
+          print(json.dumps(summary, indent=2))
+          print(months.to_string(index=False))
+          print(ppc.to_string(index=False))
+          PY
+
+      - name: Upload v0.8 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v08-dynamic-bayesian-service
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
