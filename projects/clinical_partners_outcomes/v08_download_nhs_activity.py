@@ -17,10 +17,28 @@ PUBLICATIONS = {
     "2026-06": "https://digital.nhs.uk/data-and-information/publications/statistical/nhs-talking-therapies-monthly-statistics-including-employment-advisors/performance-june-2026-and-quarter-1-2026-27-data",
 }
 
+# Verified against the resource links on the NHS England publication pages.
+# Publication-page HTML returns HTTP 403 to urllib on GitHub-hosted runners, while
+# the public files.digital.nhs.uk resources themselves are directly downloadable.
+DIRECT_CSV_URLS = {
+    "2026-01": "https://files.digital.nhs.uk/D3/4FFE1D/nhstalkingtherapies_month_jan_2026_activity_performance.csv",
+    "2026-02": "https://files.digital.nhs.uk/9B/280D3D/nhstalkingtherapies_month_feb_2026_activity_performance.csv",
+    "2026-03": "https://files.digital.nhs.uk/C5/C280AE/nhstalkingtherapies_month_mar_2026_activity_performance.csv",
+    "2026-04": "https://files.digital.nhs.uk/23/8B45A4/nhstalkingtherapies_month_apr_2026_activity_performance.csv",
+    "2026-05": "https://files.digital.nhs.uk/50/96081C/nhstalkingtherapies_month_may_2026_activity_performance.csv",
+    "2026-06": "https://files.digital.nhs.uk/4D/BDC3D4/nhstalkingtherapies_month_jun_2026_activity_performance.csv",
+}
+
 USER_AGENT = "clinical-partners-public-data-audit/0.8 (+github.com/xm2325/clinical_trial_biostatistics_cdisc)"
 
 
 class LinkCollector(HTMLParser):
+    """Small parser kept as a unit-tested provenance helper.
+
+    The real-data CI uses the verified direct URLs above because NHS publication
+    pages currently reject urllib requests from GitHub-hosted runners with 403.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.current_href: str | None = None
@@ -84,9 +102,12 @@ def download_file(url: str, destination: Path) -> int:
 
 def main(outdir: Path) -> None:
     outdir.mkdir(parents=True, exist_ok=True)
+    if set(PUBLICATIONS) != set(DIRECT_CSV_URLS):
+        raise RuntimeError("Publication and direct-file month keys are inconsistent")
     manifest: list[dict] = []
-    for month, publication_url in PUBLICATIONS.items():
-        csv_url = resolve_monthly_activity_csv(publication_url)
+    for month in sorted(PUBLICATIONS):
+        publication_url = PUBLICATIONS[month]
+        csv_url = DIRECT_CSV_URLS[month]
         destination = outdir / f"monthly_activity_{month}.csv"
         size = download_file(csv_url, destination)
         manifest.append(
