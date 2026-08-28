@@ -1,0 +1,127 @@
+name: Clinical Partners v0.10 missingness MAR MNAR sensitivity
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v10.yml'
+  workflow_dispatch:
+
+jobs:
+  missingness-sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.10 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v10_missingness_mnar.py
+
+      - name: Download verified public PSYCHE-D release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/psyche_d
+          primary='https://zenodo.org/records/5085146/files/anon_processed_df_parquet?download=1'
+          fallback='https://zenodo.org/api/records/5085146/files/anon_processed_df_parquet/content'
+          if ! curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$primary" -o data/psyche_d/anon_processed_df.parquet; then
+            curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$fallback" -o data/psyche_d/anon_processed_df.parquet
+          fi
+          echo 'a6b21ffbb5fba0600ed494c6ab299cc4  data/psyche_d/anon_processed_df.parquet' | md5sum -c -
+
+      - name: Run v0.10 IPCW MAR MI and MNAR delta sensitivity
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          mkdir -p ../../outputs/clinical_partners_outcomes
+          python v10_missingness_mnar.py \
+            --data ../../data/psyche_d/anon_processed_df.parquet \
+            --out ../../outputs/clinical_partners_outcomes \
+            --n-imputations 20
+
+      - name: Validate v0.10 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v10_missingness_mnar_summary.json').read_text())
+          missing = pd.read_csv(out / 'v10_missingness_by_month.csv')
+          weights = pd.read_csv(out / 'v10_ipcw_weights.csv')
+          primary = pd.read_csv(out / 'v10_primary_cif.csv')
+          ipcw = pd.read_csv(out / 'v10_ipcw_cif.csv')
+          mi = pd.read_csv(out / 'v10_mi_mnar_sensitivity.csv')
+
+          assert summary['version'] == '0.10', summary
+          assert summary['source_rows'] == 35694, summary
+          assert summary['baseline_cohort_n'] == 3244, summary
+          assert summary['measurement_conflicts'] == 0, summary
+          assert summary['n_imputations'] == 20, summary
+          assert summary['delta_grid'] == [-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,6.0], summary
+          assert summary['v09_first_missing_visit_censor_n'] == 1176, summary
+          assert len(missing) == 5 and list(missing['month']) == [0,3,6,9,12], missing
+          assert missing.loc[missing['month'].eq(0), 'missing'].iloc[0] == 0, missing
+          assert missing['missing_rate'].between(0,1).all(), missing
+
+          # Must exactly reproduce the v0.9 observed-data primary estimand before
+          # introducing any missingness correction.
+          assert np.isclose(summary['primary_month12']['cif_improvement'], 0.21509920040455788, atol=1e-10), summary
+          assert np.isclose(summary['primary_month12']['cif_deterioration'], 0.18524163626786883, atol=1e-10), summary
+          assert len(primary) == 4 and list(primary['month']) == [3,6,9,12], primary
+          assert len(ipcw) == 4 and list(ipcw['month']) == [3,6,9,12], ipcw
+          for frame in (primary, ipcw):
+              total = frame['survival_no_reliable_change'] + frame['cif_improvement'] + frame['cif_deterioration']
+              assert np.allclose(total, 1.0, atol=1e-10), frame
+              assert frame['cif_improvement'].between(0,1).all(), frame
+              assert frame['cif_deterioration'].between(0,1).all(), frame
+
+          assert len(weights) == 8115, len(weights)
+          assert weights['ipcw_weight'].notna().all(), weights
+          assert (weights['ipcw_weight'] > 0).all(), weights
+          assert np.isfinite(weights['ipcw_weight']).all(), weights
+          assert 0 <= summary['ipcw']['roc_auc'] <= 1, summary['ipcw']
+          assert 0 <= summary['ipcw']['brier'] <= 1, summary['ipcw']
+          assert 0 <= summary['ipcw']['fraction_weights_truncated'] <= 1, summary['ipcw']
+
+          assert len(mi) == 9 * 4 * 3, len(mi)
+          assert set(mi['n_imputations']) == {20}, mi
+          assert mi['estimate'].notna().all(), mi
+          assert mi['se'].notna().all() and (mi['se'] >= 0).all(), mi
+          assert mi['fraction_missing_information'].between(0,1).all(), mi
+          probability = mi['estimand'].isin(['cif_improvement','cif_deterioration'])
+          assert mi.loc[probability, 'estimate'].between(0,1).all(), mi
+          assert mi.loc[probability, 'ci95_low'].between(0,1).all(), mi
+          assert mi.loc[probability, 'ci95_high'].between(0,1).all(), mi
+          mar = mi[mi['delta_points_added_to_missing_phq9'].eq(0)]
+          assert len(mar) == 12, mar
+
+          print(json.dumps(summary, indent=2))
+          print(missing.to_string(index=False))
+          print('IPCW CIF:')
+          print(ipcw.to_string(index=False))
+          print('Month-12 delta sensitivity:')
+          print(mi[mi['month'].eq(12)].to_string(index=False))
+          PY
+
+      - name: Upload v0.10 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v10-missingness-mnar
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
