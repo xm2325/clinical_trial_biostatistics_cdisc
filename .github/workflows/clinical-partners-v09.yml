@@ -70,10 +70,14 @@ jobs:
           assert summary['version'] == '0.9', summary
           assert summary['source_rows'] == 35694, summary
           assert summary['source_participants'] == 4948, summary
-          assert summary['baseline_cohort_n'] >= 4500, summary
-          assert summary['person_period_rows'] >= 5000, summary
-          assert summary['first_improvement_events'] >= 300, summary
-          assert summary['first_deterioration_events'] >= 200, summary
+          # The verified PSYCHE-D release has 3,244 participants with an observed
+          # month-0 PHQ-9 score under the score reconstruction used by v0.9.
+          assert summary['baseline_cohort_n'] == 3244, summary
+          assert summary['person_period_rows'] == 8115, summary
+          assert summary['first_improvement_events'] == 597, summary
+          assert summary['first_deterioration_events'] == 487, summary
+          assert summary['first_missing_visit_censor_n'] == 1176, summary
+          assert summary['measurement_conflicts'] == 0, summary
           assert summary['bootstrap_replicates'] == 400, summary
           assert summary['improvement_model']['converged'], summary['improvement_model']
           assert summary['deterioration_model']['converged'], summary['deterioration_model']
