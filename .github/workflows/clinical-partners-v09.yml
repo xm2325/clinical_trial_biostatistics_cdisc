@@ -1,0 +1,103 @@
+name: Clinical Partners v0.9 competing-risks survival
+
+on:
+  push:
+    branches:
+      - 'feature/clinical-partners-outcomes-v0.1'
+    paths:
+      - 'projects/clinical_partners_outcomes/**'
+      - '.github/workflows/clinical-partners-v09.yml'
+  workflow_dispatch:
+
+jobs:
+  competing-risks-survival:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project dependencies
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pip install -r requirements.txt
+
+      - name: Run v0.9 unit tests
+        working-directory: projects/clinical_partners_outcomes
+        run: python -m pytest -q test_v09_competing_risks_survival.py
+
+      - name: Download verified public PSYCHE-D release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/psyche_d
+          primary='https://zenodo.org/records/5085146/files/anon_processed_df_parquet?download=1'
+          fallback='https://zenodo.org/api/records/5085146/files/anon_processed_df_parquet/content'
+          if ! curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$primary" -o data/psyche_d/anon_processed_df.parquet; then
+            curl -fL --retry 10 --retry-delay 3 --retry-all-errors "$fallback" -o data/psyche_d/anon_processed_df.parquet
+          fi
+          echo 'a6b21ffbb5fba0600ed494c6ab299cc4  data/psyche_d/anon_processed_df.parquet' | md5sum -c -
+
+      - name: Run v0.9 first reliable change survival analysis
+        working-directory: projects/clinical_partners_outcomes
+        run: |
+          mkdir -p ../../outputs/clinical_partners_outcomes
+          python v09_competing_risks_survival.py \
+            --data ../../data/psyche_d/anon_processed_df.parquet \
+            --out ../../outputs/clinical_partners_outcomes \
+            --bootstrap-replicates 400
+
+      - name: Validate v0.9 real-data invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          out = Path('outputs/clinical_partners_outcomes')
+          summary = json.loads((out / 'v09_competing_risks_summary.json').read_text())
+          cif = pd.read_csv(out / 'v09_cumulative_incidence.csv')
+          boot = pd.read_csv(out / 'v09_cif_cluster_bootstrap.csv')
+          pp = pd.read_csv(out / 'v09_first_change_person_period.csv')
+          participant = pd.read_csv(out / 'v09_first_change_participant_summary.csv')
+          conflicts = pd.read_csv(out / 'v09_score_measurement_conflicts.csv')
+
+          assert summary['version'] == '0.9', summary
+          assert summary['source_rows'] == 35694, summary
+          assert summary['source_participants'] == 4948, summary
+          assert summary['baseline_cohort_n'] >= 4500, summary
+          assert summary['person_period_rows'] >= 5000, summary
+          assert summary['first_improvement_events'] >= 300, summary
+          assert summary['first_deterioration_events'] >= 200, summary
+          assert summary['bootstrap_replicates'] == 400, summary
+          assert summary['improvement_model']['converged'], summary['improvement_model']
+          assert summary['deterioration_model']['converged'], summary['deterioration_model']
+          assert len(cif) == 4 and list(cif['month']) == [3,6,9,12], cif
+          total = cif['survival_no_reliable_change'] + cif['cif_improvement'] + cif['cif_deterioration']
+          assert np.allclose(total, 1.0, atol=1e-10), cif
+          assert cif['cif_improvement'].is_monotonic_increasing, cif
+          assert cif['cif_deterioration'].is_monotonic_increasing, cif
+          assert cif[['cif_improvement','cif_deterioration','survival_no_reliable_change']].apply(lambda s: s.between(0,1).all()).all(), cif
+          assert len(boot) == 12 and (boot['finite_replicates'] == 400).all(), boot
+          assert pp['event_improvement'].sum() == summary['first_improvement_events'], (pp, summary)
+          assert pp['event_deterioration'].sum() == summary['first_deterioration_events'], (pp, summary)
+          assert participant['participant_id'].nunique() == summary['baseline_cohort_n'], participant
+          assert len(conflicts) == summary['measurement_conflicts'], conflicts
+
+          print(json.dumps(summary, indent=2))
+          print(cif.to_string(index=False))
+          print(boot.to_string(index=False))
+          PY
+
+      - name: Upload v0.9 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-partners-v09-competing-risks-survival
+          path: outputs/clinical_partners_outcomes
+          if-no-files-found: error
+          retention-days: 7
