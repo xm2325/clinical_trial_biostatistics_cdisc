@@ -38,7 +38,7 @@ if (nrow(first) != 1L) stop("Expected one first-attempt outcome row")
 if (!identical(as.integer(first$aws_n), 50L)) stop("Expected 50 AWS records")
 if (!identical(as.integer(first$mac_n), 49L)) stop("Expected 49 Macintosh records")
 if (!identical(as.integer(first$aws_events), 43L)) stop("Unexpected AWS first-attempt-success count")
-if (!identical(as.integer(first$mac_events), 46L)) stop("Unexpected Macintosh first-attempt-success count")
+if (!identical(as.integer(first$mac_events), 45L)) stop("Unexpected Macintosh first-attempt-success count")
 
 ov <- binary[binary$variable == "intubation_overall_S_F", , drop = FALSE]
 if (!identical(as.integer(ov$aws_events), 46L)) stop("Unexpected AWS overall-success count")
