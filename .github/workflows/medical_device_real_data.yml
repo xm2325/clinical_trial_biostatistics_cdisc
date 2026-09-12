@@ -36,6 +36,7 @@ jobs:
             case_studies/medical_device_rct_real_data/R/01_prepare_data.R \
             case_studies/medical_device_rct_real_data/R/02_analysis.R \
             case_studies/medical_device_rct_real_data/R/03_outputs.R \
+            case_studies/medical_device_rct_real_data/R/04_delivery_visuals.R \
             case_studies/medical_device_rct_real_data/tests/check_outputs.R \
             case_studies/medical_device_rct_real_data/dashboard/app.R
           do
@@ -53,6 +54,8 @@ jobs:
         run: |
           echo "===== analysis_summary.md ====="
           cat case_studies/medical_device_rct_real_data/outputs/analysis_summary.md || true
+          echo "===== day5_handoff.md ====="
+          cat case_studies/medical_device_rct_real_data/outputs/day5_handoff.md || true
           echo "===== qc_findings.csv ====="
           cat case_studies/medical_device_rct_real_data/outputs/qc_findings.csv || true
 
