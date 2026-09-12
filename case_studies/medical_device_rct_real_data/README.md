@@ -60,14 +60,38 @@ Baseline variables are summarized descriptively. Because this is a randomized co
 
 A covariate-adjusted log-time model is included only as a **sensitivity analysis**. With the available sample size and small number of first-attempt failures, a large adjusted logistic model for success would be unstable and is not used as the main result.
 
+## Reproducible result snapshot
+
+The current pipeline run on the 99-patient teaching release gives:
+
+| Outcome | Pentax AWS | Macintosh #4 | Contrast |
+| --- | ---: | ---: | --- |
+| First-attempt success | 43/50 (86.0%) | 45/49 (91.8%) | risk difference -5.8 percentage points; 95% Newcombe interval -19.0 to 7.2; Fisher p=0.5246 |
+| Overall success | 46/50 (92.0%) | 49/49 (100.0%) | Fisher p=0.1175 |
+| More than one attempt | 6/50 (12.0%) | 4/49 (8.2%) | Fisher p=0.7407 |
+| Total intubation time | median 38.1 s [31.0, 50.1] | median 26.0 s [21.9, 29.4] | median difference +12.1 s; bootstrap 95% interval 7.0 to 22.5; Wilcoxon p=2.61e-7 |
+| Ease score (0 easy, 100 difficult) | median 52.5 | median 35.0 | median difference +17.5; bootstrap 95% interval -10.0 to 40.0 |
+
+Two bounded checks are also generated:
+
+- excluding the one row flagged for a source timing-definition review gives a median total-time difference of **+12.0 s** with bootstrap 95% interval **7.0 to 22.0**;
+- an adjusted log-time sensitivity model on **96 complete cases** gives an AWS/Macintosh time ratio of **1.555** with 95% CI **1.297 to 1.865**.
+
+These are results from the redistributed teaching release, not a replacement for the source publication. The analysis is designed to show statistical delivery, source-data judgement and uncertainty reporting rather than to make a new device-effectiveness claim.
+
 ## Data-quality decisions that are deliberately visible
 
 The pipeline separates ordinary missingness from structural missingness. Attempt-2 and attempt-3 fields are expected to be empty when no later attempt was needed.
 
-Two source issues are not silently repaired:
+The automated review currently produces **22 checks: 17 PASS, 5 REVIEW, 0 FAIL**. REVIEW is used for source questions that should reach a statistician/data manager rather than be silently changed. The five review items are:
 
-- the public data dictionary describes the `view` coding in a way that is internally hard to reconcile with the usual clinical interpretation of Cormack-Lehane grades. The variable is retained as a raw source code but excluded from clinically labelled inferential conclusions;
-- the pipeline checks whether any first-attempt time exceeds the supplied total-intubation-time value. Such rows are surfaced for source clarification rather than overwritten.
+- one BMI value just outside the rounded range stated in the teaching documentation;
+- one total-intubation-time value just outside the rounded documented range;
+- four missing cells across three core variables, with available-case denominators made explicit;
+- one patient whose first-attempt time is greater than the supplied total-intubation-time value;
+- the public data dictionary describes the `view` coding in a way that is internally hard to reconcile with the usual clinical interpretation of Cormack-Lehane grades. The variable is retained as a raw source code but excluded from clinically labelled inferential conclusions.
+
+No source value is silently repaired. The source-timing row is retained in the main analysis and handled separately in a bounded sensitivity analysis.
 
 This is intentional: a short contract should still leave an auditable trail of what was changed, what was not changed and why.
 
