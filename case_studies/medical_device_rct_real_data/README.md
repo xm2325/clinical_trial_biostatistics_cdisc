@@ -108,7 +108,8 @@ medical_device_rct_real_data/
 │   ├── 00_config.R
 │   ├── 01_prepare_data.R
 │   ├── 02_analysis.R
-│   └── 03_outputs.R
+│   ├── 03_outputs.R
+│   └── 04_delivery_visuals.R
 ├── spec/
 │   └── analysis_plan.md
 ├── tests/
@@ -158,7 +159,7 @@ The pipeline creates:
 - `outputs/figures/missingness.png`
 - `outputs/figures/study_to_decision.png`
 
-The figure set now uses direct result annotations and includes a one-page **Study -> Data -> QC -> Analysis -> Decision Support** view. The GitHub Actions workflow reruns the analysis from the public source, executes output checks, prints the study summary and uploads the generated outputs as an artifact.
+The figure set uses direct result annotations and includes a one-page **Study -> Data -> QC -> Analysis -> Decision Support** view. `R/04_delivery_visuals.R` keeps the recruiter-facing figures separate from the statistical result generation, so presentation changes do not change the estimands or analysis logic. The GitHub Actions workflow reruns the analysis from the public source, executes output checks, prints the study summary and uploads the generated outputs as an artifact.
 
 ## What this work sample demonstrates
 
