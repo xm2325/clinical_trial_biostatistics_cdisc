@@ -1,0 +1,65 @@
+name: medical-device-real-data-case-study
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/medical-device-real-data-case-study"]
+    paths:
+      - "case_studies/medical_device_rct_real_data/**"
+      - ".github/workflows/medical_device_real_data.yml"
+  pull_request:
+    paths:
+      - "case_studies/medical_device_rct_real_data/**"
+      - ".github/workflows/medical_device_real_data.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  run-real-data-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "release"
+          use-public-rspm: true
+
+      - name: Parse case-study R programs
+        run: |
+          for f in \
+            case_studies/medical_device_rct_real_data/run_all.R \
+            case_studies/medical_device_rct_real_data/R/00_config.R \
+            case_studies/medical_device_rct_real_data/R/01_prepare_data.R \
+            case_studies/medical_device_rct_real_data/R/02_analysis.R \
+            case_studies/medical_device_rct_real_data/R/03_outputs.R \
+            case_studies/medical_device_rct_real_data/tests/check_outputs.R \
+            case_studies/medical_device_rct_real_data/dashboard/app.R
+          do
+            Rscript -e "invisible(parse(file='$f')); cat('$f syntax OK\\n')"
+          done
+
+      - name: Run real-data medical-device analysis
+        run: Rscript case_studies/medical_device_rct_real_data/run_all.R
+
+      - name: Validate generated evidence
+        run: Rscript case_studies/medical_device_rct_real_data/tests/check_outputs.R
+
+      - name: Print analysis summary
+        if: always()
+        run: |
+          echo "===== analysis_summary.md ====="
+          cat case_studies/medical_device_rct_real_data/outputs/analysis_summary.md || true
+          echo "===== qc_findings.csv ====="
+          cat case_studies/medical_device_rct_real_data/outputs/qc_findings.csv || true
+
+      - name: Upload review package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: medical-device-real-data-analysis
+          path: case_studies/medical_device_rct_real_data/outputs/
+          if-no-files-found: error
