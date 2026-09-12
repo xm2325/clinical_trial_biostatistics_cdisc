@@ -1,0 +1,17 @@
+args <- commandArgs(trailingOnly = FALSE)
+file_arg <- grep("^--file=", args, value = TRUE)
+if (length(file_arg) != 1) stop("run_all.R must be executed with Rscript")
+this_file <- sub("^--file=", "", file_arg)
+case_dir <- normalizePath(dirname(this_file), mustWork = TRUE)
+setwd(case_dir)
+
+source(file.path("R", "00_config.R"))
+source(file.path("R", "01_prepare_data.R"))
+source(file.path("R", "02_analysis.R"))
+source(file.path("R", "03_outputs.R"))
+
+cat("\n=== MEDICAL DEVICE REAL-DATA CASE STUDY COMPLETE ===\n")
+cat("Case directory:", case_dir, "\n")
+cat("Generated output files:\n")
+for (f in sort(list.files(DIR_OUTPUT, recursive = TRUE))) cat(" - ", f, "\n", sep = "")
+cat("\n")
