@@ -15,9 +15,11 @@ required_files <- c(
   "outputs/sensitivity_analysis.csv",
   "outputs/analysis_summary.md",
   "outputs/stakeholder_brief.md",
+  "outputs/day5_handoff.md",
   "outputs/figures/first_attempt_success.png",
   "outputs/figures/total_intubation_time.png",
-  "outputs/figures/missingness.png"
+  "outputs/figures/missingness.png",
+  "outputs/figures/study_to_decision.png"
 )
 missing_files <- required_files[!file.exists(required_files)]
 if (length(missing_files) > 0) stop("Missing generated outputs: ", paste(missing_files, collapse = ", "))
@@ -68,9 +70,28 @@ if (!grepl("not an exact reproduction", summary_text, fixed = TRUE)) {
   stop("Analysis summary is missing the teaching-release evidence boundary")
 }
 
+day5_text <- paste(readLines("outputs/day5_handoff.md", warn = FALSE), collapse = "\n")
+if (!grepl("Decision message for the study team", day5_text, fixed = TRUE)) {
+  stop("Day-5 handoff is missing the decision section")
+}
+if (!grepl("not an exact reproduction", day5_text, fixed = TRUE)) {
+  stop("Day-5 handoff is missing the evidence boundary")
+}
+
+figure_sizes <- file.info(c(
+  "outputs/figures/first_attempt_success.png",
+  "outputs/figures/total_intubation_time.png",
+  "outputs/figures/missingness.png",
+  "outputs/figures/study_to_decision.png"
+))$size
+if (any(!is.finite(figure_sizes)) || any(figure_sizes < 1000L)) {
+  stop("One or more generated figures are unexpectedly small")
+}
+
 cat("medical-device real-data case study checks: PASS\n")
 cat("QC rows:", nrow(qc), "| REVIEW:", sum(qc$status == "REVIEW"), "| FAIL: 0\n")
 cat("First-attempt success: AWS", first$aws_events, "/", first$aws_n,
     "vs Macintosh", first$mac_events, "/", first$mac_n, "\n")
 cat("Median total-time difference (AWS - Macintosh):",
     sprintf("%.2f", time_row$median_difference_aws_minus_mac), "seconds\n")
+cat("Recruiter-facing one-pager and day-5 handoff outputs: READY\n")
