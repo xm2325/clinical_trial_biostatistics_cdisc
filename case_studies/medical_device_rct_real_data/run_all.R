@@ -9,6 +9,7 @@ source(file.path("R", "00_config.R"))
 source(file.path("R", "01_prepare_data.R"))
 source(file.path("R", "02_analysis.R"))
 source(file.path("R", "03_outputs.R"))
+source(file.path("R", "04_delivery_visuals.R"))
 
 cat("\n=== MEDICAL DEVICE REAL-DATA CASE STUDY COMPLETE ===\n")
 cat("Case directory:", case_dir, "\n")
