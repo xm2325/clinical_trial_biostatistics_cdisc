@@ -1,0 +1,12 @@
+# Downloaded patient-level teaching data are not committed.
+data/*.csv
+data/*.rds
+
+# Generated outputs are reproduced in CI and uploaded as workflow artifacts.
+outputs/*.csv
+outputs/*.md
+outputs/figures/*.png
+
+.Rhistory
+.RData
+.Rproj.user/
