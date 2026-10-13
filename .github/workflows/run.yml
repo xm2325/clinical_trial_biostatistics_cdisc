@@ -4,7 +4,15 @@ on:
   workflow_dispatch:
   push:
     branches: [main, "upgrade/**"]
+    paths-ignore:
+      - "case_studies/nonmem_dataflow_demo/**"
+      - ".github/workflows/nonmem_demo.yml"
+      - ".github/workflows/nonmem_advanced.yml"
   pull_request:
+    paths-ignore:
+      - "case_studies/nonmem_dataflow_demo/**"
+      - ".github/workflows/nonmem_demo.yml"
+      - ".github/workflows/nonmem_advanced.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}

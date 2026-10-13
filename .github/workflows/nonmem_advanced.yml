@@ -1,0 +1,82 @@
+name: nonmem-advanced-synthetic-pk-qc
+on:
+  push:
+    branches: [main]
+    paths:
+      - "case_studies/nonmem_dataflow_demo/advanced/**"
+      - ".github/workflows/nonmem_advanced.yml"
+  pull_request:
+    paths:
+      - "case_studies/nonmem_dataflow_demo/advanced/**"
+      - ".github/workflows/nonmem_advanced.yml"
+  workflow_dispatch:
+jobs:
+  build-qc-ode-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install repository Python requirements
+        run: python -m pip install -r requirements.txt
+      - name: Execute both M1 and M3 data pipelines
+        run: |
+          set -euo pipefail
+          for MODE in m1 m3; do
+            Rscript case_studies/nonmem_dataflow_demo/advanced/R/10_build_advanced.R --blq-mode=$MODE
+            python case_studies/nonmem_dataflow_demo/advanced/scripts/20_independent_qc.py --output-dir outputs/nonmem_advanced/$MODE
+            python case_studies/nonmem_dataflow_demo/advanced/scripts/30_pk_crosscheck.py --output-dir outputs/nonmem_advanced/$MODE
+            python case_studies/nonmem_dataflow_demo/advanced/scripts/40_package_handoff.py --output-dir outputs/nonmem_advanced/$MODE
+          done
+      - name: Inject QC, source and package corruption
+        run: |
+          python - <<'PY'
+          import csv,pathlib,shutil,subprocess
+          program="case_studies/nonmem_dataflow_demo/advanced/scripts/"
+          src=pathlib.Path("outputs/nonmem_advanced/m3")
+          trial=pathlib.Path("/tmp/nm-corrupt")
+          shutil.copytree(src,trial)
+          path=trial/"data/nonmem_input_review.csv"
+          with path.open(newline="") as f: rows=list(csv.DictReader(f))
+          rows[0]["MDV"]="0" if rows[0]["MDV"]=="1" else "1"
+          with path.open("w",newline="") as f:
+              w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
+          assert subprocess.run(["python",program+"20_independent_qc.py",
+                                 "--output-dir",str(trial)]).returncode!=0
+          original=pathlib.Path("case_studies/nonmem_dataflow_demo/advanced/data")
+          badsrc=pathlib.Path("/tmp/nm-source")
+          shutil.copytree(original,badsrc)
+          path=badsrc/"pc.csv"
+          with path.open(newline="") as f: rows=list(csv.DictReader(f))
+          rows[1]["PCSEQ"]=rows[0]["PCSEQ"]
+          with path.open("w",newline="") as f:
+              w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
+          duplicate_case=pathlib.Path("/tmp/nm-source-dup-out")
+          shutil.copytree(src,duplicate_case)
+          assert subprocess.run(["python",program+"20_independent_qc.py",
+                       "--source-dir",str(badsrc),"--output-dir",str(duplicate_case)]).returncode!=0
+          trial2=pathlib.Path("/tmp/nm-handoff-corrupt")
+          shutil.copytree(src,trial2)
+          path=trial2/"handoff/data/nonmem_input.csv"
+          path.write_text(path.read_text()+"\n")
+          assert subprocess.run(["python",program+"40_package_handoff.py",
+                      "--output-dir",str(trial2),"--verify-only"]).returncode!=0
+          PY
+      - name: Public theophylline source reconstruction, PK fit and NCA
+        run: |
+          Rscript case_studies/nonmem_dataflow_demo/advanced/R/50_theoph_public_data.R
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/51_theoph_independent_qc_and_fit.py
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nonmem-advanced-synthetic-evidence
+          path: |
+            outputs/nonmem_advanced/
+            outputs/nonmem_theoph_public/

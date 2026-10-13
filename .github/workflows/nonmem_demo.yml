@@ -1,0 +1,59 @@
+name: nonmem-synthetic-dataflow-demo
+on:
+  push:
+    branches: [main]
+    paths:
+      - "case_studies/nonmem_dataflow_demo/R/**"
+      - "case_studies/nonmem_dataflow_demo/scripts/**"
+      - "case_studies/nonmem_dataflow_demo/data/**"
+      - "case_studies/nonmem_dataflow_demo/model/**"
+      - ".github/workflows/nonmem_demo.yml"
+  pull_request:
+    paths:
+      - "case_studies/nonmem_dataflow_demo/R/**"
+      - "case_studies/nonmem_dataflow_demo/scripts/**"
+      - "case_studies/nonmem_dataflow_demo/data/**"
+      - "case_studies/nonmem_dataflow_demo/model/**"
+      - ".github/workflows/nonmem_demo.yml"
+  workflow_dispatch:
+jobs:
+  build-and-independent-qc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build synthetic PK event dataset in R
+        run: Rscript case_studies/nonmem_dataflow_demo/R/01_build_nonmem_dataset.R
+      - name: Run source-reconstructing independent QC in Python
+        run: python case_studies/nonmem_dataflow_demo/scripts/02_independent_qc.py
+      - name: Corruption-detection check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import csv
+          import subprocess
+          import shutil
+          dest=Path("/tmp/nonmem-corrupt")
+          shutil.copytree("outputs/nonmem_demo",dest)
+          p=dest/"data/nonmem_input_review.csv"
+          with p.open(newline="") as f:
+              rows=list(csv.DictReader(f))
+              fields=list(rows[0])
+          rows[0]["MDV"]="0" if rows[0]["MDV"]=="1" else "1"
+          with p.open("w",newline="") as f:
+              writer=csv.DictWriter(f,fieldnames=fields); writer.writeheader();writer.writerows(rows)
+          proc=subprocess.run(["python","case_studies/nonmem_dataflow_demo/scripts/02_independent_qc.py",
+                               "--output-dir",str(dest)])
+          assert proc.returncode != 0, "QC failed to reject a modified MDV"
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nonmem-synthetic-qc
+          path: outputs/nonmem_demo/
