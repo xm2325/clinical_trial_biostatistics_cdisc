@@ -56,8 +56,10 @@ jobs:
           rows[1]["PCSEQ"]=rows[0]["PCSEQ"]
           with path.open("w",newline="") as f:
               w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
+          duplicate_case=pathlib.Path("/tmp/nm-source-dup-out")
+          shutil.copytree(src,duplicate_case)
           assert subprocess.run(["python",program+"20_independent_qc.py",
-                       "--source-dir",str(badsrc),"--output-dir",str(src)]).returncode!=0
+                       "--source-dir",str(badsrc),"--output-dir",str(duplicate_case)]).returncode!=0
           trial2=pathlib.Path("/tmp/nm-handoff-corrupt")
           shutil.copytree(src,trial2)
           path=trial2/"handoff/data/nonmem_input.csv"
@@ -65,8 +67,14 @@ jobs:
           assert subprocess.run(["python",program+"40_package_handoff.py",
                       "--output-dir",str(trial2),"--verify-only"]).returncode!=0
           PY
+      - name: Public theophylline source reconstruction and open-source PK fit
+        run: |
+          Rscript case_studies/nonmem_dataflow_demo/advanced/R/50_theoph_public_data.R
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/51_theoph_independent_qc_and_fit.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: nonmem-advanced-synthetic-evidence
-          path: outputs/nonmem_advanced/
+          path: |
+            outputs/nonmem_advanced/
+            outputs/nonmem_theoph_public/
