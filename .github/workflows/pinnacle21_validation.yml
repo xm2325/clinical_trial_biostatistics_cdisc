@@ -3,8 +3,16 @@ name: Pinnacle 21 Community validation
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - "case_studies/nonmem_dataflow_demo/**"
+      - ".github/workflows/nonmem_demo.yml"
+      - ".github/workflows/nonmem_advanced.yml"
   push:
     branches: [main]
+    paths-ignore:
+      - "case_studies/nonmem_dataflow_demo/**"
+      - ".github/workflows/nonmem_demo.yml"
+      - ".github/workflows/nonmem_advanced.yml"
 
 permissions:
   contents: read

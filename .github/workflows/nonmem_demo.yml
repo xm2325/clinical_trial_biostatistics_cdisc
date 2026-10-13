@@ -1,12 +1,19 @@
 name: nonmem-synthetic-dataflow-demo
 on:
   push:
+    branches: [main]
     paths:
-      - "case_studies/nonmem_dataflow_demo/**"
+      - "case_studies/nonmem_dataflow_demo/R/**"
+      - "case_studies/nonmem_dataflow_demo/scripts/**"
+      - "case_studies/nonmem_dataflow_demo/data/**"
+      - "case_studies/nonmem_dataflow_demo/model/**"
       - ".github/workflows/nonmem_demo.yml"
   pull_request:
     paths:
-      - "case_studies/nonmem_dataflow_demo/**"
+      - "case_studies/nonmem_dataflow_demo/R/**"
+      - "case_studies/nonmem_dataflow_demo/scripts/**"
+      - "case_studies/nonmem_dataflow_demo/data/**"
+      - "case_studies/nonmem_dataflow_demo/model/**"
       - ".github/workflows/nonmem_demo.yml"
   workflow_dispatch:
 jobs:

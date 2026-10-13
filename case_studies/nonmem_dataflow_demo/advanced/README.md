@@ -67,3 +67,9 @@ R source: https://search.r-project.org/R/refmans/datasets/html/Theoph.html
 The advanced GitHub Actions workflow executes M1/M3 build, row-level independent QC, ODE structural cross-check, and a self-contained integrity-checked handoff. It also intentionally corrupts MDV, duplicates a source sequence key, and modifies a packaged CSV to demonstrate failure handling. A separate workflow step validates the Theoph source conversion and fits the simple open-source PK model.
 
 A green workflow means that these bounded tests ran; it does not replace clinical programming certification, GxP validation, actual NONMEM installation, study lead sign-off, official Define-XML, or a real electronic submission.
+
+## CI isolation and descriptive noncompartmental analysis (NCA)
+
+The introductory and advanced NONMEM workflows are triggered only by their own paths on pull requests, or by manual dispatch. Feature-branch push duplicates are disabled (main-branch push remains enabled). The large CDISC, P21 and v0.28 handoff workflows ignore changes that are solely inside the NONMEM demo and its two workflows; they retain manual dispatch. **Changing these larger workflow YAML files in the same PR can still cause a one-off rerun.** Check required branch protection statuses before relying on path filtering.
+
+After generating the public Theoph data, `python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py` computes per-subject Cmax, Tmax and AUC0-last (manual trapezoid independently checked against scipy.integrate.trapezoid). It reports an explicitly descriptive terminal slope and half-life using the last three post-Cmax positive samples when possible. It is not formal validated NCA and does not change or replace the pooled least-squares fit.

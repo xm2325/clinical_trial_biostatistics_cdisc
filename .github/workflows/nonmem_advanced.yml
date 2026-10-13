@@ -1,6 +1,7 @@
 name: nonmem-advanced-synthetic-pk-qc
 on:
   push:
+    branches: [main]
     paths:
       - "case_studies/nonmem_dataflow_demo/advanced/**"
       - ".github/workflows/nonmem_advanced.yml"
@@ -67,10 +68,11 @@ jobs:
           assert subprocess.run(["python",program+"40_package_handoff.py",
                       "--output-dir",str(trial2),"--verify-only"]).returncode!=0
           PY
-      - name: Public theophylline source reconstruction and open-source PK fit
+      - name: Public theophylline source reconstruction, PK fit and NCA
         run: |
           Rscript case_studies/nonmem_dataflow_demo/advanced/R/50_theoph_public_data.R
           python case_studies/nonmem_dataflow_demo/advanced/scripts/51_theoph_independent_qc_and_fit.py
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
