@@ -86,6 +86,7 @@ jobs:
           Rscript case_studies/nonmem_dataflow_demo/advanced/R/50_theoph_public_data.R
           python case_studies/nonmem_dataflow_demo/advanced/scripts/51_theoph_independent_qc_and_fit.py
           python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py
+          Rscript case_studies/nonmem_dataflow_demo/advanced/R/80_theoph_nlme.R
       - uses: actions/upload-artifact@v4
         if: always()
         with:

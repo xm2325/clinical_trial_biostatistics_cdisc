@@ -132,3 +132,25 @@ python case_studies/nonmem_dataflow_demo/advanced/scripts/90_licensed_nonmem_run
 CI exercises plan-only mode. It does NOT install, license or run NONMEM. A zero
 process exit and an output report require independent scientific review,
 model convergence checking and validation before any interpretation.
+
+
+## Genuine nonlinear mixed effects on public PK data (R nlme, not NONMEM)
+
+`R/80_theoph_nlme.R` fits an actual nonlinear mixed-effects model with
+`nlme::nlme` and the R `datasets::Theoph` published concentration records.
+It uses `SSfol` with fixed log(Ke), log(Ka), log(CL) and diagonal subject
+random effects on log(Ka) and log(CL); predictions are checked against
+an independent call to the closed-form `SSfol` formula.
+
+```bash
+Rscript case_studies/nonmem_dataflow_demo/advanced/R/80_theoph_nlme.R
+```
+
+The code reports individual-conditional and population in-sample RMSE
+and positive kinetic estimates. Since Theoph Dose is mg/kg, CL and volume
+estimates are per kg, not absolute litres per hour. It is **actual public-data
+R NLME execution**, but not a NONMEM run, random-effects validation
+against NONMEM, approved population PK model or regulatory data analysis.
+
+Published nlme example and caveats:
+https://journal.r-project.org/archive/2017/RJ-2017-010/RJ-2017-010.pdf
