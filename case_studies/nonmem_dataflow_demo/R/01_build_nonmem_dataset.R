@@ -98,7 +98,7 @@ review <- file.path(data_dir, "nonmem_input_review.csv")
 no_header <- file.path(data_dir, "nonmem_input.csv")
 write.csv(out, review, row.names = FALSE, na = "")
 write.table(out, no_header, row.names = FALSE, col.names = FALSE, sep = ",",
-            quote = FALSE, na = "", digits = 12)
+            quote = FALSE, na = "")
 write.csv(crosswalk, file.path(meta_dir, "subject_crosswalk.csv"), row.names = FALSE)
 defs <- data.frame(
   VARIABLE = names(out),
