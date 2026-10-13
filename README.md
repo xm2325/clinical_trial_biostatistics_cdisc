@@ -4,6 +4,10 @@ A reproducible public-data work sample for clinical-trial biostatistics and stat
 
 > **Evidence boundary:** this is independent portfolio work using public CDISC/pharmaverse test data. `*-style` datasets are not claimed to be submission-ready or formally ADaM-conformant. The repository does not claim sponsor/CRO production, SAS production, regulatory submission experience, validated production programming, formal independent second-programmer validation, formal Define-XML conformance, sponsor database lock, formal blinded data review, sponsor/CRO sign-off, sponsor CSR approval, health-authority correspondence, benefit-risk approval, or a successful ADaMIG CORE conformance run when the pinned official ruleset is unavailable. The portfolio does include automated SAS execution in SAS OnDemand for Academics for the bounded v0.26.1 public-data reconciliation workflow; that execution is not represented as sponsor/CRO or production SAS experience.
 
+## 学习专区 / Learning handbook (中文)
+
+New to CDISC? Start at [`docs/learning/`](docs/learning/README.md): a Chinese beginner handbook (CDISC → SDTM → ADaM → TFL) and an interview guide, both built on real public GitHub data (CDISC Pilot CDISCPILOT01 SDTM + official ADaM). Every number is reproducible with `python scripts/build_cdisc_learning_examples.py`.
+
 ## Current milestone: v0.26.1 — executed SAS clinical-programming reconciliation
 
 v0.26.1 extends the v0.25 controlled clinical-programming workflow and the v0.26 BMS-focused SAS source/metadata layer with **real SAS execution**. A trusted GitHub Actions workflow connects to **SAS OnDemand for Academics via SASPy Remote IOM**, executes the SAS analysis-dataset and statistical programs, returns the generated SAS datasets/ODS results to the runner, and reconciles them against independently generated Python/R references.

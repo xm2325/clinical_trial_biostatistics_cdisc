@@ -1,0 +1,157 @@
+{
+  "sources": {
+    "dm": {
+      "standard": "SDTM",
+      "url": "https://raw.githubusercontent.com/pharmaverse/pharmaversesdtm/7ec53ea88dfe1c168f9efbef59233c4426813b89/inst/extdata/dm.csv",
+      "sha256": "bf0a821024b5d063a06f797ee8de5a2730b71f954f1398b8a8a1f902e3f01ab6",
+      "rows": 306
+    },
+    "ex": {
+      "standard": "SDTM",
+      "url": "https://raw.githubusercontent.com/pharmaverse/pharmaversesdtm/7ec53ea88dfe1c168f9efbef59233c4426813b89/inst/extdata/ex.csv",
+      "sha256": "b8042858279e48412cf6af218318615046fdd0c9a3cef5a59d48515558030959",
+      "rows": 591
+    },
+    "ds": {
+      "standard": "SDTM",
+      "url": "https://raw.githubusercontent.com/pharmaverse/pharmaversesdtm/7ec53ea88dfe1c168f9efbef59233c4426813b89/inst/extdata/ds.csv",
+      "sha256": "9c90933c42a0acaa4b98b3e37e24a3ce2238767e713f4d621ac41c3197d11f20",
+      "rows": 850
+    },
+    "ae": {
+      "standard": "SDTM",
+      "url": "https://raw.githubusercontent.com/pharmaverse/pharmaversesdtm/7ec53ea88dfe1c168f9efbef59233c4426813b89/inst/extdata/ae.csv",
+      "sha256": "b574a33fb669c62a7fa91b8282cdbb1ca91eac8b2af2864a3cbaf0d94c8cfe2f",
+      "rows": 1191
+    },
+    "adsl": {
+      "standard": "ADaM",
+      "url": "https://raw.githubusercontent.com/cdisc-org/sdtm-adam-pilot-project/667511d4b183871d74392ba691c935c38d431d39/updated-pilot-submission-package/900172/m5/datasets/cdiscpilot01/analysis/adam/datasets/adsl.json",
+      "sha256": "5f8815fc77b65674ce9af5f8b67b08ab7dc5e0c87d439f7d3c2add062a91affa",
+      "rows": 254
+    },
+    "adae": {
+      "standard": "ADaM",
+      "url": "https://raw.githubusercontent.com/cdisc-org/sdtm-adam-pilot-project/667511d4b183871d74392ba691c935c38d431d39/updated-pilot-submission-package/900172/m5/datasets/cdiscpilot01/analysis/adam/datasets/adae.json",
+      "sha256": "9bd195ecfde55486cd39f59e485dcc39cfb4b1d62b08befc150a30af4ad15fd3",
+      "rows": 1191
+    },
+    "adqsadas": {
+      "standard": "ADaM",
+      "url": "https://raw.githubusercontent.com/cdisc-org/sdtm-adam-pilot-project/667511d4b183871d74392ba691c935c38d431d39/updated-pilot-submission-package/900172/m5/datasets/cdiscpilot01/analysis/adam/datasets/adqsadas.json",
+      "sha256": "a832aa6eae92831d813ac824973a2f58c695b5ed57c534f33815b874251b0285",
+      "rows": 12463
+    },
+    "adtte": {
+      "standard": "ADaM",
+      "url": "https://raw.githubusercontent.com/cdisc-org/sdtm-adam-pilot-project/667511d4b183871d74392ba691c935c38d431d39/updated-pilot-submission-package/900172/m5/datasets/cdiscpilot01/analysis/adam/datasets/adtte.json",
+      "sha256": "40d0213aecde81db8f84980669c1af77c711f888a78da36e46c90bc1030ff85b",
+      "rows": 254
+    }
+  },
+  "adsl_rederivation_qc": {
+    "subjects_ours": 254,
+    "subjects_ref": 254,
+    "subjects_both": 254,
+    "match_AGEGR1_v1": 254,
+    "match_SAFFL_v1": 254,
+    "match_TRTSDT_v1": 254,
+    "match_TRTEDT_v1": 248,
+    "match_TRTDUR_v1": 248,
+    "match_TRTEDT_v2": 254,
+    "match_TRTDUR_v2": 254,
+    "open_last_exposure_subjects": [
+      "01-704-1233",
+      "01-705-1018",
+      "01-705-1031",
+      "01-705-1303",
+      "01-705-1377",
+      "01-705-1382"
+    ]
+  },
+  "population": [
+    {
+      "人群": "随机化/ITT (ITTFL)",
+      "Placebo": 86,
+      "Xan Low": 84,
+      "Xan High": 84,
+      "合计": 254
+    },
+    {
+      "人群": "安全性 (SAFFL)",
+      "Placebo": 86,
+      "Xan Low": 84,
+      "Xan High": 84,
+      "合计": 254
+    },
+    {
+      "人群": "疗效 (EFFFL)",
+      "Placebo": 79,
+      "Xan Low": 81,
+      "Xan High": 74,
+      "合计": 234
+    },
+    {
+      "人群": "完成第24周 (COMP24FL)",
+      "Placebo": 60,
+      "Xan Low": 28,
+      "Xan High": 30,
+      "合计": 118
+    }
+  ],
+  "safety_denominators": {
+    "Placebo": 86,
+    "Xanomeline Low Dose": 84,
+    "Xanomeline High Dose": 84
+  },
+  "teae_subjects_total": 218,
+  "teae_records_total": 1126,
+  "adas_week24": {
+    "n": 234,
+    "dof": 220,
+    "p_dose_response": 0.24470567386850964,
+    "contrasts": [
+      {
+        "比较": "Xan Low vs Placebo",
+        "LS均值差": "-0.47",
+        "SE": "0.82",
+        "95% CI": "(-2.08, 1.15)",
+        "p值": "0.5688"
+      },
+      {
+        "比较": "Xan High vs Placebo",
+        "LS均值差": "-1.01",
+        "SE": "0.84",
+        "95% CI": "(-2.66, 0.65)",
+        "p值": "0.2326"
+      }
+    ]
+  },
+  "ttde": {
+    "logrank_chi2": 60.26955673902807,
+    "logrank_p": 8.177716313863655e-14,
+    "by_arm": [
+      {
+        "组别": "Placebo",
+        "N": 86,
+        "事件数 (CNSR=0)": 29,
+        "删失数 (CNSR=1)": 57,
+        "KM中位时间(天)": "未达到"
+      },
+      {
+        "组别": "Xan Low",
+        "N": 84,
+        "事件数 (CNSR=0)": 62,
+        "删失数 (CNSR=1)": 22,
+        "KM中位时间(天)": "33"
+      },
+      {
+        "组别": "Xan High",
+        "N": 84,
+        "事件数 (CNSR=0)": 61,
+        "删失数 (CNSR=1)": 23,
+        "KM中位时间(天)": "36"
+      }
+    ]
+  }
+}
