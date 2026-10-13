@@ -73,3 +73,84 @@ A green workflow means that these bounded tests ran; it does not replace clinica
 The introductory and advanced NONMEM workflows are triggered only by their own paths on pull requests, or by manual dispatch. Feature-branch push duplicates are disabled (main-branch push remains enabled). The large CDISC, P21 and v0.28 handoff workflows ignore changes that are solely inside the NONMEM demo and its two workflows; they retain manual dispatch. **Changing these larger workflow YAML files in the same PR can still cause a one-off rerun.** Check required branch protection statuses before relying on path filtering.
 
 After generating the public Theoph data, `python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py` computes per-subject Cmax, Tmax and AUC0-last (manual trapezoid independently checked against scipy.integrate.trapezoid). It reports an explicitly descriptive terminal slope and half-life using the last three post-Cmax positive samples when possible. It is not formal validated NCA and does not change or replace the pooled least-squares fit.
+
+
+## Source transfer gate and auditable query lifecycle
+
+The advanced CI now executes the source intake validator `scripts/60_transfer_gate.py` before
+the source-to-model independent QC and handoff, for both M1 and M3 variants.
+
+The gate checks file and variable contracts, subject/sequence identifiers,
+complete actual timestamps, exposure amount and unit, IV duration, PK values
+and LLOQ/BLQ conflicts, weight timing and source coverage. Each query
+contains table, source key, check code, severity, proposed action, reviewer,
+decision and evidence columns. ERROR places transfer on HOLD; WARNING stays
+open for human review (including a same-time dose and sample). The dataset
+is never silently corrected. The handoff packages the exact source snapshot,
+query log, source SHA256 identities and release gate status. A changed source
+fails the pre-handoff hash check.
+
+The negative-case suite `65_transfer_regression.py` deliberately injects 10
+independent issues, each of which must be rejected with its declared reason.
+These files are synthetic teaching materials, not source data from EDC, a
+sponsor-approved DTA or actual EPOD exchange.
+
+## Executable censored likelihood
+
+`70_m3_censored_likelihood.py` uses a reproducible artificial oral PK dataset.
+It fits pooled CL and additive residual SD (V and KA fixed) by:
+
+- M1: log normal-density contributions from observed samples only.
+- M3: observed normal-density log likelihood plus left-censored
+  log Phi((LLOQ - prediction) / SD).
+
+It checks the normal CDF against an independent error-function computation,
+including a numerically extreme lower tail. Hidden BLQ concentrations are
+not passed to either estimator. This is not NONMEM or NLME, and a single
+synthetic comparison does not prove a method always performs better.
+
+Relevant public technical references:
+- https://pmc.ncbi.nlm.nih.gov/articles/PMC6709422/
+- https://pmc.ncbi.nlm.nih.gov/articles/PMC2691472/
+- https://nonmem.iconplc.com/nonmem750/nm750.pdf
+
+## Licensed NONMEM runner boundary
+
+`90_licensed_nonmem_runner.py` checks model input structure and prepares
+a separate working directory. Without `--execute` it **only creates a plan**:
+
+```bash
+python case_studies/nonmem_dataflow_demo/advanced/scripts/90_licensed_nonmem_runner.py --output-dir outputs/nonmem_advanced/m3
+```
+
+A person with an actual authorised local NONMEM installation may request:
+
+```bash
+python case_studies/nonmem_dataflow_demo/advanced/scripts/90_licensed_nonmem_runner.py --output-dir outputs/nonmem_advanced/m3 --execute --executable /path/to/nmfe75
+```
+
+CI exercises plan-only mode. It does NOT install, license or run NONMEM. A zero
+process exit and an output report require independent scientific review,
+model convergence checking and validation before any interpretation.
+
+
+## Genuine nonlinear mixed effects on public PK data (R nlme, not NONMEM)
+
+`R/80_theoph_nlme.R` fits an actual nonlinear mixed-effects model with
+`nlme::nlme` and the R `datasets::Theoph` published concentration records.
+It uses `SSfol` with fixed log(Ke), log(Ka), log(CL) and diagonal subject
+random effects on log(Ka) and log(CL); predictions are checked against
+an independent call to the closed-form `SSfol` formula.
+
+```bash
+Rscript case_studies/nonmem_dataflow_demo/advanced/R/80_theoph_nlme.R
+```
+
+The code reports individual-conditional and population in-sample RMSE
+and positive kinetic estimates. Since Theoph Dose is mg/kg, CL and volume
+estimates are per kg, not absolute litres per hour. It is **actual public-data
+R NLME execution**, but not a NONMEM run, random-effects validation
+against NONMEM, approved population PK model or regulatory data analysis.
+
+Published nlme example and caveats:
+https://journal.r-project.org/archive/2017/RJ-2017-010/RJ-2017-010.pdf

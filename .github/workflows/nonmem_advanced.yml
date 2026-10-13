@@ -30,10 +30,23 @@ jobs:
           set -euo pipefail
           for MODE in m1 m3; do
             Rscript case_studies/nonmem_dataflow_demo/advanced/R/10_build_advanced.R --blq-mode=$MODE
+            python case_studies/nonmem_dataflow_demo/advanced/scripts/60_transfer_gate.py --output-dir outputs/nonmem_advanced/$MODE
             python case_studies/nonmem_dataflow_demo/advanced/scripts/20_independent_qc.py --output-dir outputs/nonmem_advanced/$MODE
             python case_studies/nonmem_dataflow_demo/advanced/scripts/30_pk_crosscheck.py --output-dir outputs/nonmem_advanced/$MODE
             python case_studies/nonmem_dataflow_demo/advanced/scripts/40_package_handoff.py --output-dir outputs/nonmem_advanced/$MODE
           done
+      - name: Reject malformed PK transfers and test M3 likelihood
+        run: |
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/65_transfer_regression.py
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/70_m3_censored_likelihood.py
+          python case_studies/nonmem_dataflow_demo/advanced/scripts/90_licensed_nonmem_runner.py --output-dir outputs/nonmem_advanced/m3
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("outputs/nonmem_advanced/m3/licensed_run/execution_status.json")
+          state=json.loads(p.read_text())
+          assert state["mode"]=="PLAN_ONLY" and not state["NONMEM_executed"]
+          PY
       - name: Inject QC, source and package corruption
         run: |
           python - <<'PY'
@@ -73,6 +86,7 @@ jobs:
           Rscript case_studies/nonmem_dataflow_demo/advanced/R/50_theoph_public_data.R
           python case_studies/nonmem_dataflow_demo/advanced/scripts/51_theoph_independent_qc_and_fit.py
           python case_studies/nonmem_dataflow_demo/advanced/scripts/52_theoph_nca.py
+          Rscript case_studies/nonmem_dataflow_demo/advanced/R/80_theoph_nlme.R
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -80,3 +94,4 @@ jobs:
           path: |
             outputs/nonmem_advanced/
             outputs/nonmem_theoph_public/
+            outputs/nonmem_m3_likelihood/
