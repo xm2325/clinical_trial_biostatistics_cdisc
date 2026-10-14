@@ -49,6 +49,18 @@ data work.ex_clean;
   format TRTSDT_EX TRTEDT_EX yymmdd10.;
 run;
 
+/* Last EX record by start date: a missing end date means exposure was still open. */
+proc sort data=work.ex_clean out=work.ex_last;
+  by STUDYID USUBJID TRTSDT_EX EXSEQ;
+run;
+data work.ex_last;
+  set work.ex_last;
+  by STUDYID USUBJID;
+  if last.USUBJID;
+  EXOPEN=missing(TRTEDT_EX);
+  keep STUDYID USUBJID EXOPEN;
+run;
+
 proc sql;
   create table work.ex_summary as
   select STUDYID,
@@ -88,6 +100,9 @@ run;
 proc sort data=work.ex_summary;
   by STUDYID USUBJID;
 run;
+proc sort data=work.ex_last;
+  by STUDYID USUBJID;
+run;
 proc sort data=work.ds_summary;
   by STUDYID USUBJID;
 run;
@@ -95,6 +110,7 @@ run;
 data work.adsl;
   merge work.dm(in=in_dm)
         work.ex_summary
+        work.ex_last
         work.ds_summary;
   by STUDYID USUBJID;
   if in_dm;
@@ -117,7 +133,11 @@ data work.adsl;
   end;
   else TRTSDTSRC="MISSING";
 
-  if not missing(TRTEDT_EX) then do;
+  if EXOPEN=1 and not missing(EOSDT) then do;
+    TRTEDT=EOSDT;
+    TRTEDTSRC="DS_DISPOSITION_FALLBACK";
+  end;
+  else if not missing(TRTEDT_EX) then do;
     TRTEDT=TRTEDT_EX;
     TRTEDTSRC="EX";
   end;

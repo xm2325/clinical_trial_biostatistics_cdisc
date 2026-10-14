@@ -74,3 +74,29 @@ def test_missing_exposure_end_uses_disposition_date_with_flag():
     assert str(adsl["TRTEDT"].date()) == "2020-01-10"
     assert adsl["TRTEDTSRC"] == "DS_DISPOSITION_FALLBACK"
     assert adsl["TRTDURN"] == 10
+
+
+def test_open_ended_last_exposure_uses_disposition_date():
+    # Last EX record has no end date: the EX maximum (2020-01-05) and DM.RFXENDTC
+    # both stop early, so TRTEDT must come from the final disposition date.
+    dm = _dm().iloc[[0]].copy()
+    dm.loc[:, "RFXENDTC"] = "2020-01-05"
+    ex = _ex().loc[_ex()["USUBJID"].eq("1")].copy()
+    ex.loc[ex["EXSEQ"].eq(2), "EXENDTC"] = None
+    ds = _ds().loc[_ds()["USUBJID"].eq("1")].copy()
+    adsl = derive_adsl_style(dm, ex, ds).iloc[0]
+    assert str(adsl["TRTEDT"].date()) == "2020-01-10"
+    assert adsl["TRTEDTSRC"] == "DS_DISPOSITION_FALLBACK"
+    assert adsl["TRTDURN"] == 10
+
+    ae = pd.DataFrame([
+        {"STUDYID":"S","USUBJID":"1","AESEQ":1,"AETERM":"on","AEDECOD":"RASH","AEBODSYS":"SKIN","AESEV":"MILD","AESER":"N","AEREL":"NONE","AEOUT":"RECOVERED","AESTDTC":"2020-02-08","AEENDTC":None},
+    ])
+    adae = derive_adae_style(ae, derive_adsl_style(dm, ex, ds)).iloc[0]
+    assert adae["TRTEMFL"] == "Y"
+
+
+def test_closed_last_exposure_keeps_ex_end_date():
+    adsl = derive_adsl_style(_dm(), _ex(), _ds()).set_index("USUBJID")
+    assert str(adsl.loc["1", "TRTEDT"].date()) == "2020-01-10"
+    assert adsl.loc["2", "TRTEDTSRC"] == "EX"

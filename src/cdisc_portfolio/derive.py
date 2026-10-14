@@ -20,11 +20,16 @@ def _exposure_subject_summary(ex: pd.DataFrame) -> pd.DataFrame:
     x["EXSTDT"] = _to_date(x["EXSTDTC"])
     x["EXENDT"] = _to_date(x["EXENDTC"])
     x["EXDOSE_NUM"] = pd.to_numeric(x["EXDOSE"], errors="coerce")
+    x["EXSEQ_NUM"] = pd.to_numeric(x["EXSEQ"], errors="coerce")
 
     rows: list[dict[str, object]] = []
     for (studyid, usubjid), g in x.groupby(["STUDYID", "USUBJID"], sort=False, dropna=False):
         start = g["EXSTDT"].min()
         end = g["EXENDT"].max()
+        # max() skips missing end dates, so an ongoing final record would silently
+        # truncate exposure to the previous record's end; flag it for ADSL.
+        last = g.sort_values(["EXSTDT", "EXSEQ_NUM"], na_position="first").iloc[-1]
+        open_last = bool(pd.isna(last["EXENDT"]))
         duration = (end - start).days + 1 if pd.notna(start) and pd.notna(end) else np.nan
         trts = sorted(g["EXTRT"].dropna().astype(str).str.strip().unique().tolist())
         doses = pd.to_numeric(g["EXDOSE_NUM"], errors="coerce")
@@ -35,6 +40,7 @@ def _exposure_subject_summary(ex: pd.DataFrame) -> pd.DataFrame:
             "TRTEDT_EX": end,
             "EXDURN_RAW": duration,
             "EXN": int(len(g)),
+            "EXOPENFL": "Y" if open_last else "N",
             "EXTRTS": " | ".join(trts),
             "EXDOSE_MAX": float(doses.max()) if doses.notna().any() else np.nan,
             "EXDOSE_MEAN": float(doses.mean()) if doses.notna().any() else np.nan,
@@ -103,16 +109,20 @@ def derive_adsl_style(dm: pd.DataFrame, ex: pd.DataFrame, ds: pd.DataFrame) -> p
     # EX is used as the source of actual exposure dates when available; DM dates are kept
     # for traceability and QC comparisons. A final DS disposition date is an explicit
     # portfolio fallback when both EX and DM exposure-end dates are unavailable.
+    # When the last EX record is still open (no EXENDTC), both the EX maximum and
+    # DM.RFXENDTC stop at an earlier record, so the final DS disposition date is used.
     adsl["TRTSDT"] = adsl["TRTSDT_EX"].combine_first(adsl["TRTSDT_DM"])
-    adsl["TRTEDT"] = adsl["TRTEDT_EX"].combine_first(adsl["TRTEDT_DM"]).combine_first(adsl["EOSDT"])
+    open_end = adsl["EXOPENFL"].eq("Y") & adsl["EOSDT"].notna()
+    closed_end = adsl["TRTEDT_EX"].combine_first(adsl["TRTEDT_DM"]).combine_first(adsl["EOSDT"])
+    adsl["TRTEDT"] = adsl["EOSDT"].where(open_end, closed_end)
     adsl["TRTSDTSRC"] = np.select(
         [adsl["TRTSDT_EX"].notna(), adsl["TRTSDT_DM"].notna()],
         ["EX", "DM_FALLBACK"],
         default="MISSING",
     )
     adsl["TRTEDTSRC"] = np.select(
-        [adsl["TRTEDT_EX"].notna(), adsl["TRTEDT_DM"].notna(), adsl["EOSDT"].notna()],
-        ["EX", "DM_FALLBACK", "DS_DISPOSITION_FALLBACK"],
+        [open_end, adsl["TRTEDT_EX"].notna(), adsl["TRTEDT_DM"].notna(), adsl["EOSDT"].notna()],
+        ["DS_DISPOSITION_FALLBACK", "EX", "DM_FALLBACK", "DS_DISPOSITION_FALLBACK"],
         default="MISSING",
     )
     valid_window = adsl["TRTSDT"].notna() & adsl["TRTEDT"].notna() & (adsl["TRTEDT"] >= adsl["TRTSDT"])

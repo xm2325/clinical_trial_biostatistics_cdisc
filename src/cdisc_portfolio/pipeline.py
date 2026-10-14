@@ -98,7 +98,7 @@ def run(root: Path) -> dict[str, object]:
         table.to_csv(path, index=False)
         out_paths[name] = path
 
-    safety_qc = run_qc(adsl, adae).assign(area="safety")
+    safety_qc = run_qc(adsl, adae, ex).assign(area="safety")
     efficacy_qc = run_efficacy_qc(adqscibc, adqs_actot, reference_metrics, ancova_subjects).assign(area="efficacy")
     qc = pd.concat([safety_qc, efficacy_qc], ignore_index=True)
     qc_path = output_dir / "qc_report.csv"

@@ -126,8 +126,19 @@ adsl_rows <- lapply(seq_len(nrow(dm)), function(i) {
 
   trtsdt <- ex_start
   if (is.na(trtsdt)) trtsdt <- dm_start
+  # A still-open final EX record (no EXENDTC) means exposure continued past every
+  # recorded end date; take the final disposition date instead of the EX maximum.
+  ex_open_last <- FALSE
+  if (has_ex) {
+    ord <- order(parse_date(ee$EXSTDTC), suppressWarnings(as.numeric(ee$EXSEQ)), na.last = FALSE)
+    ex_open_last <- is.na(parse_date(ee$EXENDTC[ord[length(ord)]]))
+  }
   trtedt <- ex_end
   end_src <- if (!is.na(ex_end)) "EX" else ""
+  if (ex_open_last && !is.na(ds_end)) {
+    trtedt <- ds_end
+    end_src <- "DS_DISPOSITION_FALLBACK"
+  }
   if (is.na(trtedt) && !is.na(dm_end)) {
     trtedt <- dm_end
     end_src <- "DM"

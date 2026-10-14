@@ -3,7 +3,17 @@ from __future__ import annotations
 import pandas as pd
 
 
-def run_qc(adsl: pd.DataFrame, adae: pd.DataFrame) -> pd.DataFrame:
+def _last_exposure(ex: pd.DataFrame) -> pd.DataFrame:
+    """Independent recomputation from SDTM EX: each subject's last record by start date."""
+    x = ex.copy()
+    x["EXSTDT"] = pd.to_datetime(x["EXSTDTC"], errors="coerce").dt.normalize()
+    x["EXENDT"] = pd.to_datetime(x["EXENDTC"], errors="coerce").dt.normalize()
+    x["EXSEQ_NUM"] = pd.to_numeric(x["EXSEQ"], errors="coerce")
+    last = x.sort_values(["USUBJID", "EXSTDT", "EXSEQ_NUM"], na_position="first").groupby("USUBJID").tail(1)
+    return last[["USUBJID", "EXSTDT", "EXENDT"]].rename(columns={"EXSTDT": "LAST_EXSTDT", "EXENDT": "LAST_EXENDT"})
+
+
+def run_qc(adsl: pd.DataFrame, adae: pd.DataFrame, ex: pd.DataFrame | None = None) -> pd.DataFrame:
     checks: list[dict[str, object]] = []
 
     def add(name: str, passed: bool, detail: str, required: bool = True) -> None:
@@ -42,6 +52,15 @@ def run_qc(adsl: pd.DataFrame, adae: pd.DataFrame) -> pd.DataFrame:
 
     reverse_dates = int((adsl["TRTSDT"].notna() & adsl["TRTEDT"].notna() & (adsl["TRTEDT"] < adsl["TRTSDT"])).sum())
     add("Exposure end is not before exposure start", reverse_dates == 0, f"subjects={reverse_dates}")
+
+    if ex is not None:
+        last = adsl.loc[adsl["SAFFL"].eq("Y"), ["USUBJID", "TRTEDT", "TRTEDTSRC", "EOSDT"]].merge(_last_exposure(ex), on="USUBJID", how="left")
+        before_last_start = int((last["TRTEDT"].isna() | (last["TRTEDT"] < last["LAST_EXSTDT"])).sum())
+        add("TRTEDT is not before the start of the last exposure record", before_last_start == 0, f"subjects={before_last_start}")
+        open_last = last["LAST_EXENDT"].isna() & last["LAST_EXSTDT"].notna()
+        open_wrong = int((open_last & last["EOSDT"].notna() & last["TRTEDT"].ne(last["EOSDT"])).sum())
+        add("Open-ended last exposure record takes TRTEDT from final disposition", open_wrong == 0,
+            f"open-ended subjects={int(open_last.sum())}; not using disposition date={open_wrong}")
 
     rand_missing_ds = int((adsl["RANDFL"].eq("Y") & adsl["EOSDECOD"].fillna("").eq("")).sum())
     add("Randomised subjects have a disposition event", rand_missing_ds == 0, f"subjects={rand_missing_ds}")

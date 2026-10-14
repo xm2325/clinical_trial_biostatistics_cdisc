@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — exposure-end derivation fix
+
+- Fix `TRTEDT` for subjects whose last EX record is still open (missing `EXENDTC`). The EX maximum skipped the missing end date and `DM.RFXENDTC` held the same earlier date, so the last-dose date was truncated for **4** randomised subjects (01-704-1233, 01-705-1031, 01-705-1303, 01-705-1377). These subjects now take the final DS disposition date, which matches `DM.RFENDTC` and the official CDISC pilot ADSL for all **6** open-ended subjects.
+- The same rule is applied in the Python derivation, the independent R QC (`R/independent_qc.R`) and both SAS programs (`sas/derive_adsl_adae.sas`, `sas/oda/derive_adsl_adae.sas`) so cross-language reconciliation stays aligned. ADSL-style columns are unchanged.
+- Impact: TEAE subjects / records change from **217 / 1,116** to **218 / 1,120** (four rash/pruritus records for 01-705-1303 now fall inside the 30-day window); DS-disposition exposure-end fallbacks change from **2** to **6**; the v0.24 diagnostic any-TEAE risk shift becomes **0.0536**. Earlier run records in this changelog and in `docs/` describe the runs they cite and are not rewritten.
+- Add two required safety QC checks recomputed independently from SDTM EX: `TRTEDT is not before the start of the last exposure record` and `Open-ended last exposure record takes TRTEDT from final disposition`. Both fail on the previous derivation (4 subjects) and pass after the fix; required safety/efficacy QC is now **26/26**.
+
 ## 0.26.1 — 2026-08-26
 
 - Add a trusted-push SAS ODA workflow using SASPy Remote IOM, encrypted/ephemeral ODA client JAR installation and repository secrets; the credential-free PR workflow remains separate.

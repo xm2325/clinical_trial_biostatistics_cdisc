@@ -19,3 +19,31 @@ def test_required_qc_passes_clean_fixture():
     qc = run_qc(adsl, adae)
     required = qc.loc[qc["required"]]
     assert required["passed"].all()
+
+
+def _exposure_fixture():
+    adsl = pd.DataFrame([
+        {"STUDYID":"S","USUBJID":"1","SAFFL":"Y","EXN":2,"TRTSDT":pd.Timestamp("2020-01-01"),"TRTEDT":pd.Timestamp("2020-01-05"),"TRTEDTSRC":"EX","EOSDT":pd.Timestamp("2020-03-01"),"RANDFL":"Y","EOSDECOD":"COMPLETED","COMPLFL":"Y","DCSFL":"N"}
+    ])
+    adae = pd.DataFrame([
+        {"STUDYID":"S","USUBJID":"1","AESEQ":1,"SAFFL":"Y","TRTEMFL":"Y","ASTDT":pd.Timestamp("2020-01-03"),"TRTSDT":pd.Timestamp("2020-01-01"),"TRTEDT":pd.Timestamp("2020-01-05")}
+    ])
+    ex = pd.DataFrame([
+        {"USUBJID":"1","EXSEQ":1,"EXSTDTC":"2020-01-01","EXENDTC":"2020-01-05"},
+        {"USUBJID":"1","EXSEQ":2,"EXSTDTC":"2020-01-06","EXENDTC":None},
+    ])
+    return adsl, adae, ex
+
+
+def test_qc_flags_truncated_exposure_end():
+    adsl, adae, ex = _exposure_fixture()
+    qc = run_qc(adsl, adae, ex).set_index("check")
+    assert not qc.loc["TRTEDT is not before the start of the last exposure record", "passed"]
+    assert not qc.loc["Open-ended last exposure record takes TRTEDT from final disposition", "passed"]
+
+
+def test_qc_accepts_disposition_end_for_open_exposure():
+    adsl, adae, ex = _exposure_fixture()
+    adsl.loc[0, ["TRTEDT", "TRTEDTSRC"]] = [pd.Timestamp("2020-03-01"), "DS_DISPOSITION_FALLBACK"]
+    qc = run_qc(adsl, adae, ex)
+    assert qc.loc[qc["required"], "passed"].all()

@@ -44,7 +44,7 @@ Across five controlled scenarios, each with **2,000 alternative + 2,000 null rep
 
 The same 12 planned-versus-actual mismatches that require **planned randomised treatment (`TRT01P`)** for v0.23 efficacy MI provide a deliberately different safety question. For this portfolio's exposure-based safety summary, denominators use **actual treatment (`TRT01A`)**.
 
-The live review verifies **254** unique safety subjects, **217** subjects with at least one TEAE and **1,116** TEAE records. It separates subject incidence from event count and reconciles ADAE-style treatment labels back to ADSL-style actual treatment. If planned assignment were incorrectly substituted into this safety question, an arm denominator would shift by up to **12 subjects** and any-TEAE risk by up to **0.0516 (5.16 percentage points)**. Safety-assignment QC is **6/6 PASS** with controlled claim **`PORTFOLIO_SAFETY_POPULATION_ASSIGNMENT_READY`**.
+The live review verifies **254** unique safety subjects, **217** subjects with at least one TEAE and **1,116** TEAE records. (After the open-ended exposure fix in the Unreleased changelog entry, a re-run gives **218** subjects and **1,120** records.) It separates subject incidence from event count and reconciles ADAE-style treatment labels back to ADSL-style actual treatment. If planned assignment were incorrectly substituted into this safety question, an arm denominator would shift by up to **12 subjects** and any-TEAE risk by up to **0.0516 (5.16 percentage points)**. Safety-assignment QC is **6/6 PASS** with controlled claim **`PORTFOLIO_SAFETY_POPULATION_ASSIGNMENT_READY`**.
 
 The point is not “planned is right” or “actual is right”; the treatment variable follows the statistical question and analysis-population definition.
 
